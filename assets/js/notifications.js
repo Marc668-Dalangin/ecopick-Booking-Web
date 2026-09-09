@@ -3,6 +3,20 @@
         return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
     }
 
+    function updateNotificationDateGroups() {
+        document.querySelectorAll('.notification-date-group').forEach((group) => {
+            const toggle = group.querySelector('.notification-toggle');
+            const collapse = group.querySelector('.collapse');
+            const icon = group.querySelector('.toggle-icon');
+            if (!toggle || !collapse || !icon) return;
+
+            collapse.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+            icon.classList.remove('bi-chevron-up');
+            icon.classList.add('bi-chevron-down');
+        });
+    }
+
     function updateBadges(count) {
         document.querySelectorAll('[data-notification-count]').forEach((badge) => {
             badge.textContent = String(count);
@@ -39,6 +53,8 @@
     }
 
     window.addEventListener('DOMContentLoaded', function () {
+        updateNotificationDateGroups();
+
         if (!window.EcoPickLiveUpdates || !document.querySelector('[data-notification-count]')) return;
         window.EcoPickLiveUpdates.startPolling({
             key: 'global-notifications',
