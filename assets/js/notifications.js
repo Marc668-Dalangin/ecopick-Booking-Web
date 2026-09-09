@@ -3,18 +3,62 @@
         return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
     }
 
-    function updateNotificationDateGroups() {
-        document.querySelectorAll('.notification-date-group').forEach((group) => {
-            const toggle = group.querySelector('.notification-toggle');
-            const collapse = group.querySelector('.collapse');
-            const icon = group.querySelector('.toggle-icon');
-            if (!toggle || !collapse || !icon) return;
+    function clearNotificationState() {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (key && key.indexOf('ecopick_notif_state_') === 0) {
+                keys.push(key);
+            }
+        }
 
-            collapse.classList.remove('show');
-            toggle.setAttribute('aria-expanded', 'false');
-            icon.classList.remove('bi-chevron-up');
-            icon.classList.add('bi-chevron-down');
-        });
+        keys.forEach((key) => localStorage.removeItem(key));
+    }
+
+    function storageKeyForDate(dateValue) {
+        return 'ecopick_notif_state_' + String(dateValue);
+    }
+
+    function applyGroupState(group, shouldOpen) {
+        const toggle = group && group.querySelector('.notification-toggle');
+        const collapse = group && group.querySelector('.collapse');
+        const icon = group && group.querySelector('.toggle-icon');
+
+        if (!toggle || !collapse || !icon) return;
+
+        collapse.classList.toggle('show', shouldOpen);
+        toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        icon.classList.toggle('bi-chevron-up', shouldOpen);
+        icon.classList.toggle('bi-chevron-down', !shouldOpen);
+
+        const dateValue = group.dataset.dateGroup;
+        if (dateValue) {
+            localStorage.setItem(storageKeyForDate(dateValue), shouldOpen ? 'open' : 'closed');
+        }
+    }
+
+    function restoreGroupState(group) {
+        const dateValue = group && group.dataset.dateGroup;
+        if (!dateValue) return;
+
+        const savedState = localStorage.getItem(storageKeyForDate(dateValue));
+        const hasUnread = Array.from(group.querySelectorAll('.notification-item')).some(item => item.dataset.isUnread === '1');
+
+        if (savedState === 'open') {
+            applyGroupState(group, true);
+            return;
+        }
+
+        if (savedState === 'closed') {
+            applyGroupState(group, false);
+            return;
+        }
+
+        applyGroupState(group, hasUnread);
+    }
+
+    function restoreAllGroups() {
+        document.querySelectorAll('.notification-date-group').forEach(restoreGroupState);
     }
 
     function updateBadges(count) {
@@ -52,10 +96,66 @@
         if (empty) empty.classList.toggle('d-none', notifications.length > 0);
     }
 
+    function handleNotificationRender() {
+        requestAnimationFrame(function () {
+            document.querySelectorAll('.notification-date-group').forEach((group) => {
+                const dateValue = group.dataset.dateGroup;
+                if (!dateValue) return;
+
+                const savedState = localStorage.getItem(storageKeyForDate(dateValue));
+                const hasUnread = Array.from(group.querySelectorAll('.notification-item')).some(item => item.dataset.isUnread === '1');
+
+                if (savedState === 'open') {
+                    applyGroupState(group, true);
+                    return;
+                }
+
+                if (savedState === 'closed') {
+                    applyGroupState(group, false);
+                    return;
+                }
+
+                applyGroupState(group, hasUnread);
+            });
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        const toggle = event.target.closest('.notification-toggle');
+        if (!toggle) return;
+
+        const group = toggle.closest('.notification-date-group');
+        if (!group) return;
+
+        event.preventDefault();
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true' || group.querySelector('.collapse')?.classList.contains('show');
+        applyGroupState(group, !isOpen);
+    });
+
+    document.addEventListener('shown.bs.collapse', function (event) {
+        const group = event.target.closest('.notification-date-group');
+        if (!group) return;
+        const dateValue = group.dataset.dateGroup;
+        if (dateValue) localStorage.setItem(storageKeyForDate(dateValue), 'open');
+    });
+
+    document.addEventListener('hidden.bs.collapse', function (event) {
+        const group = event.target.closest('.notification-date-group');
+        if (!group) return;
+        const dateValue = group.dataset.dateGroup;
+        if (dateValue) localStorage.setItem(storageKeyForDate(dateValue), 'closed');
+    });
+
     window.addEventListener('DOMContentLoaded', function () {
-        updateNotificationDateGroups();
+        if (sessionStorage.getItem('ecopick_reset_notif_state') === '1') {
+            clearNotificationState();
+            sessionStorage.removeItem('ecopick_reset_notif_state');
+        }
+
+        restoreAllGroups();
 
         if (!window.EcoPickLiveUpdates || !document.querySelector('[data-notification-count]')) return;
+
         window.EcoPickLiveUpdates.startPolling({
             key: 'global-notifications',
             url: window.ecopickNotificationUrl || '/api/notifications/fetch-latest.php',
@@ -64,6 +164,7 @@
                 const data = payload.data || {};
                 updateBadges(Number(data.unread_count || 0));
                 injectUnreadNotifications(data.notifications || []);
+                handleNotificationRender();
             }
         });
     });

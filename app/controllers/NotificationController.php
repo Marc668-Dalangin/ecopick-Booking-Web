@@ -15,7 +15,7 @@ class NotificationController
     {
         $limit = max(1, min($limit, 50));
         return $this->db->query(
-            'SELECT id, title, message, link_url, created_at FROM notifications WHERE recipient_account_id = :account_id AND read_at IS NULL ORDER BY created_at DESC LIMIT ' . $limit,
+            'SELECT id, title, message, link_url, read_at, created_at FROM notifications WHERE recipient_account_id = :account_id AND read_at IS NULL ORDER BY created_at DESC LIMIT ' . $limit,
             ['account_id' => $accountId]
         )->fetchAll();
     }

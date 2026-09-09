@@ -151,6 +151,16 @@ $pageTitle = 'Login';
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        if (sessionStorage.getItem('ecopick_reset_notif_state') === '1') {
+            for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+                const key = localStorage.key(i);
+                if (key && key.indexOf('ecopick_notif_state_') === 0) {
+                    localStorage.removeItem(key);
+                }
+            }
+            sessionStorage.removeItem('ecopick_reset_notif_state');
+        }
+
         const form = document.querySelector('form');
         if (form) {
             form.addEventListener('submit', function(e) {
