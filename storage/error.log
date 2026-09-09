@@ -1,0 +1,191 @@
+[06-Sep-2026 02:06:42 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:45 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:46 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:46 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:46 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:46 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:47 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:06:51 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:08:49 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:09:51 UTC] Uncaught Error: Class "FeeCalculator" not found in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\new-pickup-request.php:42
+[06-Sep-2026 02:44:40 UTC] Uncaught RuntimeException: Authentication required. in C:\xampp\htdocs\booking-website-lipacity\app\controllers\AdminDashboardController.php:24
+[06-Sep-2026 02:44:40 UTC] Uncaught RuntimeException: Authentication required. in C:\xampp\htdocs\booking-website-lipacity\app\controllers\AdminDashboardController.php:24
+[06-Sep-2026 02:54:48 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:54:48 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 02:55:47 UTC] Booking notification error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 03:19:42 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.reporter_account_id' in 'where clause'
+[06-Sep-2026 03:19:42 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.reporter_account_id' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[06-Sep-2026 03:19:44 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 03:19:44 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[06-Sep-2026 03:20:06 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 03:20:06 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[06-Sep-2026 03:20:08 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.reporter_account_id' in 'where clause'
+[06-Sep-2026 03:20:08 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.reporter_account_id' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[06-Sep-2026 03:20:35 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list'
+[06-Sep-2026 03:20:35 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'link_url' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[06-Sep-2026 11:30:02 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopick_phase1.schema_migrations' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:82
+[06-Sep-2026 11:30:07 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopick_phase1.schema_migrations' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:82
+[07-Sep-2026 01:12:33 UTC] Database error: SQLSTATE[HY000]: General error: 2006 MySQL server has gone away
+[07-Sep-2026 01:12:33 UTC] Uncaught PDOException: SQLSTATE[HY000]: General error: 2006 MySQL server has gone away in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 01:12:37 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[07-Sep-2026 01:12:41 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[07-Sep-2026 01:12:45 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[07-Sep-2026 01:12:49 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[07-Sep-2026 01:13:23 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[07-Sep-2026 01:29:09 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:09 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:10 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:10 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:12 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:12 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:12 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:12 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:16 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:16 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:16 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:16 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:16 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:16 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:32 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:32 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:29:32 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:29:32 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:29:44 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_login_user_by_email does not exist
+[07-Sep-2026 01:29:44 UTC] Login error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_login_user_by_email does not exist
+[07-Sep-2026 01:30:44 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:30:44 UTC] Stored procedure read error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_junkshop_profile does not exist
+[07-Sep-2026 01:30:44 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine
+[07-Sep-2026 01:30:44 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopick_phase1.notifications' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[07-Sep-2026 01:31:00 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_login_user_by_email does not exist
+[07-Sep-2026 01:31:00 UTC] Login error: SQLSTATE[42000]: Syntax error or access violation: 1305 PROCEDURE ecopick_phase1.sp_get_login_user_by_email does not exist
+[07-Sep-2026 01:51:26 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopick_phase1'
+[07-Sep-2026 12:47:44 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:44 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:46 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:46 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:46 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:46 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:46 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:46 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:47 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:47 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:52 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:52 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:52 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:52 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:52 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:52 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 12:47:53 UTC] Database error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`))
+[07-Sep-2026 12:47:53 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`ecopickdb`.`transaction_materials`, CONSTRAINT `fk_transaction_material_request_item` FOREIGN KEY (`pickup_request_item_id`) REFERENCES `pickup_request_items` (`id`)) in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[07-Sep-2026 14:22:02 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:100
+[07-Sep-2026 14:22:15 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:100
+[07-Sep-2026 14:23:04 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:101
+[08-Sep-2026 00:59:18 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[08-Sep-2026 01:05:47 UTC] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[08-Sep-2026 01:05:47 UTC] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[08-Sep-2026 12:03:07 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 12:03:07 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 12:03:13 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 12:03:13 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 13:57:32 UTC] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:101
+[08-Sep-2026 14:03:08 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:03:08 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 14:18:56 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:18:56 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 14:32:46 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:32:46 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:32:59 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:32:59 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:33:03 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:33:03 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:33:05 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:33:05 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 14:33:12 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:33:12 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:35:12 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:35:12 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:37:30 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:37:30 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:38:18 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:38:18 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:38:20 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:38:20 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:38:24 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:38:24 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 14:41:27 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:27 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:29 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:29 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:33 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:33 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:36 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:36 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:39 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:41:39 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:44 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:44 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:47 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:47 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:49 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:49 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:52 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:52 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:54 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:54 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:57 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:57 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 14:42:59 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:42:59 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[08-Sep-2026 14:43:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:09 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:11 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:11 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:13 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:13 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:14 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:14 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:15 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:43:15 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:07 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:07 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:11 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:11 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:15 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:15 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:18 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[08-Sep-2026 14:44:18 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
