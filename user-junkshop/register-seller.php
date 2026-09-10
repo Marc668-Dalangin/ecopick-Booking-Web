@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = [
             'first_name' => $_POST['first_name'] ?? '',
             'last_name' => $_POST['last_name'] ?? '',
+            'username' => $_POST['username'] ?? '',
             'email' => $_POST['email'] ?? '',
             'mobile_number' => $_POST['mobile_number'] ?? '',
             'address' => $_POST['address'] ?? '',
@@ -108,6 +109,11 @@ $pageTitle = 'Register as Seller';
                                         placeholder="Dela Cruz"
                                     >
                                 </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="username" name="username" value="<?php echo isset($_POST['username']) ? Validator::escape($_POST['username']) : ''; ?>" required minlength="5" maxlength="100" pattern="^(?=.{5,100}$)(?!.*\s)[A-Z]?[a-z0-9\W_]+$" placeholder="Marc123">
                             </div>
 
                             <!-- Email -->
@@ -272,6 +278,13 @@ $pageTitle = 'Register as Seller';
 </div>
 
 <script>
+    function validateUsername(input) {
+        if (!input) return false;
+        const valid = /^(?=.{5,100}$)(?!.*\s)[A-Z]?[a-z0-9\W_]+$/.test(input.value);
+        input.setCustomValidity(valid ? '' : 'Use at least 5 characters with uppercase only at the beginning and no spaces.');
+        return valid;
+    }
+
     function validateMobileSuffix(input) {
         if (!input) return false;
         const digits = (input.value || '').replace(/\D/g, '').slice(0, 9);
@@ -282,6 +295,16 @@ $pageTitle = 'Register as Seller';
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+            usernameInput.addEventListener('input', function() {
+                validateUsername(this);
+            });
+            usernameInput.addEventListener('blur', function() {
+                validateUsername(this);
+            });
+        }
+
         const mobileInput = document.getElementById('mobile_number');
         if (mobileInput) {
             mobileInput.addEventListener('input', function() {

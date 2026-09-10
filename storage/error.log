@@ -580,3 +580,57 @@
 [10-Sep-2026 05:36:08 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
 [10-Sep-2026 05:36:08 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
 [10-Sep-2026 05:36:08 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 12:06:58 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_register_seller; expected 6, got 7
+[10-Sep-2026 12:06:58 UTC] Registration error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_register_seller; expected 6, got 7
+[10-Sep-2026 12:07:17 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_register_seller; expected 6, got 7
+[10-Sep-2026 12:07:17 UTC] Registration error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_register_seller; expected 6, got 7
+[10-Sep-2026 12:56:21 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist
+[10-Sep-2026 12:56:21 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 12:56:22 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist
+[10-Sep-2026 12:56:22 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 12:56:22 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist
+[10-Sep-2026 12:56:22 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 12:56:22 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist
+[10-Sep-2026 12:56:22 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 12:56:22 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist
+[10-Sep-2026 12:56:22 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.preferred_junkshops' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:10:32 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:10:32 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:11:32 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:11:32 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:24 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:24 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:26 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:26 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:26 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:26 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:27 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:27 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:27 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:27 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:27 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:27 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:29 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:29 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 16:12:39 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34
+[10-Sep-2026 16:12:39 UTC] Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHEN 'Cancelled' THEN 'Cancelled by Seller'
+                        WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77

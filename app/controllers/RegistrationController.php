@@ -29,8 +29,13 @@ class RegistrationController
         }
 
         try {
+            if ($this->usernameExists($data['username'])) {
+                return ['success' => false, 'errors' => ['Username already registered']];
+            }
+
             $stmt = $this->db->call('sp_register_seller', [
                 $data['full_name'],
+                trim((string) ($data['username'] ?? '')),
                 $data['email'],
                 $data['mobile_number'],
                 password_hash($data['password'], PASSWORD_BCRYPT),
@@ -42,27 +47,13 @@ class RegistrationController
             $this->db->closeProcedureCursor($stmt);
 
             if (($result['p_result'] ?? '') === 'success') {
-                $registrationFee = $this->db->query(
-                    'SELECT config_value FROM fee_configurations WHERE config_key = :config_key LIMIT 1',
-                    ['config_key' => 'junkshop_registration_fee']
-                )->fetchColumn();
-                $this->db->query(
-                    'INSERT INTO junkshop_partnership_payments (junkshop_account_id, payment_type, amount, payment_method, payment_status, due_at) VALUES (:account_id, :payment_type, :amount, :payment_method, :payment_status, CURRENT_TIMESTAMP)',
-                    [
-                        'account_id' => (int) ($result['p_account_id'] ?? 0),
-                        'payment_type' => 'Registration',
-                        'amount' => (float) ($registrationFee !== false ? $registrationFee : 0),
-                        'payment_method' => 'Cash',
-                        'payment_status' => 'Unpaid',
-                    ]
-                );
                 return ['success' => true, 'message' => 'Registration successful. Please login.'];
             }
 
             return ['success' => false, 'errors' => [($result['p_result'] ?? 'Registration failed')]];
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Registration error: ' . $e->getMessage());
-            return ['success' => false, 'errors' => ['An error occurred during registration']];
+            return ['success' => false, 'errors' => [$e->getMessage()]];
         }
     }
 
@@ -78,9 +69,14 @@ class RegistrationController
         }
 
         try {
+            if ($this->usernameExists($data['username'])) {
+                return ['success' => false, 'errors' => ['Username already registered']];
+            }
+
             $stmt = $this->db->call('sp_register_junkshop', [
                 $data['business_name'],
                 $data['owner_name'],
+                trim((string) ($data['username'] ?? '')),
                 $data['email'],
                 $data['mobile_number'],
                 $data['complete_address'],
@@ -97,10 +93,18 @@ class RegistrationController
             }
 
             return ['success' => false, 'errors' => [($result['p_result'] ?? 'Registration failed')]];
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Registration error: ' . $e->getMessage());
-            return ['success' => false, 'errors' => ['An error occurred during registration']];
+            return ['success' => false, 'errors' => [$e->getMessage()]];
         }
+    }
+
+    private function usernameExists($username)
+    {
+        return (int) $this->db->query(
+            'SELECT COUNT(*) FROM accounts WHERE username = :username',
+            ['username' => trim((string) $username)]
+        )->fetchColumn() > 0;
     }
 
     private function validateSellerForm($data)
@@ -120,6 +124,12 @@ class RegistrationController
 
         if (!Validator::required($data['full_name'] ?? '')) {
             $errors[] = 'Full name is required';
+        }
+
+        if (!Validator::required($data['username'] ?? '')) {
+            $errors[] = 'Username is required';
+        } elseif (!Validator::username($data['username'])) {
+            $errors[] = 'Username must be at least 5 characters, contain no spaces, and use an uppercase letter only as its first character';
         }
 
         if (!Validator::required($data['email'] ?? '')) {
@@ -173,6 +183,12 @@ class RegistrationController
 
         if (!Validator::required($data['owner_name'] ?? '')) {
             $errors[] = 'Owner name is required';
+        }
+
+        if (!Validator::required($data['username'] ?? '')) {
+            $errors[] = 'Username is required';
+        } elseif (!Validator::username($data['username'])) {
+            $errors[] = 'Username must be at least 5 characters, contain no spaces, and use an uppercase letter only as its first character';
         }
 
         if (!Validator::required($data['email'] ?? '')) {

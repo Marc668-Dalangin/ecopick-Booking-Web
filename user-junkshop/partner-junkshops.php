@@ -74,9 +74,12 @@ ob_start();
             <div id="seller-price-list" class="row g-4">
                 <?php foreach ($rowsByJunkshop as $junkshopId => $rows): ?>
                     <?php $junkshop = $rows[0]; ?>
-                    <div class="col-lg-6 seller-junkshop-card" data-junkshop-name="<?php echo Validator::escape(strtolower((string)($junkshop['business_name'] ?? ''))); ?>">
+                    <div class="col-lg-6 seller-junkshop-card" data-junkshop-name="<?php echo Validator::escape(strtolower((string)($junkshop['business_name'] ?? ''))); ?>" data-is-preferred="<?php echo !empty($junkshop['is_preferred']) ? '1' : '0'; ?>">
                         <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body p-4">
+                            <div class="card-body p-4 position-relative">
+                                <button type="button" class="btn btn-link p-0 position-absolute top-0 start-0 m-3 preferred-star" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" aria-label="<?php echo !empty($junkshop['is_preferred']) ? 'Remove preferred junkshop' : 'Set as preferred junkshop'; ?>" title="<?php echo !empty($junkshop['is_preferred']) ? 'Remove preferred junkshop' : 'Set as preferred junkshop'; ?>">
+                                    <i class="bi <?php echo !empty($junkshop['is_preferred']) ? 'bi-star-fill text-warning' : 'bi-star text-muted'; ?> preferred-star-icon"></i>
+                                </button>
                                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                                     <div>
                                         <h5 class="fw-bold mb-1"><?php echo Validator::escape($junkshop['business_name'] ?? ''); ?></h5>
@@ -119,7 +122,10 @@ ob_start();
                                     </table>
                                 </div>
 
-                                <div class="d-flex justify-content-end mt-3">
+                                <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+                                    <button type="button" class="btn <?php echo !empty($junkshop['is_preferred']) ? 'btn-outline-secondary' : 'btn-outline-primary'; ?> toggle-preferred" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-is-preferred="<?php echo !empty($junkshop['is_preferred']) ? '1' : '0'; ?>">
+                                        <?php echo !empty($junkshop['is_preferred']) ? 'Remove Preferred' : 'Set as Preferred'; ?>
+                                    </button>
                                     <?php if (!empty($junkshop['has_active_request'])): ?>
                                         <button type="button" class="btn btn-secondary disabled" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" disabled>
                                             <i class="bi bi-clock-history"></i> Request Pending
@@ -234,8 +240,35 @@ ob_start();
         const defaultPickupFee = <?php echo json_encode($defaultPickupFee); ?>;
         const serviceFeePct = <?php echo json_encode($serviceFeePct); ?>;
         const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
+        const preferredApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/toggle_preferred_junkshop.php';
+        const csrfToken = '<?php echo CSRF::token(); ?>';
         let rowIndex = 0;
         let selectedPrices = {};
+
+        function sortPreferredCards() {
+            const list = document.getElementById('seller-price-list');
+            Array.from(list.querySelectorAll('.seller-junkshop-card'))
+                .sort(function (first, second) {
+                    const preferredDifference = Number(second.dataset.isPreferred || 0) - Number(first.dataset.isPreferred || 0);
+                    return preferredDifference || (first.dataset.junkshopName || '').localeCompare(second.dataset.junkshopName || '');
+                })
+                .forEach(function (card) { list.appendChild(card); });
+        }
+
+        function updatePreferredCard(button, isPreferred) {
+            const card = button.closest('.seller-junkshop-card');
+            const star = card.querySelector('.preferred-star');
+            const icon = card.querySelector('.preferred-star-icon');
+            const label = isPreferred ? 'Remove Preferred' : 'Set as Preferred';
+            card.dataset.isPreferred = isPreferred ? '1' : '0';
+            button.dataset.isPreferred = isPreferred ? '1' : '0';
+            button.classList.toggle('btn-outline-secondary', isPreferred);
+            button.classList.toggle('btn-outline-primary', !isPreferred);
+            button.textContent = label;
+            icon.className = 'bi ' + (isPreferred ? 'bi-star-fill text-warning' : 'bi-star text-muted') + ' preferred-star-icon';
+            star.setAttribute('aria-label', isPreferred ? 'Remove preferred junkshop' : 'Set as preferred junkshop');
+            star.title = isPreferred ? 'Remove preferred junkshop' : 'Set as preferred junkshop';
+        }
 
         function applySellerFilters() {
             const nameValue = (nameFilter?.value || '').toLowerCase().trim();
@@ -328,6 +361,33 @@ ob_start();
 
         nameFilter?.addEventListener('input', applySellerFilters);
         materialFilter?.addEventListener('change', applySellerFilters);
+
+        document.querySelectorAll('.toggle-preferred').forEach(function (button) {
+            button.addEventListener('click', async function () {
+                button.disabled = true;
+                const formData = new FormData();
+                formData.append('_csrf_token', csrfToken);
+                formData.append('junkshop_id', button.dataset.junkshopId || '0');
+                try {
+                    const response = await fetch(preferredApiUrl, { method: 'POST', body: formData, credentials: 'same-origin' });
+                    const payload = await response.json();
+                    if (payload.session_expired && payload.redirect) {
+                        window.location.href = payload.redirect;
+                        return;
+                    }
+                    if (!response.ok || !payload.success) {
+                        throw new Error(payload.message || 'Unable to update preferred junkshop.');
+                    }
+                    updatePreferredCard(button, Boolean(payload.is_preferred));
+                    sortPreferredCards();
+                    applySellerFilters();
+                } catch (error) {
+                    window.alert(error.message || 'Unable to update preferred junkshop.');
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
 
         document.querySelectorAll('.request-pickup-btn').forEach(function (button) {
             button.addEventListener('click', function () {

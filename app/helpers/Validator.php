@@ -23,6 +23,11 @@ class Validator
         return strlen($password) >= 8;
     }
 
+    public static function username($username)
+    {
+        return preg_match('/^(?=.{5,100}$)(?!.*\s)[A-Z]?[a-z0-9\W_]+$/D', (string) $username) === 1;
+    }
+
     /**
      * Normalize and validate a Philippine mobile number in the exact format 09xxxxxxxxx.
      */

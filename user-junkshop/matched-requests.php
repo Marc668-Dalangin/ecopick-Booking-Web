@@ -17,6 +17,14 @@ $assignments = $dashboardController->getPendingJunkshopRequests(Auth::userId());
 $pageTitle = 'Matched Requests';
 $currentPage = 'matched-requests';
 $userDisplayName = Auth::userName();
+$formatPickupDate = static function ($date): string {
+    $timestamp = strtotime((string) $date);
+    return $timestamp === false ? '' : date('M d, Y', $timestamp);
+};
+$formatPickupTime = static function ($time): string {
+    $timestamp = strtotime((string) $time);
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
 ob_start();
 ?>
 <div class="card border-0 shadow-sm">
@@ -41,7 +49,12 @@ ob_start();
             </div>
         <?php else: ?>
                 <?php foreach ($assignments as $assignment): ?>
+                    <?php $currentStatus = (string)($assignment['current_status'] ?? 'Matched'); ?>
+                    <?php $isCancelled = in_array($currentStatus, ['Cancelled', 'Cancelled by Seller'], true); ?>
                     <?php $statusClass = strtolower((string)($assignment['assignment_status'] ?? 'Matched')); ?>
+                    <?php $pickupDate = $formatPickupDate($assignment['confirmed_pickup_date'] ?? $assignment['preferred_pickup_date'] ?? ''); ?>
+                    <?php $pickupTime = $formatPickupTime($assignment['confirmed_pickup_time'] ?? $assignment['preferred_pickup_time'] ?? ''); ?>
+                    <?php $terminalTimestamp = $isCancelled ? ($assignment['formatted_cancelled_at'] ?? '') : ($currentStatus === 'Completed' ? ($assignment['formatted_completed_at'] ?? '') : ''); ?>
                     <div class="col-12" data-assignment-card data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body p-4">
@@ -51,14 +64,13 @@ ob_start();
                                         <h5 class="fw-bold mb-1"><?php echo Validator::escape($assignment['booking_reference'] ?? ''); ?></h5>
                                         <div class="small text-muted"><?php echo Validator::escape($assignment['materials_summary'] ?? ''); ?></div>
                                     </div>
-                                    <span class="status-badge <?php echo $statusClass === 'accepted' ? 'approved' : ($statusClass === 'declined' ? 'rejected' : 'pending'); ?>" data-live-assignment-status><?php echo Validator::escape($assignment['assignment_status'] ?? 'Matched'); ?></span>
+                                    <?php if ($isCancelled): ?><span class="badge bg-danger" data-live-assignment-status>Cancelled by Seller<?php if ($terminalTimestamp !== ''): ?><small class="d-block fw-normal"><?php echo Validator::escape($terminalTimestamp); ?></small><?php endif; ?></span><?php else: ?><span class="status-badge <?php echo $statusClass === 'accepted' ? 'approved' : ($statusClass === 'declined' ? 'rejected' : 'pending'); ?>" data-live-assignment-status><?php echo Validator::escape($assignment['assignment_status'] ?? 'Matched'); ?><?php if ($terminalTimestamp !== ''): ?><small class="d-block fw-normal"><?php echo Validator::escape($terminalTimestamp); ?></small><?php endif; ?></span><?php endif; ?>
                                 </div>
 
                                 <div class="row g-3 small mb-3">
-                                    <div class="col-md-3"><div class="text-muted">Status</div><strong data-live-current-status><?php echo Validator::escape($assignment['current_status'] ?? 'Matched'); ?></strong></div>
-                                    <div class="col-md-3"><div class="text-muted">Seller</div><strong><?php echo Validator::escape($assignment['seller_name'] ?? ''); ?></strong></div>
-                                    <div class="col-md-3"><div class="text-muted">Pickup</div><strong><?php echo Validator::escape($assignment['confirmed_pickup_date'] ?? $assignment['preferred_pickup_date'] ?? ''); ?></strong><br><?php echo Validator::escape($assignment['confirmed_pickup_time'] ?? $assignment['preferred_pickup_time'] ?? ''); ?></div>
-                                    <div class="col-md-3"><div class="text-muted">Distance</div><strong><?php echo isset($assignment['distance_km']) ? number_format((float)$assignment['distance_km'], 2) . ' km' : 'Pending'; ?></strong></div>
+                                    <div class="col-md-4"><div class="text-muted">Seller</div><strong><?php echo Validator::escape($assignment['seller_name'] ?? ''); ?></strong></div>
+                                    <div class="col-md-4"><div class="text-muted">Pickup</div><strong><?php echo Validator::escape($pickupDate); ?></strong><br><?php echo Validator::escape($pickupTime); ?></div>
+                                    <div class="col-md-4"><div class="text-muted">Distance</div><strong><?php echo isset($assignment['distance_km']) ? number_format((float)$assignment['distance_km'], 2) . ' km' : 'Pending'; ?></strong></div>
                                 </div>
 
                                 <div class="small text-muted mb-3"><?php echo Validator::escape($assignment['pickup_address'] ?? ''); ?>, <?php echo Validator::escape($assignment['barangay'] ?? ''); ?></div>
@@ -110,7 +122,6 @@ ob_start();
                                         <button type="button" class="btn btn-success complete-transaction" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">Complete Transaction</button>
                                     </div>
                                 <?php elseif (($assignment['current_status'] ?? '') === 'Completed'): ?>
-                                    <span class="status-badge approved">Completed</span>
                                 <?php elseif (($assignment['current_status'] ?? '') === 'For Pickup' && empty($assignment['transaction_id'])): ?>
                                     <form class="row g-3 settlement-form" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">
                                         <?php echo CSRF::field(); ?>
@@ -258,6 +269,27 @@ window.addEventListener('DOMContentLoaded', function () {
         return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
     }
 
+    function formatPickupDate(value) {
+        const match = String(value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!match) return '';
+        const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    }
+
+    function formatPickupTime(value) {
+        const match = String(value ?? '').trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+        if (!match) return '';
+        let hours = Number(match[1]);
+        const minutes = match[2];
+        const meridiem = match[3]?.toUpperCase();
+        if (meridiem) {
+            hours = hours % 12 + (meridiem === 'PM' ? 12 : 0);
+        }
+        const suffix = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours % 12 || 12;
+        return displayHour + ':' + minutes + ' ' + suffix;
+    }
+
     function getPickupRequestId(assignment) {
         const value = Number(assignment?.pickup_request_id ?? assignment?.assignment_id ?? 0);
         return Number.isFinite(value) ? value : 0;
@@ -325,6 +357,9 @@ window.addEventListener('DOMContentLoaded', function () {
 
     function renderLifecycleControls(request, requestId) {
         const status = request.current_status || 'Pending Request';
+        if (status === 'Cancelled' || status === 'Cancelled by Seller') {
+            return '';
+        }
         if (status === 'Accepted') {
             return '<button type="button" class="btn btn-primary schedule-request" data-pickup-request-id="' + requestId + '">Set Schedule</button>';
         }
@@ -338,7 +373,7 @@ window.addEventListener('DOMContentLoaded', function () {
             return '<button type="button" class="btn btn-success complete-transaction" data-pickup-request-id="' + requestId + '">Complete Transaction</button>';
         }
         if (status === 'Completed') {
-            return '<span class="status-badge approved">Completed</span>';
+            return '';
         }
         return '';
     }
@@ -353,11 +388,15 @@ window.addEventListener('DOMContentLoaded', function () {
         assignmentList.innerHTML = requests.map(function (request) {
             const requestId = getPickupRequestId(request);
             const status = request.current_status || 'Pending Request';
+            const cancelled = status === 'Cancelled' || status === 'Cancelled by Seller';
             const statusClass = status === 'Completed' ? 'approved' : (status === 'Pending Request' ? 'pending' : 'scheduled');
+            const terminalTimestamp = status === 'Completed' ? request.formatted_completed_at : (cancelled ? request.formatted_cancelled_at : '');
+            const statusLabel = cancelled ? 'Cancelled by Seller' : status;
+            const statusMarkup = '<span class="' + (cancelled ? 'badge bg-danger' : 'status-badge ' + statusClass) + '">' + escapeHtml(statusLabel) + (terminalTimestamp ? '<small class="d-block fw-normal">' + escapeHtml(terminalTimestamp) + '</small>' : '') + '</span>';
             const distance = request.distance_km === null || request.distance_km === undefined ? 'Pending' : Number(request.distance_km).toFixed(2) + ' km';
-            const pickupDate = request.confirmed_pickup_date || request.preferred_pickup_date || '';
-            const pickupTime = request.confirmed_pickup_time || request.preferred_pickup_time || '';
-            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div><span class="status-badge ' + statusClass + '">' + escapeHtml(status) + '</span></div><div class="row g-3 small mb-3"><div class="col-md-3"><div class="text-muted">Status</div><strong>' + escapeHtml(status) + '</strong></div><div class="col-md-3"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-3"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-3"><div class="text-muted">Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + ', ' + escapeHtml(request.barangay) + '</div><div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
+            const pickupDate = formatPickupDate(request.confirmed_pickup_date || request.preferred_pickup_date || '');
+            const pickupTime = formatPickupTime(request.confirmed_pickup_time || request.preferred_pickup_time || '');
+            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + ', ' + escapeHtml(request.barangay) + '</div><div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
         }).join('');
     }
 

@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = [
             'business_name' => $_POST['business_name'] ?? '',
             'owner_name' => $_POST['owner_name'] ?? '',
+            'username' => $_POST['username'] ?? '',
             'email' => $_POST['email'] ?? '',
             'mobile_number' => $_POST['mobile_number'] ?? '',
             'complete_address' => $_POST['complete_address'] ?? '',
@@ -218,6 +219,11 @@ $pageTitle = 'Register Your Junkshop';
                             <!-- Contact Information -->
                             <h5 class="mb-3 fw-bold">Contact Information</h5>
 
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="username" name="username" value="<?php echo isset($_POST['username']) ? Validator::escape($_POST['username']) : ''; ?>" required minlength="5" maxlength="100" pattern="^(?=.{5,100}$)(?!.*\s)[A-Z]?[a-z0-9\W_]+$" placeholder="Marc123">
+                            </div>
+
                             <!-- Email -->
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
@@ -365,6 +371,13 @@ $pageTitle = 'Register Your Junkshop';
 </div>
 
 <script>
+    function validateUsername(input) {
+        if (!input) return false;
+        const valid = /^(?=.{5,100}$)(?!.*\s)[A-Z]?[a-z0-9\W_]+$/.test(input.value);
+        input.setCustomValidity(valid ? '' : 'Use at least 5 characters with uppercase only at the beginning and no spaces.');
+        return valid;
+    }
+
     function validateMobileSuffix(input) {
         if (!input) return false;
         const value = input.value.trim();
@@ -397,6 +410,16 @@ $pageTitle = 'Register Your Junkshop';
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+            usernameInput.addEventListener('input', function() {
+                validateUsername(this);
+            });
+            usernameInput.addEventListener('blur', function() {
+                validateUsername(this);
+            });
+        }
+
         const mobileInput = document.getElementById('mobile_number');
         if (mobileInput) {
             mobileInput.addEventListener('input', function() {

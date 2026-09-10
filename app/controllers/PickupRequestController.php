@@ -161,6 +161,8 @@ class PickupRequestController
             ];
         }
         $request['status_history'] = $history;
+        $request['formatted_pickup_date'] = $request['formatted_pickup_date'] ?? null;
+        $request['formatted_pickup_time'] = $request['formatted_pickup_time'] ?? null;
         return $request;
     }
 
@@ -250,9 +252,8 @@ class PickupRequestController
         }
 
         $currentStatus = (string) $request['current_status'];
-        $cancellableStatuses = ['Pending Request', 'Matched', 'Accepted'];
-        if (!in_array($currentStatus, $cancellableStatuses, true)) {
-            return ['success' => false, 'message' => 'Sellers may only cancel bookings before they are scheduled.'];
+        if ($currentStatus !== 'Pending Request') {
+            return ['success' => false, 'message' => 'Cancellation is not allowed once the request has been accepted.'];
         }
 
         $result = $this->executeResult('sp_cancel_pickup_request', [(int) $requestId, (int) $sellerAccountId], 'Pickup request cancelled successfully.');

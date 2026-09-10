@@ -18,11 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
         $error = 'Invalid security token. Please try again.';
     } else {
-        $email = Validator::sanitizeEmail($_POST['email'] ?? '');
+        $input = trim((string)($_POST['email'] ?? ''));
         $password = $_POST['password'] ?? '';
 
         $controller = new LoginController();
-        $result = $controller->authenticate($email, $password);
+        $result = $controller->authenticate($input, $password);
 
         if ($result['success']) {
             // Redirect based on role
@@ -72,19 +72,19 @@ $pageTitle = 'Login';
                         <!-- CSRF Token -->
                         <?php echo CSRF::field(); ?>
 
-                        <!-- Email Field -->
+                        <!-- Email or Username Field -->
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email Address</label>
+                            <label for="email" class="form-label">Email or Username</label>
                             <input 
-                                type="email" 
+                                type="text"
                                 class="form-control" 
                                 id="email" 
                                 name="email" 
                                 value="<?php echo isset($_POST['email']) ? Validator::escape($_POST['email']) : ''; ?>"
                                 required
-                                placeholder="your@email.com"
+                                placeholder="your@email.com or Marc123"
                             >
-                            <small class="text-muted">We'll never share your email.</small>
+                            <small class="text-muted">Use either your registered email address or username.</small>
                         </div>
 
                         <!-- Password Field -->

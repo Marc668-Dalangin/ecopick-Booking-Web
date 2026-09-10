@@ -260,6 +260,15 @@ class DashboardController
                 pr.confirmed_pickup_time,
                 pr.approximate_distance_km AS distance_km,
                 pr.created_at,
+                                pr.updated_at,
+                     (SELECT DATE_FORMAT(MAX(bsh.changed_at), \'%b %d, %Y at %h:%i %p\')
+                                 FROM booking_status_history bsh
+                                 WHERE bsh.pickup_request_id = pr.id
+                         AND bsh.new_status = \'Completed\') AS formatted_completed_at,
+                     (SELECT DATE_FORMAT(MAX(bsh.changed_at), \'%b %d, %Y at %h:%i %p\')
+                                 FROM booking_status_history bsh
+                                 WHERE bsh.pickup_request_id = pr.id
+                         AND bsh.new_status IN (\'Cancelled\', \'Cancelled by Seller\')) AS formatted_cancelled_at,
                 seller.full_name AS seller_name,
                 sp.address AS seller_address,
                 sp.barangay AS seller_barangay,
@@ -282,9 +291,9 @@ class DashboardController
             LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
             LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1
             WHERE pr.junkshop_id = :junkshop_id
-                              AND pr.current_status IN (:pending_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status)
+                        AND pr.current_status IN (:pending_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status, :cancelled_status, :cancelled_by_seller_status)
             GROUP BY pr.id, seller.id, sp.id
-                        ORDER BY FIELD(pr.current_status, :pending_status_order, :accepted_status_order, :scheduled_status_order, :for_pickup_status_order, :completed_status_order), pr.updated_at DESC',
+                    ORDER BY pr.updated_at DESC',
             [
                 'junkshop_id' => $junkshopId,
                 'pending_status' => 'Pending Request',
@@ -292,11 +301,8 @@ class DashboardController
                                 'scheduled_status' => 'Scheduled',
                                 'for_pickup_status' => 'For Pickup',
                                 'completed_status' => 'Completed',
-                                'pending_status_order' => 'Pending Request',
-                                'accepted_status_order' => 'Accepted',
-                                'scheduled_status_order' => 'Scheduled',
-                                'for_pickup_status_order' => 'For Pickup',
-                                'completed_status_order' => 'Completed',
+                                'cancelled_status' => 'Cancelled',
+                                'cancelled_by_seller_status' => 'Cancelled by Seller',
             ]
         )->fetchAll();
     }

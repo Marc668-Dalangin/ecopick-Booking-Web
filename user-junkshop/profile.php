@@ -105,6 +105,7 @@ ob_start();
                 </div>
                 <div class="text-center">
                     <div class="fw-semibold"><?php echo Validator::escape(Auth::userName()); ?></div>
+                    <div class="text-muted">@<?php echo Validator::escape($currentProfile['username'] ?? ''); ?></div>
                     <div class="text-muted"><?php echo ucfirst(Validator::escape($role)); ?></div>
                 </div>
             </div>

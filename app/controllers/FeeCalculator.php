@@ -6,7 +6,7 @@
 class FeeCalculator
 {
     public const DEFAULT_SERVICE_FEE_PCT = 0.05;
-    public const DEFAULT_PICKUP_FEE = 50.00;
+    public const DEFAULT_PICKUP_FEE = 0.00;
     public const DEFAULT_JUNKSHOP_COMMISSION_PCT = 0.025;
 
     /**

@@ -14,16 +14,18 @@ $currentPage = 'current-bookings';
 $userDisplayName = Auth::userName();
 $assignment = $controller->getSellerRequestAssignmentSummary($requestId, Auth::userId());
 $statusOrder = ['Pending Request', 'Matched', 'Accepted', 'Scheduled', 'For Pickup', 'Completed'];
-$cancellableStatuses = ['Pending Request', 'Matched', 'Accepted'];
+$cancellableStatuses = ['Pending Request'];
 $canCancel = in_array($request['current_status'], $cancellableStatuses, true);
 $currentStatusIndex = array_search($request['current_status'], $statusOrder, true);
 $currentStatusIndex = $currentStatusIndex === false ? 0 : $currentStatusIndex;
+$confirmedPickupDate = (string) ($request['formatted_pickup_date'] ?? '');
+$confirmedPickupTime = (string) ($request['formatted_pickup_time'] ?? '');
 ob_start();
 ?>
 <div class="row g-4">
     <div class="col-12"><a href="<?php echo APP_URL; ?>/user-junkshop/current-bookings.php" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Current bookings</a></div>
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4"><div><p class="eyebrow mb-1">Booking tracking</p><h2 class="fw-bold mb-1"><?php echo Validator::escape($request['booking_reference']); ?></h2><p class="text-muted mb-0">Submitted <?php echo Validator::escape(date('M d, Y g:i A', strtotime($request['created_at']))); ?></p></div><span class="status-badge <?php echo str_contains((string)$request['current_status'], 'Cancelled') ? 'rejected' : 'pending'; ?>"><?php echo Validator::escape($request['current_status']); ?></span></div>
+        <div class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4"><div><p class="eyebrow mb-1">Booking tracking</p><h2 class="fw-bold mb-1"><?php echo Validator::escape($request['booking_reference']); ?></h2><p class="text-muted mb-0">Submitted <?php echo Validator::escape(date('M d, Y g:i A', strtotime($request['created_at']))); ?></p></div><span id="booking-current-status" class="status-badge <?php echo str_contains((string)$request['current_status'], 'Cancelled') ? 'rejected' : 'pending'; ?>"><?php echo Validator::escape($request['current_status']); ?></span></div>
             <div class="alert alert-info" role="note"><i class="bi bi-info-circle me-2"></i>EcoPick is facilitating this request. Registered junkshops handle collection, weighing, assessment, and purchase in later steps.</div>
             <?php if ($canCancel): ?><div class="d-flex justify-content-end mb-4"><button type="button" class="btn btn-sm btn-outline-danger" id="detail-cancel-request"><i class="bi bi-x-circle"></i> Cancel booking</button></div><?php endif; ?>
 
@@ -34,10 +36,10 @@ ob_start();
                         <?php $isComplete = $index <= $currentStatusIndex; $isActive = $index === $currentStatusIndex; ?>
                         <div class="flex-fill min-w-120px">
                             <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="status-step rounded-circle d-inline-flex align-items-center justify-content-center <?php echo $isComplete ? 'bg-success text-white' : ($isActive ? 'bg-primary text-white' : 'bg-light text-muted'); ?>">
+                                <span data-status-step="<?php echo Validator::escape($status); ?>" class="status-step rounded-circle d-inline-flex align-items-center justify-content-center <?php echo $isComplete ? 'bg-success text-white' : ($isActive ? 'bg-primary text-white' : 'bg-light text-muted'); ?>">
                                     <?php echo $isComplete ? '<i class="bi bi-check"></i>' : ($index + 1); ?>
                                 </span>
-                                <small class="fw-semibold <?php echo $isActive ? 'text-primary' : ($isComplete ? 'text-success' : 'text-muted'); ?>"><?php echo Validator::escape($status); ?></small>
+                                <small data-status-label="<?php echo Validator::escape($status); ?>" class="fw-semibold <?php echo $isActive ? 'text-primary' : ($isComplete ? 'text-success' : 'text-muted'); ?>"><?php echo Validator::escape($status); ?></small>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -61,24 +63,154 @@ ob_start();
             <div class="alert alert-secondary mb-0">No matched junkshop is assigned for this request yet.</div>
         <?php endif; ?>
 
-        <h5 class="fw-bold mb-4">Status timeline</h5><ol class="status-timeline list-unstyled mb-0"><?php foreach ($request['status_history'] as $history): ?><li class="status-timeline-item"><span class="status-timeline-dot"></span><div><strong><?php echo Validator::escape($history['new_status'] ?? ''); ?></strong><div class="small text-muted"><?php echo Validator::escape(date('M d, Y g:i A', strtotime($history['changed_at'] ?? 'now'))); ?> · <?php echo Validator::escape($history['responsible_party'] ?? 'System'); ?></div><?php if (($history['new_status'] ?? '') === 'Scheduled' && !empty($request['confirmed_pickup_date']) && !empty($request['confirmed_pickup_time'])): ?><small class="text-muted d-block">Scheduled for: <?php echo Validator::escape($request['confirmed_pickup_date']); ?> at <?php echo Validator::escape($request['confirmed_pickup_time']); ?></small><?php endif; ?></div></li><?php endforeach; ?></ol>
+        <h5 class="fw-bold mb-4">Status timeline</h5><ol class="status-timeline list-unstyled mb-0"><?php foreach ($request['status_history'] as $history): ?><li class="status-timeline-item"><span class="status-timeline-dot"></span><div><strong><?php echo Validator::escape($history['new_status'] ?? ''); ?></strong><div class="small text-muted"><?php echo Validator::escape(date('M d, Y g:i A', strtotime($history['changed_at'] ?? 'now'))); ?> · <?php echo Validator::escape($history['responsible_party'] ?? 'System'); ?></div><?php if (($history['new_status'] ?? '') === 'Accepted'): ?><small class="text-danger d-block mt-1" data-cancellation-warning>Cancellation is not allowed!</small><?php elseif (($history['new_status'] ?? '') === 'Scheduled' && $confirmedPickupDate !== '' && $confirmedPickupTime !== ''): ?><div class="text-muted small mt-1">Scheduled for: <?php echo Validator::escape($confirmedPickupDate); ?> at <?php echo Validator::escape($confirmedPickupTime); ?></div><?php endif; ?></div></li><?php endforeach; ?></ol>
     </div></div></div>
 </div>
 <script>
 window.addEventListener('DOMContentLoaded', function () {
+    let activeBookingInterval = null;
+    let currentActiveBookingId = null;
+    let pollingInProgress = false;
+    const requestId = <?php echo (int) $requestId; ?>;
+    const detailsUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php?action=details&request_id=' + requestId;
+    const statusOrder = <?php echo json_encode($statusOrder, JSON_UNESCAPED_UNICODE); ?>;
+
     const formatTime = (value) => {
         const date = new Date('1970-01-01T' + String(value || '').trim().slice(0, 8));
         return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
+
+    const formatDateTime = (value) => {
+        const date = new Date(String(value || '').replace(' ', 'T'));
+        return Number.isNaN(date.getTime()) ? String(value || '') : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    };
+
+    function updateProgress(currentStatus) {
+        const currentIndex = statusOrder.indexOf(currentStatus);
+        document.querySelectorAll('[data-status-step]').forEach((step) => {
+            const stepIndex = statusOrder.indexOf(step.dataset.statusStep);
+            const complete = currentIndex >= 0 && stepIndex <= currentIndex;
+            const active = stepIndex === currentIndex;
+            step.classList.remove('bg-success', 'bg-primary', 'bg-light', 'text-white', 'text-muted');
+            step.classList.add(complete ? 'bg-success' : active ? 'bg-primary' : 'bg-light', complete || active ? 'text-white' : 'text-muted');
+            step.innerHTML = complete ? '<i class="bi bi-check"></i>' : String(stepIndex + 1);
+        });
+        document.querySelectorAll('[data-status-label]').forEach((label) => {
+            const labelIndex = statusOrder.indexOf(label.dataset.statusLabel);
+            const active = labelIndex === currentIndex;
+            const complete = currentIndex >= 0 && labelIndex <= currentIndex;
+            label.classList.remove('text-primary', 'text-success', 'text-muted');
+            label.classList.add(active ? 'text-primary' : complete ? 'text-success' : 'text-muted');
+        });
+    }
+
+    function updateTimeline(history, request) {
+        const timeline = document.querySelector('.status-timeline');
+        if (!timeline || !Array.isArray(history)) return;
+        history.forEach((entry, index) => {
+            let item = timeline.children[index];
+            if (!item) {
+                item = document.createElement('li');
+                item.className = 'status-timeline-item';
+                item.innerHTML = '<span class="status-timeline-dot"></span><div><strong></strong><div class="small text-muted"></div></div>';
+                timeline.appendChild(item);
+            }
+            const status = String(entry.new_status || '');
+            const text = item.querySelector('strong');
+            const metadata = item.querySelector('.small.text-muted');
+            if (text) text.textContent = status;
+            if (metadata) metadata.textContent = formatDateTime(entry.changed_at) + ' · ' + String(entry.responsible_party || 'System');
+            let warning = item.querySelector('[data-cancellation-warning]');
+            if (status === 'Accepted' && !warning) {
+                warning = document.createElement('small');
+                warning.className = 'text-danger d-block mt-1';
+                warning.dataset.cancellationWarning = 'true';
+                warning.textContent = 'Cancellation is not allowed!';
+                item.querySelector('div').appendChild(warning);
+            }
+            if (status !== 'Accepted' && warning) warning.remove();
+            if (status === 'Scheduled') {
+                let schedule = item.querySelector('#timeline-schedule-text, .mt-1');
+                if (!schedule) {
+                    schedule = document.createElement('div');
+                    schedule.id = 'timeline-schedule-text';
+                    schedule.className = 'text-muted small mt-1';
+                    item.querySelector('div').appendChild(schedule);
+                }
+                const date = request.formatted_pickup_date || request.confirmed_pickup_date || '';
+                const time = request.formatted_pickup_time || request.confirmed_pickup_time || '';
+                schedule.textContent = date && time ? 'Scheduled for: ' + date + ' at ' + time : '';
+            }
+        });
+    }
+
+    function updateItemPrices(items) {
+        if (!Array.isArray(items)) return;
+        const rows = document.querySelectorAll('.table-responsive tbody tr');
+        items.forEach((item, index) => {
+            const row = rows[index];
+            if (!row || row.cells.length < 5) return;
+            const price = item.matched_price_per_kg;
+            const value = item.actual_value ?? item.estimated_value;
+            row.cells[3].textContent = price === null || price === undefined ? 'Pending' : '₱' + Number(price).toFixed(2) + '/kg';
+            row.cells[4].textContent = value === null || value === undefined ? 'Pending' : '₱' + Number(value).toFixed(2);
+        });
+    }
+
+    function applyBookingUpdate(request) {
+        const status = document.getElementById('booking-current-status');
+        if (status) {
+            status.textContent = request.current_status || '';
+            status.classList.toggle('rejected', request.current_status === 'Cancelled');
+            status.classList.toggle('pending', request.current_status !== 'Cancelled');
+        }
+        updateProgress(request.current_status);
+        updateTimeline(request.status_history, request);
+        updateItemPrices(request.items);
+    }
+
+    function stopBookingPolling() {
+        if (activeBookingInterval !== null) {
+            clearInterval(activeBookingInterval);
+            activeBookingInterval = null;
+        }
+        currentActiveBookingId = null;
+    }
+
+    async function pollActiveBooking() {
+        if (!currentActiveBookingId || pollingInProgress || document.hidden) return;
+        pollingInProgress = true;
+        try {
+            const response = await fetch(detailsUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const payload = await response.json();
+            if (payload.session_expired && payload.redirect) {
+                window.location.href = payload.redirect;
+                return;
+            }
+            if (response.ok && payload.success && payload.data?.request) applyBookingUpdate(payload.data.request);
+        } catch (error) {
+            console.error('Failed to refresh booking details:', error);
+        } finally {
+            pollingInProgress = false;
+        }
+    }
+
+    function startBookingPolling(bookingId) {
+        stopBookingPolling();
+        currentActiveBookingId = Number(bookingId);
+        pollActiveBooking();
+        activeBookingInterval = setInterval(pollActiveBooking, 3000);
+    }
 
     document.querySelectorAll('dt').forEach((label) => {
         const value = label.nextElementSibling;
         if (label.textContent.trim() === 'Preferred time' && value) value.textContent = formatTime(value.textContent);
     });
 
-    document.querySelectorAll('.status-timeline-item small').forEach((schedule) => {
-        schedule.textContent = schedule.textContent.replace(/Scheduled for:\s*(\d{4}-\d{2}-\d{2})\s+at\s+(\d{1,2}:\d{2}:?\d{0,2})$/, (_, date, time) => 'Scheduled for: ' + new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + formatTime(time));
-    });
+    document.getElementById('bookingDetailsModal')?.addEventListener('hidden.bs.modal', stopBookingPolling);
+    window.addEventListener('pagehide', stopBookingPolling, { once: true });
+    startBookingPolling(requestId);
+
 });
 </script>
 <?php if ($canCancel): ?>

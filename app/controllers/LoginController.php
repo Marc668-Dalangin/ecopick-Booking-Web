@@ -17,19 +17,15 @@ class LoginController
     /**
      * Authenticate user
      */
-    public function authenticate($email, $password)
+    public function authenticate($input, $password)
     {
         // Validate inputs
-        if (empty($email) || empty($password)) {
-            return ['success' => false, 'error' => 'Email and password are required'];
-        }
-
-        if (!Validator::email($email)) {
-            return ['success' => false, 'error' => 'Invalid email format'];
+        if (empty($input) || empty($password)) {
+            return ['success' => false, 'error' => 'Email or username and password are required'];
         }
 
         try {
-            $stmt = $this->db->call('sp_get_login_user_by_email', [$email]);
+            $stmt = $this->db->call('sp_get_login_user_by_email', [$input]);
             $user = $stmt->fetch();
             $this->db->closeProcedureCursor($stmt);
 

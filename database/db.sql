@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     role_id INT NOT NULL,
     account_role ENUM('admin', 'seller', 'junkshop') NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(100) NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     mobile_number VARCHAR(20),
@@ -53,6 +54,18 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     INDEX idx_account_id (account_id),
     INDEX idx_approval_status (approval_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS preferred_junkshops (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    seller_id INT NOT NULL,
+    junkshop_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_preferred_junkshop (seller_id, junkshop_id),
+    FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    INDEX idx_preferred_seller_id (seller_id),
+    INDEX idx_preferred_junkshop_id (junkshop_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Partner-prices listing rule:
@@ -375,7 +388,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES
     ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
-    ('default_pickup_fee', 50.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
+    ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
     ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.')
 ON DUPLICATE KEY UPDATE
     config_value = VALUES(config_value),
@@ -703,3 +716,93 @@ SET renewal_status = CASE
     WHEN partnership_expires_at <= DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY) THEN 'Due'
     ELSE 'Current'
 END;
+
+DROP PROCEDURE IF EXISTS sp_get_pickup_request_details;
+
+DELIMITER //
+
+CREATE PROCEDURE sp_get_pickup_request_details(IN p_request_id INT, IN p_seller_account_id INT)
+BEGIN
+    SELECT
+        pr.id,
+        pr.booking_reference,
+        pr.seller_account_id,
+        a.full_name AS seller_name,
+        a.email AS seller_email,
+        pr.current_status,
+        pr.pickup_address,
+        pr.barangay,
+        pr.preferred_pickup_date,
+        pr.preferred_pickup_time,
+        pr.confirmed_pickup_date,
+        pr.confirmed_pickup_time,
+        DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+        TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time,
+        pr.photo_path,
+        pr.notes,
+        pr.created_at,
+        pr.updated_at,
+        pri.id AS item_id,
+        pri.material_id,
+        rm.material_name,
+        rm.category,
+        rm.unit_of_measure,
+        pri.estimated_weight,
+        COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> 'Pending Request' THEN jmp.buying_price END) AS matched_price_per_kg,
+        COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> 'Pending Request' THEN ROUND(pri.estimated_weight * jmp.buying_price, 2) END) AS estimated_value,
+        tm.final_material_value AS actual_value,
+        pri.estimated_buying_price_per_kg,
+        pri.estimated_material_value,
+        pri.estimate_snapshot_at
+    FROM pickup_requests pr
+    JOIN accounts a ON a.id = pr.seller_account_id
+    JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+    JOIN recyclable_materials rm ON rm.id = pri.material_id
+    LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1
+    LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id
+    WHERE pr.id = p_request_id
+      AND pr.seller_account_id = p_seller_account_id
+    ORDER BY rm.material_name ASC, tm.id DESC;
+END //
+
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_cancel_pickup_request;
+
+DELIMITER //
+
+CREATE PROCEDURE sp_cancel_pickup_request(IN p_request_id INT, IN p_seller_account_id INT)
+BEGIN
+    DECLARE v_status VARCHAR(40);
+
+    SELECT current_status INTO v_status
+    FROM pickup_requests
+    WHERE id = p_request_id
+      AND seller_account_id = p_seller_account_id
+    LIMIT 1;
+
+    IF v_status IS NULL THEN
+        SELECT 'Pickup request not found.' AS p_result;
+    ELSEIF v_status <> 'Pending Request' THEN
+        SELECT 'Cancellation is not allowed once the request has been accepted.' AS p_result;
+    ELSE
+        START TRANSACTION;
+        UPDATE pickup_requests
+        SET current_status = 'Cancelled by Seller', updated_at = CURRENT_TIMESTAMP
+        WHERE id = p_request_id
+          AND seller_account_id = p_seller_account_id
+          AND current_status = 'Pending Request';
+
+        IF ROW_COUNT() = 0 THEN
+            ROLLBACK;
+            SELECT 'The pickup request could not be cancelled.' AS p_result;
+        ELSE
+            INSERT INTO pickup_request_status_history (pickup_request_id, status, changed_by_account_id)
+            VALUES (p_request_id, 'Cancelled', p_seller_account_id);
+            COMMIT;
+            SELECT 'success' AS p_result;
+        END IF;
+    END IF;
+END //
+
+DELIMITER ;

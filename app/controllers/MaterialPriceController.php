@@ -58,6 +58,7 @@ class MaterialPriceController
                     jmp.buying_price,
                     jmp.available,
                     jmp.id AS price_id,
+                    CASE WHEN pj.id IS NOT NULL THEN 1 ELSE 0 END AS is_preferred,
                     IFNULL((
                         SELECT 1
                         FROM pickup_requests active_pr
@@ -74,17 +75,75 @@ class MaterialPriceController
                 LEFT JOIN recyclable_materials rm
                     ON rm.id = jmp.material_id
                    AND rm.is_active = 1
+                LEFT JOIN preferred_junkshops pj
+                    ON pj.junkshop_id = jp.account_id
+                   AND pj.seller_id = :preferred_seller_id
                 WHERE a.account_status = 'active'
                   AND jp.approval_status = 'approved'
                   AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
-                ORDER BY jp.business_name ASC, rm.category ASC, rm.material_name ASC",
-                ['seller_account_id' => (int) $sellerAccountId]
+                ORDER BY is_preferred DESC, jp.business_name ASC, rm.category ASC, rm.material_name ASC",
+                [
+                    'seller_account_id' => (int) $sellerAccountId,
+                    'preferred_seller_id' => (int) $sellerAccountId,
+                ]
             )->fetchAll(),
             static function (array $junkshop): bool {
                 $expiry = trim((string) ($junkshop['partnership_expires_at'] ?? ''));
                 return $expiry === '' || $expiry >= date('Y-m-d');
             }
         ));
+    }
+
+    public function togglePreferredJunkshop(int $sellerAccountId, int $junkshopAccountId)
+    {
+        $db = $this->db;
+
+        try {
+            $db->beginTransaction();
+
+            $junkshop = $db->query(
+                "SELECT jp.account_id
+                 FROM junkshop_profiles jp
+                 JOIN accounts a ON a.id = jp.account_id
+                 WHERE jp.account_id = :junkshop_id
+                   AND a.account_status = 'active'
+                   AND jp.approval_status = 'approved'
+                   AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
+                 LIMIT 1",
+                ['junkshop_id' => $junkshopAccountId]
+            )->fetch();
+
+            if (!$junkshop) {
+                $db->rollBack();
+                return ['success' => false, 'message' => 'Junkshop is not available for preference selection.'];
+            }
+
+            $existing = $db->query(
+                'SELECT id FROM preferred_junkshops WHERE seller_id = :seller_id AND junkshop_id = :junkshop_id LIMIT 1',
+                ['seller_id' => $sellerAccountId, 'junkshop_id' => $junkshopAccountId]
+            )->fetch();
+
+            if ($existing) {
+                $db->query(
+                    'DELETE FROM preferred_junkshops WHERE seller_id = :seller_id AND junkshop_id = :junkshop_id',
+                    ['seller_id' => $sellerAccountId, 'junkshop_id' => $junkshopAccountId]
+                );
+                $isPreferred = false;
+            } else {
+                $db->query(
+                    'INSERT INTO preferred_junkshops (seller_id, junkshop_id) VALUES (:seller_id, :junkshop_id)',
+                    ['seller_id' => $sellerAccountId, 'junkshop_id' => $junkshopAccountId]
+                );
+                $isPreferred = true;
+            }
+
+            $db->commit();
+            return ['success' => true, 'message' => 'Preferred junkshop updated.', 'is_preferred' => $isPreferred];
+        } catch (Throwable $exception) {
+            $db->rollBack();
+            error_log('Preferred junkshop toggle error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => 'Unable to update preferred junkshop.'];
+        }
     }
 
     public function getAdminPriceOverview()

@@ -371,7 +371,7 @@ class BookingLifecycleController
         )->fetch();
 
         if ($row === false || !isset($row['config_value'])) {
-            return 50.00;
+            return 0.00;
         }
 
         return (float) $row['config_value'];

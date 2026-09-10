@@ -1,12 +1,30 @@
 USE ecopickdb;
 SET NAMES utf8mb4;
 
+CREATE TABLE IF NOT EXISTS preferred_junkshops (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    seller_id INT NOT NULL,
+    junkshop_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_preferred_junkshop (seller_id, junkshop_id),
+    FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    INDEX idx_preferred_seller_id (seller_id),
+    INDEX idx_preferred_junkshop_id (junkshop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+UPDATE fee_configurations
+SET config_value = 0.00,
+    updated_at = CURRENT_TIMESTAMP
+WHERE config_key = 'default_pickup_fee';
+
 DELIMITER //
 
 DROP PROCEDURE IF EXISTS sp_register_seller //
 
 CREATE PROCEDURE sp_register_seller(
     IN p_full_name VARCHAR(255),
+    IN p_username VARCHAR(100),
     IN p_email VARCHAR(255),
     IN p_mobile_number VARCHAR(20),
     IN p_password_hash VARCHAR(255),
@@ -14,14 +32,15 @@ CREATE PROCEDURE sp_register_seller(
     IN p_barangay VARCHAR(100)
 )
 BEGIN
-    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email) THEN
-        SELECT 'Email already registered' AS p_result, NULL AS p_account_id;
+    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email OR username = p_username) THEN
+        SELECT 'Email or username already registered' AS p_result, NULL AS p_account_id;
     ELSE
-        INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, mobile_number, account_status)
+        INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
         VALUES (
             (SELECT id FROM roles WHERE name = 'seller'),
             'seller',
             p_email,
+            p_username,
             p_password_hash,
             p_full_name,
             p_mobile_number,
@@ -42,6 +61,7 @@ DROP PROCEDURE IF EXISTS sp_register_junkshop //
 CREATE PROCEDURE sp_register_junkshop(
     IN p_business_name VARCHAR(255),
     IN p_owner_name VARCHAR(255),
+    IN p_username VARCHAR(100),
     IN p_email VARCHAR(255),
     IN p_mobile_number VARCHAR(20),
     IN p_complete_address VARCHAR(255),
@@ -50,14 +70,15 @@ CREATE PROCEDURE sp_register_junkshop(
     IN p_password_hash VARCHAR(255)
 )
 BEGIN
-    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email) THEN
-        SELECT 'Email already registered' AS p_result, NULL AS p_account_id;
+    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email OR username = p_username) THEN
+        SELECT 'Email or username already registered' AS p_result, NULL AS p_account_id;
     ELSE
-        INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, mobile_number, account_status)
+        INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
         VALUES (
             (SELECT id FROM roles WHERE name = 'junkshop'),
             'junkshop',
             p_email,
+            p_username,
             p_password_hash,
             p_owner_name,
             p_mobile_number,
@@ -76,7 +97,7 @@ END //
 DROP PROCEDURE IF EXISTS sp_get_login_user_by_email //
 
 CREATE PROCEDURE sp_get_login_user_by_email(
-    IN p_email VARCHAR(255)
+    IN p_input VARCHAR(255)
 )
 BEGIN
     SELECT
@@ -84,6 +105,7 @@ BEGIN
         a.role_id,
         COALESCE(a.account_role, r.name) AS account_role,
         a.email,
+        a.username,
         a.password_hash,
         a.full_name,
         a.account_status,
@@ -94,7 +116,7 @@ BEGIN
         END AS approval_status
     FROM accounts a
     JOIN roles r ON a.role_id = r.id
-    WHERE a.email = p_email;
+    WHERE a.email = p_input OR a.username = p_input;
 END //
 
 DROP PROCEDURE IF EXISTS sp_get_account_by_id //
@@ -275,6 +297,7 @@ CREATE PROCEDURE sp_get_seller_profile(
 BEGIN
     SELECT
         a.id AS account_id,
+        a.username,
         a.full_name,
         a.email,
         a.mobile_number,
@@ -333,6 +356,7 @@ CREATE PROCEDURE sp_get_junkshop_profile(
 BEGIN
     SELECT
         a.id AS account_id,
+        a.username,
         a.email,
         a.full_name AS owner_name,
         a.mobile_number,
@@ -394,6 +418,7 @@ DROP PROCEDURE IF EXISTS sp_register_seller //
 
 CREATE PROCEDURE sp_register_seller(
     IN p_full_name VARCHAR(255),
+    IN p_username VARCHAR(100),
     IN p_email VARCHAR(255),
     IN p_mobile_number VARCHAR(20),
     IN p_password_hash VARCHAR(255),
@@ -401,14 +426,15 @@ CREATE PROCEDURE sp_register_seller(
     IN p_barangay VARCHAR(100)
 )
 BEGIN
-    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email) THEN
-        SELECT 'Email already registered' AS p_result, NULL AS p_account_id;
+    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email OR username = p_username) THEN
+        SELECT 'Email or username already registered' AS p_result, NULL AS p_account_id;
     ELSE
-        INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, mobile_number, account_status)
+        INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
         VALUES (
             (SELECT id FROM roles WHERE name = 'seller'),
             'seller',
             p_email,
+            p_username,
             p_password_hash,
             p_full_name,
             p_mobile_number,
@@ -429,6 +455,7 @@ DROP PROCEDURE IF EXISTS sp_register_junkshop //
 CREATE PROCEDURE sp_register_junkshop(
     IN p_business_name VARCHAR(255),
     IN p_owner_name VARCHAR(255),
+    IN p_username VARCHAR(100),
     IN p_email VARCHAR(255),
     IN p_mobile_number VARCHAR(20),
     IN p_complete_address VARCHAR(255),
@@ -437,14 +464,15 @@ CREATE PROCEDURE sp_register_junkshop(
     IN p_password_hash VARCHAR(255)
 )
 BEGIN
-    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email) THEN
-        SELECT 'Email already registered' AS p_result, NULL AS p_account_id;
+    IF EXISTS (SELECT 1 FROM accounts WHERE email = p_email OR username = p_username) THEN
+        SELECT 'Email or username already registered' AS p_result, NULL AS p_account_id;
     ELSE
-        INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, mobile_number, account_status)
+        INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
         VALUES (
             (SELECT id FROM roles WHERE name = 'junkshop'),
             'junkshop',
             p_email,
+            p_username,
             p_password_hash,
             p_owner_name,
             p_mobile_number,
@@ -488,7 +516,7 @@ END //
 DROP PROCEDURE IF EXISTS sp_get_login_user_by_email //
 
 CREATE PROCEDURE sp_get_login_user_by_email(
-    IN p_email VARCHAR(255)
+    IN p_input VARCHAR(255)
 )
 BEGIN
     SELECT
@@ -496,6 +524,7 @@ BEGIN
         a.role_id,
         COALESCE(a.account_role, r.name) AS account_role,
         a.email,
+        a.username,
         a.password_hash,
         a.full_name,
         a.account_status,
@@ -506,7 +535,7 @@ BEGIN
         END AS approval_status
     FROM accounts a
     JOIN roles r ON a.role_id = r.id
-    WHERE a.email = p_email;
+    WHERE a.email = p_input OR a.username = p_input;
 END //
 
 DROP PROCEDURE IF EXISTS sp_get_account_by_id //
@@ -901,6 +930,8 @@ BEGIN
         pr.preferred_pickup_time,
         pr.confirmed_pickup_date,
         pr.confirmed_pickup_time,
+        DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+        TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time,
         pr.photo_path,
         pr.notes,
         pr.created_at,
@@ -933,6 +964,8 @@ BEGIN
         pr.preferred_pickup_time,
         pr.confirmed_pickup_date,
         pr.confirmed_pickup_time,
+        DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+        TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time,
         pr.photo_path,
         pr.notes,
         pr.created_at,
@@ -1050,15 +1083,15 @@ BEGIN
 
     IF v_status IS NULL THEN
         SELECT 'Pickup request not found.' AS p_result;
-    ELSEIF v_status NOT IN ('Pending Request', 'Matched', 'Accepted') THEN
-        SELECT 'Only pending, matched, or accepted pickup requests can be cancelled.' AS p_result;
+    ELSEIF v_status <> 'Pending Request' THEN
+        SELECT 'Cancellation is not allowed once the request has been accepted.' AS p_result;
     ELSE
         START TRANSACTION;
         UPDATE pickup_requests
         SET current_status = 'Cancelled by Seller', updated_at = CURRENT_TIMESTAMP
         WHERE id = p_request_id
           AND seller_account_id = p_seller_account_id
-          AND current_status IN ('Pending Request', 'Matched', 'Accepted');
+          AND current_status = 'Pending Request';
 
         IF ROW_COUNT() = 0 THEN
             ROLLBACK;
@@ -1078,6 +1111,7 @@ CREATE PROCEDURE sp_get_junkshop_profile(IN p_account_id INT)
 BEGIN
     SELECT
         a.id AS account_id,
+        a.username,
         a.email,
         a.full_name AS owner_name,
         a.mobile_number,
@@ -1113,6 +1147,10 @@ BEGIN
                 pr.approximate_distance_km,
                 pr.preferred_pickup_date,
                 pr.preferred_pickup_time,
+                pr.confirmed_pickup_date,
+                pr.confirmed_pickup_time,
+                DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+                TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time,
                 pr.photo_path,
                 pr.notes,
                 pr.created_at,
