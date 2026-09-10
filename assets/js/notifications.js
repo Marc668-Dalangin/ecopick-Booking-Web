@@ -1,4 +1,6 @@
 (function () {
+    let lastUnreadCount = null;
+
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
     }
@@ -68,6 +70,80 @@
         });
     }
 
+    function decrementDateBadge(group) {
+        const badge = group && group.querySelector('[data-date-unread-badge]');
+        if (!badge) return;
+
+        const unreadCount = Math.max(0, Number.parseInt(badge.dataset.unreadCount || badge.textContent, 10) - 1);
+        badge.dataset.unreadCount = String(unreadCount);
+        badge.textContent = unreadCount + ' unread';
+        badge.classList.toggle('d-none', unreadCount === 0);
+    }
+
+    function persistNotificationRead(notificationId) {
+        const csrfToken = window.ecopickCsrfToken || '';
+        fetch(window.ecopickMarkReadUrl || '/api/notifications/mark-read.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ notification_id: Number(notificationId) })
+        }).catch(() => {});
+    }
+
+    function markNotificationRead(item) {
+        if (!item || item.dataset.isUnread !== '1') return;
+
+        const notificationId = item.dataset.notificationId;
+        if (!notificationId) return;
+
+        item.dataset.isUnread = '0';
+        item.classList.remove('notification-unread', 'bg-light');
+        item.querySelectorAll('.notification-unread-indicator').forEach(indicator => indicator.remove());
+        decrementDateBadge(item.closest('.notification-date-group'));
+
+        const currentCount = lastUnreadCount === null
+            ? Number(document.querySelector('[data-notification-count]')?.textContent || 0)
+            : lastUnreadCount;
+        lastUnreadCount = Math.max(0, currentCount - 1);
+        updateBadges(lastUnreadCount);
+        persistNotificationRead(notificationId);
+    }
+
+    function dateKeyFromValue(value) {
+        const date = new Date(String(value || '').replace(' ', 'T'));
+        if (Number.isNaN(date.getTime())) return '';
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function dateLabel(dateKey) {
+        const today = dateKeyFromValue(new Date());
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = dateKeyFromValue(yesterdayDate);
+
+        if (dateKey === today) return 'Today';
+        if (dateKey === yesterday) return 'Yesterday';
+
+        const date = new Date(dateKey + 'T00:00:00');
+        return Number.isNaN(date.getTime())
+            ? dateKey
+            : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function openNotificationDropdown() {
+        const toggle = document.querySelector('[data-notification-toggle]');
+        if (!toggle || !window.bootstrap?.Dropdown) return;
+
+        window.bootstrap.Dropdown.getOrCreateInstance(toggle).show();
+    }
+
     function formatNotificationTimestamp(value) {
         const rawValue = String(value || '');
         const normalizedValue = rawValue.includes('T') ? rawValue : rawValue.replace(' ', 'T') + 'Z';
@@ -79,21 +155,37 @@
         return date + ' &bull; <strong>' + escapeHtml(time) + '</strong>';
     }
 
-    function injectUnreadNotifications(notifications) {
+    function renderUnreadNotifications(notifications) {
         const menu = document.querySelector('[data-notification-menu]');
         if (!menu || !Array.isArray(notifications)) return;
 
-        const knownIds = new Set(Array.from(menu.querySelectorAll('[data-notification-id]')).map(item => item.dataset.notificationId));
-        const fresh = notifications.filter(notification => !knownIds.has(String(notification.id)));
-        fresh.reverse().forEach((notification) => {
-            const item = document.createElement('li');
-            item.dataset.notificationId = String(notification.id);
-            item.innerHTML = '<a class="dropdown-item notification-dropdown-item" href="' + escapeHtml(notification.link_url || '#') + '"><strong class="d-block">' + escapeHtml(notification.title) + '</strong><span class="small text-muted d-block">' + escapeHtml(notification.message) + '</span><span class="small text-muted">' + formatNotificationTimestamp(notification.created_at) + '</span></a>';
-            menu.insertBefore(item, menu.querySelector('[data-notification-empty]') || null);
-        });
+        const grouped = notifications.reduce((groups, notification) => {
+            const dateKey = dateKeyFromValue(notification.created_at) || dateKeyFromValue(new Date());
+            if (!groups[dateKey]) groups[dateKey] = [];
+            groups[dateKey].push(notification);
+            return groups;
+        }, {});
+
+        const groupMarkup = Object.keys(grouped).sort().reverse().map((dateKey, index) => {
+            const groupNotifications = grouped[dateKey];
+            const groupId = 'live-notification-group-' + dateKey.replace(/[^0-9]/g, '');
+            const unreadCount = groupNotifications.length;
+            const isCurrentDate = dateKey === dateKeyFromValue(new Date());
+            const shouldOpen = isCurrentDate && (lastUnreadCount === null || unreadCount > 0);
+            const items = groupNotifications.map((notification) => '<li class="notification-dropdown-item notification-unread bg-light" data-notification-id="' + escapeHtml(notification.id) + '" data-is-unread="1"><a class="dropdown-item" href="' + escapeHtml(notification.link_url || '#') + '"><strong class="d-block">' + escapeHtml(notification.title) + '</strong><span class="small text-muted d-block">' + escapeHtml(notification.message) + '</span><span class="small text-muted">' + formatNotificationTimestamp(notification.created_at) + '</span></a></li>').join('');
+
+            return '<li class="notification-date-group" data-date-group="' + escapeHtml(dateKey) + '"><button type="button" class="notification-toggle dropdown-item d-flex align-items-center justify-content-between gap-2 fw-semibold" data-bs-toggle="collapse" data-bs-target="#' + groupId + '" aria-expanded="' + (shouldOpen ? 'true' : 'false') + '"><span>' + escapeHtml(dateLabel(dateKey)) + '</span><span class="d-flex align-items-center gap-2"><span class="badge bg-danger rounded-pill" data-date-unread-badge data-unread-count="' + unreadCount + '">' + unreadCount + ' unread</span><i class="bi bi-chevron-' + (shouldOpen ? 'up' : 'down') + ' toggle-icon"></i></span></button><div id="' + groupId + '" class="collapse ' + (shouldOpen ? 'show' : '') + '"><ul class="list-unstyled mb-0">' + items + '</ul></div></li>';
+        }).join('');
 
         const empty = menu.querySelector('[data-notification-empty]');
+        menu.querySelectorAll('.notification-date-group').forEach(group => group.remove());
         if (empty) empty.classList.toggle('d-none', notifications.length > 0);
+        menu.insertAdjacentHTML('beforeend', groupMarkup);
+    }
+
+    function expandCurrentDateGroup() {
+        const group = document.querySelector('.notification-date-group[data-date-group="' + dateKeyFromValue(new Date()) + '"]');
+        if (group) applyGroupState(group, true);
     }
 
     function handleNotificationRender() {
@@ -121,6 +213,13 @@
     }
 
     document.addEventListener('click', function (event) {
+        const notificationItem = event.target.closest('.notification-item, .notification-dropdown-item');
+        if (notificationItem) {
+            event.stopPropagation();
+            markNotificationRead(notificationItem);
+            return;
+        }
+
         const toggle = event.target.closest('.notification-toggle');
         if (!toggle) return;
 
@@ -162,9 +261,19 @@
             interval: 3000,
             onSuccess: function (payload) {
                 const data = payload.data || {};
-                updateBadges(Number(data.unread_count || 0));
-                injectUnreadNotifications(data.notifications || []);
+                const currentUnreadCount = Number(data.unread_count || 0);
+                const hasNewNotification = lastUnreadCount !== null && currentUnreadCount > lastUnreadCount;
+
+                updateBadges(currentUnreadCount);
+                renderUnreadNotifications(data.notifications || []);
                 handleNotificationRender();
+
+                if (hasNewNotification) {
+                    openNotificationDropdown();
+                    expandCurrentDateGroup();
+                }
+
+                lastUnreadCount = currentUnreadCount;
             }
         });
     });

@@ -2,6 +2,7 @@
 -- Import this file first, then import sp_add.sql.
 CREATE DATABASE IF NOT EXISTS ecopickdb CHARACTER SET utf8mb4 COLLATE=utf8mb4_unicode_ci;
 USE ecopickdb;
+SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -53,6 +54,19 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     INDEX idx_account_id (account_id),
     INDEX idx_approval_status (approval_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Partner-prices listing rule:
+-- Approved junkshops must remain visible even when they have not added any prices yet.
+-- Use LEFT JOIN against junkshop_material_prices so the junkshop row is retained when the
+-- pricing table has no matching entries. The only strict filters are the approval and status checks.
+-- Example:
+-- SELECT ...
+-- FROM junkshop_profiles jp
+-- JOIN accounts a ON a.id = jp.account_id
+-- LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = jp.account_id AND jmp.available = 1
+-- LEFT JOIN recyclable_materials rm ON rm.id = jmp.material_id AND rm.is_active = 1
+-- WHERE a.account_status = 'active'
+--   AND jp.approval_status = 'approved';
 
 INSERT INTO roles (name, description) VALUES
 ('seller', 'Recyclable material seller'),
@@ -252,19 +266,31 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
     booking_reference VARCHAR(24) NOT NULL,
     seller_account_id INT NOT NULL,
+    junkshop_id INT NULL,
     current_status ENUM('Pending Request', 'Cancelled') NOT NULL DEFAULT 'Pending Request',
+    final_recyclable_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    pickup_collection_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    ecopick_service_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    final_amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    payment_method ENUM('Cash') NULL,
+    payment_status ENUM('Unpaid', 'Paid') NULL,
     pickup_address VARCHAR(255) NOT NULL,
     barangay VARCHAR(120) NOT NULL,
     preferred_pickup_date DATE NOT NULL,
     preferred_pickup_time VARCHAR(40) NOT NULL,
+    confirmed_pickup_date DATE NULL,
+    confirmed_pickup_time TIME NULL,
     photo_path VARCHAR(255) NULL,
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_pickup_booking_reference (booking_reference),
     INDEX idx_pickup_seller_status (seller_account_id, current_status),
+    INDEX idx_pickup_seller_junkshop_status (seller_account_id, junkshop_id, current_status),
+    INDEX idx_pickup_junkshop_status (junkshop_id, current_status),
     INDEX idx_pickup_status_created (current_status, created_at),
-    CONSTRAINT fk_pickup_request_seller FOREIGN KEY (seller_account_id) REFERENCES accounts(id) ON DELETE CASCADE
+    CONSTRAINT fk_pickup_request_seller FOREIGN KEY (seller_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pickup_request_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pickup_request_items (
@@ -272,6 +298,8 @@ CREATE TABLE IF NOT EXISTS pickup_request_items (
     pickup_request_id INT NOT NULL,
     material_id INT NOT NULL,
     estimated_weight DECIMAL(10,2) NOT NULL,
+    actual_weight DECIMAL(10,2) NULL,
+    material_condition VARCHAR(120) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_pickup_request_material (pickup_request_id, material_id),
     INDEX idx_pickup_item_request (pickup_request_id),
@@ -310,23 +338,6 @@ ALTER TABLE pickup_requests
         'Completed',
         'Cancelled'
     ) NOT NULL DEFAULT 'Pending Request';
-
-CREATE TABLE IF NOT EXISTS junkshop_assignments (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    pickup_request_id INT NOT NULL,
-    junkshop_id INT NOT NULL,
-    status ENUM('Matched', 'Accepted', 'Declined', 'Rematched') NOT NULL DEFAULT 'Matched',
-    distance_km DECIMAL(5,2) NULL,
-    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    responded_at TIMESTAMP NULL,
-    INDEX idx_assignment_pickup_request (pickup_request_id),
-    INDEX idx_assignment_junkshop (junkshop_id),
-    INDEX idx_assignment_status (status),
-    CONSTRAINT fk_assignment_pickup_request
-        FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
-    CONSTRAINT fk_assignment_junkshop
-        FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS fee_configurations (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -448,6 +459,7 @@ CREATE TABLE IF NOT EXISTS transaction_materials (
     accepted TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_transaction_request_item (transaction_id, pickup_request_item_id),
+    INDEX idx_transaction_material_request_item (pickup_request_item_id),
     INDEX idx_transaction_material_material (material_id),
     CONSTRAINT fk_transaction_material_transaction
         FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,

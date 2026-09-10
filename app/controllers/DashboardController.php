@@ -215,23 +215,96 @@ class DashboardController
     public function getSellerTransactionHistory(int $sellerId): array
     {
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.junkshop_id, t.actual_weight_kg, t.final_recyclable_value, t.pickup_fee, t.ecopick_service_fee, t.final_seller_amount, t.payment_method, t.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(SUM(pri.actual_weight), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
             ['seller_id' => $sellerId]
         )->fetchAll();
     }
 
     public function getJunkshopAssignments(int $junkshopId): array
     {
+        try {
+            return $this->db->query(
+                'SELECT pr.id AS pickup_request_id, pr.id AS assignment_id, pr.booking_reference, pr.current_status, pr.pickup_location_name, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at, a.full_name AS seller_name, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight, GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary, GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items, CASE WHEN pr.current_status = :pending_status THEN :matched_status ELSE pr.current_status END AS assignment_status, NULL AS distance_km, NULL AS assigned_at, NULL AS responded_at FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id WHERE pr.junkshop_id = :junkshop_id AND pr.current_status IN (:pending_status, :pending_legacy_status, :matched_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status, :cancelled_status) GROUP BY pr.id ORDER BY pr.created_at DESC',
+                [
+                    'junkshop_id' => $junkshopId,
+                    'pending_status' => 'Pending Request',
+                    'pending_legacy_status' => 'Pending',
+                    'matched_status' => 'Matched',
+                    'accepted_status' => 'Accepted',
+                    'scheduled_status' => 'Scheduled',
+                    'for_pickup_status' => 'For Pickup',
+                    'completed_status' => 'Completed',
+                    'cancelled_status' => 'Cancelled',
+                ]
+            )->fetchAll();
+        } catch (Throwable $e) {
+            error_log($e->getMessage());
+            return [];
+        }
+    }
+
+    public function getPendingJunkshopRequests(int $junkshopId): array
+    {
         return $this->db->query(
-            'SELECT ja.id AS assignment_id, ja.pickup_request_id, pr.booking_reference, pr.current_status, pr.pickup_location_name, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at, a.full_name AS seller_name, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight, GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary, GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items, MAX(t.id) AS transaction_id, MAX(t.payment_method) AS payment_method, MAX(t.payment_status) AS payment_status, MAX(pp.id) AS payment_proof_id, ja.status AS assignment_status, ja.distance_km, ja.assigned_at, ja.responded_at FROM junkshop_assignments ja JOIN pickup_requests pr ON pr.id = ja.pickup_request_id JOIN accounts a ON a.id = pr.seller_account_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id LEFT JOIN transactions t ON t.pickup_request_id = pr.id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE ja.junkshop_id = :junkshop_id GROUP BY ja.id ORDER BY ja.assigned_at DESC',
-            ['junkshop_id' => $junkshopId]
+            'SELECT
+                pr.id AS pickup_request_id,
+                pr.id AS assignment_id,
+                pr.booking_reference,
+                pr.current_status,
+                pr.pickup_location_name,
+                pr.pickup_address,
+                pr.barangay,
+                pr.preferred_pickup_date,
+                pr.preferred_pickup_time,
+                pr.confirmed_pickup_date,
+                pr.confirmed_pickup_time,
+                pr.approximate_distance_km AS distance_km,
+                pr.created_at,
+                seller.full_name AS seller_name,
+                sp.address AS seller_address,
+                sp.barangay AS seller_barangay,
+                COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
+                GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary,
+                GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2), ":", FORMAT(COALESCE(jmp.buying_price, 0), 2)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items,
+                COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct,
+                CASE pr.current_status
+                    WHEN \'Pending Request\' THEN \'Pending\'
+                    WHEN \'Accepted\' THEN \'Accepted\'
+                    WHEN \'Scheduled\' THEN \'Scheduled\'
+                    WHEN \'For Pickup\' THEN \'For Pickup\'
+                    WHEN \'Completed\' THEN \'Completed\'
+                    ELSE pr.current_status
+                END AS assignment_status
+            FROM pickup_requests pr
+            JOIN accounts seller ON seller.id = pr.seller_account_id
+            JOIN seller_profiles sp ON sp.account_id = seller.id
+            LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+            LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
+            LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1
+            WHERE pr.junkshop_id = :junkshop_id
+                              AND pr.current_status IN (:pending_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status)
+            GROUP BY pr.id, seller.id, sp.id
+                        ORDER BY FIELD(pr.current_status, :pending_status_order, :accepted_status_order, :scheduled_status_order, :for_pickup_status_order, :completed_status_order), pr.updated_at DESC',
+            [
+                'junkshop_id' => $junkshopId,
+                'pending_status' => 'Pending Request',
+                'accepted_status' => 'Accepted',
+                                'scheduled_status' => 'Scheduled',
+                                'for_pickup_status' => 'For Pickup',
+                                'completed_status' => 'Completed',
+                                'pending_status_order' => 'Pending Request',
+                                'accepted_status_order' => 'Accepted',
+                                'scheduled_status_order' => 'Scheduled',
+                                'for_pickup_status_order' => 'For Pickup',
+                                'completed_status_order' => 'Completed',
+            ]
         )->fetchAll();
     }
 
     public function getJunkshopCompletedTransactions(int $junkshopId): array
     {
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.seller_id, t.actual_weight_kg, t.final_recyclable_value, t.pickup_fee, t.ecopick_service_fee, t.final_seller_amount, t.transaction_commission, t.payment_method, t.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg x \\u20b1\', FORMAT(tm.buying_price_per_kg, 2), \')\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.junkshop_id = :junkshop_id GROUP BY t.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.seller_id, COALESCE(SUM(pri.actual_weight), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, t.transaction_commission, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg x ₱\', FORMAT(tm.buying_price_per_kg, 2), \')\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.junkshop_id = :junkshop_id GROUP BY t.id, pr.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
             ['junkshop_id' => $junkshopId]
         )->fetchAll();
     }
@@ -239,7 +312,7 @@ class DashboardController
     public function getSellerCompletedTransactions(int $sellerId): array
     {
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.junkshop_id, t.actual_weight_kg, t.final_recyclable_value, t.pickup_fee, t.ecopick_service_fee, t.final_seller_amount, t.payment_method, t.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg)\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(SUM(pri.actual_weight), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg)\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
             ['seller_id' => $sellerId]
         )->fetchAll();
     }
@@ -259,7 +332,7 @@ class DashboardController
         }
 
         if ($role === 'junkshop') {
-            $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr JOIN junkshop_assignments ja ON ja.pickup_request_id = pr.id WHERE ja.junkshop_id = :user_id AND pr.current_status IN (' . $placeholders . ') ORDER BY pr.updated_at DESC';
+            $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr WHERE pr.junkshop_id = :user_id AND pr.current_status IN (' . $placeholders . ') ORDER BY pr.updated_at DESC';
             $params = [$userId];
             foreach ($statuses as $status) {
                 $params[] = $status;

@@ -50,7 +50,6 @@ require_once __DIR__ . '/helpers/Validator.php';
 require_once __DIR__ . '/helpers/UI.php';
 
 // Load service layer
-require_once __DIR__ . '/services/MatchingEngine.php';
 require_once __DIR__ . '/services/StatusLogger.php';
 require_once __DIR__ . '/services/NotificationService.php';
 require_once __DIR__ . '/services/MailerService.php';

@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/controllers/MaterialPriceController.php';
 
+$timeOptions = ['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM'];
+
 if (!Auth::check()) {
     header('Location: ' . APP_URL . '/user-junkshop/login.php');
     exit;
@@ -13,8 +15,11 @@ if (Auth::userRole() !== 'seller') {
 }
 
 $controller = new MaterialPriceController();
-$junkshops = $controller->listApprovedJunkshopsWithPrices();
+$junkshops = $controller->listApprovedJunkshopsWithPrices(Auth::userId());
 $materials = $controller->listActiveMaterials();
+$feeConfigs = FeeCalculator::getConfigs();
+$defaultPickupFee = (float)($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
+$serviceFeePct = (float)($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
 
 $pageTitle = 'Partner Junkshops and Buying Prices';
 $currentPage = 'partner-prices';
@@ -95,15 +100,35 @@ ob_start();
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($rows as $row): ?>
-                                                <tr data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
-                                                    <td><?php echo Validator::escape($row['material_name'] ?? ''); ?></td>
-                                                    <td><?php echo Validator::escape($row['category'] ?? ''); ?></td>
-                                                    <td class="text-end fw-semibold">₱<?php echo number_format((float)($row['buying_price'] ?? 0), 2); ?> / <?php echo Validator::escape($row['unit_of_measure'] ?? 'kg'); ?></td>
-                                                </tr>
+                                            <?php $hasPriceRows = false; foreach ($rows as $row): ?>
+                                                <?php if (!empty($row['material_name'])): ?>
+                                                    <?php $hasPriceRows = true; ?>
+                                                    <tr data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
+                                                        <td><?php echo Validator::escape($row['material_name'] ?? ''); ?></td>
+                                                        <td><?php echo Validator::escape($row['category'] ?? ''); ?></td>
+                                                        <td class="text-end fw-semibold">₱<?php echo number_format((float)($row['buying_price'] ?? 0), 2); ?> / <?php echo Validator::escape($row['unit_of_measure'] ?? 'kg'); ?></td>
+                                                    </tr>
+                                                <?php endif; ?>
                                             <?php endforeach; ?>
+                                            <?php if (!$hasPriceRows): ?>
+                                                <tr>
+                                                    <td colspan="3" class="text-muted fst-italic text-center py-3">Prices not yet listed</td>
+                                                </tr>
+                                            <?php endif; ?>
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <div class="d-flex justify-content-end mt-3">
+                                    <?php if (!empty($junkshop['has_active_request'])): ?>
+                                        <button type="button" class="btn btn-secondary disabled" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" disabled>
+                                            <i class="bi bi-clock-history"></i> Request Pending
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-primary request-pickup-btn" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>">
+                                            <i class="bi bi-plus-circle"></i> Request Pickup
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -113,11 +138,104 @@ ob_start();
         <?php endif; ?>
     </div>
 </div>
+
+<div class="modal fade" id="sellerPickupRequestModal" tabindex="-1" aria-labelledby="sellerPickupRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sellerPickupRequestModalLabel">Request Pickup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="pickup-request-form-status" class="alert d-none" role="alert" aria-live="polite"></div>
+                <form id="pickup-request-form" enctype="multipart/form-data" novalidate>
+                    <?php echo CSRF::field(); ?>
+                    <input type="hidden" name="action" value="create">
+                    <input type="hidden" name="junkshop_id" id="selected-junkshop-id" value="0">
+
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-2">Materials</h6>
+                        <div id="material-rows"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-material-row">
+                            <i class="bi bi-plus-lg"></i> Add material
+                        </button>
+                    </div>
+
+                    <div class="card border-0 bg-light-subtle mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0">Estimated calculation</h6>
+                                <span class="badge bg-primary-subtle text-primary">Live estimate</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Estimated recyclable value</div><div class="fw-bold fs-5" id="calc-estimated-recyclable-value">₱0.00</div></div>
+                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Pickup fee</div><div class="fw-bold fs-5" id="calc-pickup-fee">₱0.00</div></div>
+                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Service fee</div><div class="fw-bold fs-5" id="calc-service-fee">₱0.00</div></div>
+                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Estimated net amount</div><div class="fw-bold fs-5 text-success" id="calc-estimated-net-amount">₱0.00</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4"><label class="form-label" for="pickup_location_name">Location name <span class="text-danger">*</span></label><input class="form-control" id="pickup_location_name" name="pickup_location_name" required maxlength="160" placeholder="Subdivision, landmark, or sitio"></div>
+                        <div class="col-md-4"><label class="form-label" for="pickup_address">Pickup address <span class="text-danger">*</span></label><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" placeholder="House number, street, subdivision"></div>
+                        <div class="col-md-4"><label class="form-label" for="barangay">Barangay <span class="text-danger">*</span></label><input class="form-control" id="barangay" name="barangay" required maxlength="120" placeholder="Barangay name"></div>
+                        <div class="col-md-4"><label class="form-label" for="approximate_distance_km">Approximate distance (km) <span class="text-danger">*</span></label><input type="number" min="0" max="15" step="0.01" class="form-control" id="approximate_distance_km" name="approximate_distance_km" required placeholder="Example: 4.50"></div>
+                        <div class="col-md-4"><label class="form-label" for="preferred_pickup_date">Preferred pickup date <span class="text-danger">*</span></label><input type="date" class="form-control" id="preferred_pickup_date" name="preferred_pickup_date" required></div>
+                        <div class="col-md-4"><label class="form-label" for="preferred_pickup_time">Preferred pickup time <span class="text-danger">*</span></label><select class="form-select" id="preferred_pickup_time" name="preferred_pickup_time" required><option value="">Choose a preferred time</option><?php foreach ($timeOptions as $time): ?><option value="<?php echo Validator::escape($time); ?>"><?php echo Validator::escape($time); ?></option><?php endforeach; ?></select></div>
+                        <div class="col-12"><label class="form-label" for="photo">Optional recyclable-material photo</label><input type="file" class="form-control" id="photo" name="photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><div class="form-text">JPG, JPEG, PNG, or WEBP only; maximum 5 MB.</div></div>
+                        <div class="col-12"><label class="form-label" for="notes">Optional notes</label><textarea class="form-control" id="notes" name="notes" rows="4" maxlength="2000" placeholder="Add useful access or material details."></textarea></div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Submit pickup request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="pickupRequestToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" data-toast-message>Pickup request submitted successfully.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const nameFilter = document.getElementById('filter-junkshop-name');
         const materialFilter = document.getElementById('filter-material');
         const cards = Array.from(document.querySelectorAll('.seller-junkshop-card'));
+        const form = document.getElementById('pickup-request-form');
+        const rows = document.getElementById('material-rows');
+        const status = document.getElementById('pickup-request-form-status');
+        const hiddenJunkshopId = document.getElementById('selected-junkshop-id');
+        const modalEl = document.getElementById('sellerPickupRequestModal');
+        const pickupModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const successToast = bootstrap.Toast.getOrCreateInstance(document.getElementById('pickupRequestToast'));
+        const materialOptions = <?php echo json_encode($materials, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const pricesByJunkshop = <?php
+            $pricesByJunkshop = [];
+            foreach ($rowsByJunkshop as $junkshopId => $junkshopRows) {
+                $pricesByJunkshop[$junkshopId] = [];
+                foreach ($junkshopRows as $priceRow) {
+                    if (!empty($priceRow['material_id']) && isset($priceRow['buying_price'])) {
+                        $pricesByJunkshop[$junkshopId][(int)$priceRow['material_id']] = (float)$priceRow['buying_price'];
+                    }
+                }
+            }
+            echo json_encode($pricesByJunkshop, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        ?>;
+        const defaultPickupFee = <?php echo json_encode($defaultPickupFee); ?>;
+        const serviceFeePct = <?php echo json_encode($serviceFeePct); ?>;
+        const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
+        let rowIndex = 0;
+        let selectedPrices = {};
 
         function applySellerFilters() {
             const nameValue = (nameFilter?.value || '').toLowerCase().trim();
@@ -125,7 +243,7 @@ ob_start();
 
             cards.forEach(function (card) {
                 const businessName = (card.dataset.junkshopName || '').toLowerCase();
-                const rows = card.querySelectorAll('[data-material-name]');
+                const rowsInCard = card.querySelectorAll('[data-material-name]');
                 let visible = true;
 
                 if (nameValue && !businessName.includes(nameValue)) {
@@ -133,7 +251,7 @@ ob_start();
                 }
 
                 if (materialValue) {
-                    const matchMaterial = Array.from(rows).some(function (row) {
+                    const matchMaterial = Array.from(rowsInCard).some(function (row) {
                         return (row.dataset.materialName || '').includes(materialValue);
                     });
                     if (!matchMaterial) {
@@ -145,8 +263,149 @@ ob_start();
             });
         }
 
+        function formatMoney(value) {
+            return '₱' + Number(value || 0).toFixed(2);
+        }
+
+        function showStatus(message, success, errors) {
+            status.className = 'alert ' + (success ? 'alert-success' : 'alert-danger');
+            status.innerHTML = message + (errors && errors.length ? '<ul class="mb-0 mt-2">' + errors.map(function (error) { return '<li>' + String(error) + '</li>'; }).join('') + '</ul>' : '');
+            status.classList.remove('d-none');
+        }
+
+        function refreshMaterialChoices() {
+            const selected = Array.from(document.querySelectorAll('.material-select')).map(function (select) { return select.value; }).filter(Boolean);
+            document.querySelectorAll('.material-select').forEach(function (select) {
+                select.querySelectorAll('option').forEach(function (option) {
+                    option.disabled = !!(option.value && selected.includes(option.value) && option.value !== select.value);
+                });
+            });
+        }
+
+        function updateEstimateSummary() {
+            let recyclableValue = 0;
+            document.querySelectorAll('.material-row').forEach(function (row) {
+                const select = row.querySelector('.material-select');
+                const weightInput = row.querySelector('.weight-input');
+                if (!select || !weightInput) return;
+                const materialId = Number(select.value || 0);
+                const weight = Number(weightInput.value || 0);
+                const price = materialId && selectedPrices[materialId] ? Number(selectedPrices[materialId]) : 0;
+                recyclableValue += weight * price;
+            });
+
+            const serviceFee = recyclableValue * (Number(serviceFeePct || 0) / 100);
+            const netAmount = recyclableValue - Number(defaultPickupFee || 0) - serviceFee;
+            document.getElementById('calc-estimated-recyclable-value').textContent = formatMoney(recyclableValue);
+            document.getElementById('calc-pickup-fee').textContent = formatMoney(Number(defaultPickupFee || 0));
+            document.getElementById('calc-service-fee').textContent = formatMoney(serviceFee);
+            document.getElementById('calc-estimated-net-amount').textContent = formatMoney(netAmount);
+        }
+
+        function markJunkshopRequestPending(junkshopId) {
+            const button = document.querySelector('button.request-pickup-btn[data-junkshop-id="' + CSS.escape(String(junkshopId)) + '"]');
+            if (!button) return;
+
+            button.classList.remove('btn-primary', 'request-pickup-btn');
+            button.classList.add('btn-secondary', 'disabled');
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-clock-history"></i> Request Pending';
+        }
+
+        function addMaterialRow() {
+            const row = document.createElement('div');
+            row.className = 'row g-2 align-items-end mb-3 material-row';
+            row.dataset.index = String(rowIndex++);
+            row.innerHTML = '<div class="col-md-7"><label class="form-label" for="material-' + row.dataset.index + '">Material <span class="text-danger">*</span></label><select class="form-select material-select" id="material-' + row.dataset.index + '" name="material_id[]" required><option value="">Choose material</option>' + materialOptions.map(function (material) { return '<option value="' + material.id + '">' + material.material_name + ' (' + material.unit_of_measure + ')</option>'; }).join('') + '</select></div><div class="col-md-3"><label class="form-label" for="weight-' + row.dataset.index + '">Estimated kg <span class="text-danger">*</span></label><input class="form-control weight-input" id="weight-' + row.dataset.index + '" name="estimated_weight[]" type="number" min="0.01" step="0.01" required placeholder="0.00"></div><div class="col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-material" aria-label="Remove material row"><i class="bi bi-trash"></i></button></div>';
+            rows.appendChild(row);
+            refreshMaterialChoices();
+            row.querySelectorAll('.material-select, .weight-input').forEach(function (input) {
+                input.addEventListener('input', updateEstimateSummary);
+                input.addEventListener('change', updateEstimateSummary);
+            });
+            updateEstimateSummary();
+        }
+
         nameFilter?.addEventListener('input', applySellerFilters);
         materialFilter?.addEventListener('change', applySellerFilters);
+
+        document.querySelectorAll('.request-pickup-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const selectedJunkshopId = button.dataset.junkshopId || '0';
+                status.classList.add('d-none');
+                form.reset();
+                hiddenJunkshopId.value = selectedJunkshopId;
+                selectedPrices = pricesByJunkshop[selectedJunkshopId] || {};
+                rows.innerHTML = '';
+                addMaterialRow();
+                pickupModal.show();
+            });
+        });
+
+        document.getElementById('add-material-row').addEventListener('click', addMaterialRow);
+        rows.addEventListener('change', function () { refreshMaterialChoices(); updateEstimateSummary(); });
+        rows.addEventListener('click', function (event) {
+            const button = event.target.closest('.remove-material');
+            if (!button) return;
+            if (document.querySelectorAll('.material-row').length === 1) {
+                showStatus('At least one recyclable material is required.', false, []);
+                return;
+            }
+            button.closest('.material-row').remove();
+            refreshMaterialChoices();
+            updateEstimateSummary();
+        });
+
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            status.classList.add('d-none');
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                showStatus('Please correct the highlighted fields before submitting.', false, []);
+                return;
+            }
+
+            const selected = Array.from(document.querySelectorAll('.material-select')).map(function (select) { return select.value; }).filter(Boolean);
+            if (selected.length !== new Set(selected).size) {
+                showStatus('Please choose each recyclable material only once.', false, []);
+                return;
+            }
+
+            if (!window.confirm('Are you sure you want to submit this pickup request to this junkshop?')) {
+                return;
+            }
+
+            try {
+                const submittedJunkshopId = hiddenJunkshopId.value;
+                const response = await fetch(apiUrl, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+                const payload = await response.json();
+                if (payload.session_expired && payload.redirect) {
+                    window.location.href = payload.redirect;
+                    return;
+                }
+                if (!response.ok || !payload.success) {
+                    showStatus(payload.message || 'Please correct the form.', false, payload.validation_errors || []);
+                    return;
+                }
+
+                markJunkshopRequestPending(submittedJunkshopId);
+                const toastMessage = document.querySelector('[data-toast-message]');
+                toastMessage.textContent = 'Pickup request submitted successfully for selected partner junkshop.';
+                successToast.show();
+                form.reset();
+                rows.innerHTML = '';
+                addMaterialRow();
+                pickupModal.hide();
+            } catch (error) {
+                showStatus('Unable to submit the pickup request right now.', false, []);
+            }
+        });
+
+        const dateField = document.getElementById('preferred_pickup_date');
+        const today = new Date();
+        const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        dateField.min = localToday;
+        addMaterialRow();
     });
 </script>
 <?php

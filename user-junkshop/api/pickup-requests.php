@@ -6,13 +6,13 @@ header('Content-Type: application/json; charset=UTF-8');
 
 if (!Auth::check()) {
     http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Session expired. Please log in again.', 'session_expired' => true, 'redirect' => APP_URL . '/user-junkshop/login.php', 'data' => ['requests' => []]]);
+    echo json_encode(['success' => false, 'message' => 'Session expired. Please log in again.', 'session_expired' => true, 'redirect' => APP_URL . '/user-junkshop/login.php', 'data' => ['requests' => []]], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 if (Auth::userRole() !== 'seller') {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Only sellers can access pickup requests.', 'data' => ['requests' => []]]);
+    echo json_encode(['success' => false, 'message' => 'Only sellers can access pickup requests.', 'data' => ['requests' => []]], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -24,7 +24,7 @@ $action = $_POST['action'] ?? ($_GET['action'] ?? 'list');
 if ($method === 'POST') {
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid security token. Please try again.', 'validation_errors' => []]);
+        echo json_encode(['success' => false, 'message' => 'Invalid security token. Please try again.', 'validation_errors' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -41,6 +41,7 @@ if ($method === 'POST') {
 
         $result = $controller->createRequest($sellerId, [
             'items' => $items,
+            'junkshop_id' => $_POST['junkshop_id'] ?? 0,
             'pickup_location_name' => $_POST['pickup_location_name'] ?? '',
             'pickup_address' => $_POST['pickup_address'] ?? '',
             'barangay' => $_POST['barangay'] ?? '',
@@ -54,7 +55,7 @@ if ($method === 'POST') {
             $result['data'] = ['requests' => $controller->listSellerRequests($sellerId), 'request' => $result['request']];
             unset($result['request']);
         }
-        echo json_encode($result);
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -63,12 +64,12 @@ if ($method === 'POST') {
         $result = $controller->cancelRequest($requestId, $sellerId);
         $result['validation_errors'] = [];
         $result['data'] = ['requests' => $controller->listSellerRequests($sellerId)];
-        echo json_encode($result);
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Unsupported pickup request action.', 'validation_errors' => []]);
+    echo json_encode(['success' => false, 'message' => 'Unsupported pickup request action.', 'validation_errors' => []], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -76,12 +77,12 @@ if ($action === 'details') {
     $request = $controller->getSellerRequestDetails((int) ($_GET['request_id'] ?? 0), $sellerId);
     if ($request === null) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Pickup request not found.', 'data' => []]);
+        echo json_encode(['success' => false, 'message' => 'Pickup request not found.', 'data' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    echo json_encode(['success' => true, 'message' => 'Pickup request loaded.', 'data' => ['request' => $request], 'validation_errors' => []]);
+    echo json_encode(['success' => true, 'message' => 'Pickup request loaded.', 'data' => ['request' => $request], 'validation_errors' => []], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $requests = $controller->listSellerRequests($sellerId);
-echo json_encode(['success' => true, 'message' => 'Pickup requests loaded.', 'data' => ['requests' => $requests], 'validation_errors' => [], 'timestamp' => time()]);
+echo json_encode(['success' => true, 'message' => 'Pickup requests loaded.', 'data' => ['requests' => $requests], 'validation_errors' => [], 'timestamp' => time()], JSON_UNESCAPED_UNICODE);

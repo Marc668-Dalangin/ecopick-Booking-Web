@@ -33,10 +33,6 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
                     <span>Dashboard</span>
                 </a>
                 <?php if (Auth::userRole() === 'seller'): ?>
-                    <a class="nav-link <?php echo $currentPage === 'new-pickup' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/new-pickup-request.php">
-                        <i class="bi bi-plus-circle"></i>
-                        <span>New Pickup Request</span>
-                    </a>
                     <a class="nav-link <?php echo $currentPage === 'current-bookings' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/current-bookings.php">
                         <i class="bi bi-calendar2-check"></i>
                         <span>Current Bookings</span>
@@ -97,7 +93,7 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
                         <div class="small text-muted"><?php echo ucfirst(Validator::escape($userRole)); ?></div>
                     </div>
                     <div class="dropdown">
-                        <button class="btn btn-outline-secondary position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+                        <button class="btn btn-outline-secondary position-relative" type="button" data-notification-toggle data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications">
                             <i class="bi bi-bell"></i>
                             <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle <?php echo $notificationCount > 0 ? '' : 'd-none'; ?>" data-notification-count><?php echo $notificationCount; ?></span>
                         </button>
@@ -140,10 +136,6 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
                                 <span>Dashboard</span>
                             </a>
                             <?php if (Auth::userRole() === 'seller'): ?>
-                                <a class="nav-link <?php echo $currentPage === 'new-pickup' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/new-pickup-request.php">
-                                    <i class="bi bi-plus-circle"></i>
-                                    <span>New Pickup Request</span>
-                                </a>
                                 <a class="nav-link <?php echo $currentPage === 'current-bookings' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/current-bookings.php">
                                     <i class="bi bi-calendar2-check"></i>
                                     <span>Current Bookings</span>
@@ -180,7 +172,11 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo APP_URL; ?>/assets/js/live-updates.js"></script>
-    <script>window.ecopickNotificationUrl = '<?php echo APP_URL; ?>/api/notifications/fetch-latest.php';</script>
+    <script>
+        window.ecopickNotificationUrl = '<?php echo APP_URL; ?>/api/notifications/fetch-latest.php';
+        window.ecopickMarkReadUrl = '<?php echo APP_URL; ?>/api/notifications/mark-read.php';
+        window.ecopickCsrfToken = '<?php echo Validator::escape(CSRF::token()); ?>';
+    </script>
     <script src="<?php echo APP_URL; ?>/assets/js/notifications.js"></script>
     <script src="<?php echo APP_URL; ?>/assets/js/main.js"></script>
 </body>

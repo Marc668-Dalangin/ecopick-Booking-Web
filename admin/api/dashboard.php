@@ -26,7 +26,7 @@ if (!Auth::check()) {
             'pending' => [],
             'pending_count' => 0,
         ],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -36,7 +36,7 @@ if (Auth::userRole() !== 'admin') {
         'success' => false,
         'message' => 'Access denied.',
         'data' => [],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -55,4 +55,4 @@ echo json_encode([
         'pending_count' => count($pending),
     ],
     'timestamp' => time(),
-]);
+], JSON_UNESCAPED_UNICODE);

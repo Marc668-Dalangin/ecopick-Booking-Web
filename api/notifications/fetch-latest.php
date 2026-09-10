@@ -12,7 +12,7 @@ if (!Auth::check()) {
         'session_expired' => true,
         'redirect' => APP_URL . '/user-junkshop/login.php',
         'data' => ['unread_count' => 0, 'notifications' => []],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -24,4 +24,4 @@ echo json_encode([
         'notifications' => $controller->latestUnreadForUser(Auth::userId()),
     ],
     'timestamp' => time(),
-]);
+], JSON_UNESCAPED_UNICODE);

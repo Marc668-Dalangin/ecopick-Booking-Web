@@ -12,7 +12,7 @@ if (!Auth::check()) {
         'session_expired' => true,
         'redirect' => APP_URL . '/user-junkshop/login.php',
         'data' => ['materials' => [], 'prices' => []],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -22,7 +22,7 @@ if (Auth::userRole() !== 'junkshop') {
         'success' => false,
         'message' => 'Only approved junkshops may manage material prices.',
         'data' => ['materials' => [], 'prices' => []],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -34,7 +34,7 @@ if ($method === 'POST') {
     $action = $_POST['action'] ?? '';
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid security token. Please try again.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid security token. Please try again.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -44,7 +44,7 @@ if ($method === 'POST') {
 
     if ($action === 'add' || $action === 'update') {
         if ($amount === '' || !is_numeric($amount) || (float) $amount <= 0) {
-            echo json_encode(['success' => false, 'message' => 'Please enter a valid positive buying price.']);
+            echo json_encode(['success' => false, 'message' => 'Please enter a valid positive buying price.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
         $amount = number_format((float) $amount, 2, '.', '');
@@ -71,7 +71,7 @@ if ($method === 'POST') {
             'prices' => $prices,
             'matches' => $result['matches'] ?? [],
         ],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -82,7 +82,7 @@ if ($approvalStatus !== 'approved') {
         'success' => false,
         'message' => 'Your junkshop is not approved to manage materials and prices yet.',
         'data' => ['materials' => [], 'prices' => []],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -94,4 +94,4 @@ echo json_encode([
     'message' => 'Material and price list loaded.',
     'data' => ['materials' => $materials, 'prices' => $prices],
     'timestamp' => time(),
-]);
+], JSON_UNESCAPED_UNICODE);

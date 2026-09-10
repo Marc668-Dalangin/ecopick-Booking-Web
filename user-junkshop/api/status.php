@@ -14,7 +14,7 @@ if (!Auth::check()) {
         'data' => [
             'approval_status' => 'pending',
         ],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -24,7 +24,7 @@ if (Auth::userRole() === 'admin') {
         'success' => false,
         'message' => 'Admin accounts do not use the junkshop status API.',
         'data' => [],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -48,4 +48,4 @@ echo json_encode([
         'profile' => $profile,
     ],
     'timestamp' => time(),
-]);
+], JSON_UNESCAPED_UNICODE);

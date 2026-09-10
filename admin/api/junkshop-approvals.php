@@ -21,7 +21,7 @@ if (!Auth::check()) {
             'pending' => [],
             'pending_count' => 0,
         ],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -31,7 +31,7 @@ if (Auth::userRole() !== 'admin') {
         'success' => false,
         'message' => 'Access denied.',
         'data' => [],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => 'Invalid security token. Please try again.',
             'validation_errors' => ['security' => 'Invalid security token.'],
             'data' => [],
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => 'A valid junkshop account is required.',
             'validation_errors' => ['account_id' => 'A valid junkshop account is required.'],
             'data' => [],
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => 'Invalid decision value.',
             'validation_errors' => ['decision' => 'Invalid decision value.'],
             'data' => [],
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'account_id' => $accountId,
         ],
         'validation_errors' => [],
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -120,4 +120,4 @@ echo json_encode([
         'pending_count' => count($pending),
     ],
     'timestamp' => time(),
-]);
+], JSON_UNESCAPED_UNICODE);

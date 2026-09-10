@@ -13,7 +13,7 @@ if (Auth::userRole() !== 'junkshop') {
 }
 
 $dashboardController = new DashboardController();
-$assignments = $dashboardController->getJunkshopAssignments(Auth::userId());
+$assignments = $dashboardController->getPendingJunkshopRequests(Auth::userId());
 $pageTitle = 'Matched Requests';
 $currentPage = 'matched-requests';
 $userDisplayName = Auth::userName();
@@ -57,16 +57,20 @@ ob_start();
                                 <div class="row g-3 small mb-3">
                                     <div class="col-md-3"><div class="text-muted">Status</div><strong data-live-current-status><?php echo Validator::escape($assignment['current_status'] ?? 'Matched'); ?></strong></div>
                                     <div class="col-md-3"><div class="text-muted">Seller</div><strong><?php echo Validator::escape($assignment['seller_name'] ?? ''); ?></strong></div>
-                                    <div class="col-md-3"><div class="text-muted">Pickup</div><strong><?php echo Validator::escape($assignment['preferred_pickup_date'] ?? ''); ?></strong><br><?php echo Validator::escape($assignment['preferred_pickup_time'] ?? ''); ?></div>
+                                    <div class="col-md-3"><div class="text-muted">Pickup</div><strong><?php echo Validator::escape($assignment['confirmed_pickup_date'] ?? $assignment['preferred_pickup_date'] ?? ''); ?></strong><br><?php echo Validator::escape($assignment['confirmed_pickup_time'] ?? $assignment['preferred_pickup_time'] ?? ''); ?></div>
                                     <div class="col-md-3"><div class="text-muted">Distance</div><strong><?php echo isset($assignment['distance_km']) ? number_format((float)$assignment['distance_km'], 2) . ' km' : 'Pending'; ?></strong></div>
                                 </div>
 
                                 <div class="small text-muted mb-3"><?php echo Validator::escape($assignment['pickup_address'] ?? ''); ?>, <?php echo Validator::escape($assignment['barangay'] ?? ''); ?></div>
 
-                                <?php if (($assignment['assignment_status'] ?? '') === 'Matched'): ?>
+                                <?php if (in_array(($assignment['current_status'] ?? ''), ['Pending Request', 'Matched'], true) || (($assignment['assignment_status'] ?? '') === 'Matched')): ?>
                                     <div class="d-flex flex-wrap gap-2">
                                         <button type="button" class="btn btn-success accept-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Accept</button>
                                         <button type="button" class="btn btn-outline-danger decline-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Decline</button>
+                                    </div>
+                                <?php elseif (($assignment['current_status'] ?? '') === 'Accepted'): ?>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-primary schedule-request" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" data-scheduled-date="<?php echo Validator::escape($assignment['preferred_pickup_date'] ?? ''); ?>" data-scheduled-time="<?php echo Validator::escape($assignment['preferred_pickup_time'] ?? ''); ?>">Mark as Scheduled</button>
                                     </div>
                                 <?php elseif (($assignment['assignment_status'] ?? '') === 'Accepted' && ($assignment['current_status'] ?? '') === 'Accepted'): ?>
                                     <form class="row g-3 align-items-end schedule-form" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">
@@ -101,6 +105,12 @@ ob_start();
                                     <div class="d-flex align-items-center gap-2">
                                         <button type="button" class="btn btn-primary mark-for-pickup" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">Mark For Pickup</button>
                                     </div>
+                                <?php elseif (($assignment['current_status'] ?? '') === 'For Pickup'): ?>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-success complete-transaction" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">Complete Transaction</button>
+                                    </div>
+                                <?php elseif (($assignment['current_status'] ?? '') === 'Completed'): ?>
+                                    <span class="status-badge approved">Completed</span>
                                 <?php elseif (($assignment['current_status'] ?? '') === 'For Pickup' && empty($assignment['transaction_id'])): ?>
                                     <form class="row g-3 settlement-form" data-pickup-request-id="<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">
                                         <?php echo CSRF::field(); ?>
@@ -219,13 +229,23 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 
     assignmentList?.addEventListener('click', async function (event) {
-        const button = event.target.closest('.accept-request, .decline-request');
+        const button = event.target.closest('.accept-request, .decline-request, .schedule-request, .mark-for-pickup, .complete-transaction');
         if (!button) return;
-        const action = button.classList.contains('accept-request') ? 'accept' : 'decline';
-        const actionLabel = action === 'accept' ? 'accept' : 'decline';
-        confirmation.open('Are you sure you want to ' + actionLabel + ' this pickup request?', async function () {
+        if (button.classList.contains('schedule-request')) {
+            openScheduleModal(Number(button.dataset.pickupRequestId || 0));
+            return;
+        }
+        if (button.classList.contains('complete-transaction')) {
+            openCompletionModal(Number(button.dataset.pickupRequestId || 0));
+            return;
+        }
+        const action = button.classList.contains('accept-request') ? 'accept' : (button.classList.contains('decline-request') ? 'decline' : (button.classList.contains('schedule-request') ? 'schedule' : 'mark-for-pickup'));
+        const actionLabel = action === 'accept' ? 'accept' : (action === 'decline' ? 'decline' : (action === 'schedule' ? 'mark this request as scheduled' : 'mark this request as for pickup'));
+        const pickupRequestId = Number(button.dataset.pickupRequestId || button.dataset.assignmentId || 0);
+            confirmation.open('Are you sure you want to ' + actionLabel + (action === 'accept' || action === 'decline' ? ' this pickup request?' : '?'), async function () {
             button.disabled = true;
-            const response = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: action, assignment_id: button.dataset.assignmentId });
+            const requestId = Number.isFinite(pickupRequestId) ? pickupRequestId : 0;
+            const response = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: action, pickup_request_id: requestId, assignment_id: requestId, scheduled_date: button.dataset.scheduledDate || '', scheduled_time: button.dataset.scheduledTime || '' });
             const payload = await response.json();
             if (!payload.success) { showFeedback(payload.message || 'Unable to update this request.', false); button.disabled = false; return false; }
             showFeedback(payload.message || 'Request updated.', true);
@@ -238,57 +258,126 @@ window.addEventListener('DOMContentLoaded', function () {
         return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
     }
 
-    function appendLiveAssignments(assignments) {
-        if (!assignmentList || !Array.isArray(assignments)) return 0;
-        let appended = 0;
-        assignments.forEach(function (assignment) {
-            const assignmentId = Number(assignment.assignment_id || 0);
-            if (!assignmentId || assignmentList.querySelector('[data-assignment-id="' + assignmentId + '"]')) return;
-            assignmentList.querySelector('[data-empty-assignments]')?.remove();
-            assignmentList.insertAdjacentHTML('beforeend', '<div class="col-12" data-assignment-card data-assignment-id="' + assignmentId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(assignment.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(assignment.materials_summary) + '</div></div><span class="status-badge pending" data-live-assignment-status>Matched</span></div><div class="row g-3 small mb-3"><div class="col-md-3"><div class="text-muted">Status</div><strong data-live-current-status>' + escapeHtml(assignment.current_status || 'Matched') + '</strong></div><div class="col-md-3"><div class="text-muted">Seller</div><strong>' + escapeHtml(assignment.seller_name) + '</strong></div><div class="col-md-3"><div class="text-muted">Pickup</div><strong>' + escapeHtml(assignment.preferred_pickup_date) + '</strong><br>' + escapeHtml(assignment.preferred_pickup_time) + '</div><div class="col-md-3"><div class="text-muted">Distance</div><strong>' + Number(assignment.distance_km || 0).toFixed(2) + ' km</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(assignment.pickup_address) + ', ' + escapeHtml(assignment.barangay) + '</div><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-success accept-request" data-assignment-id="' + assignmentId + '">Accept</button><button type="button" class="btn btn-outline-danger decline-request" data-assignment-id="' + assignmentId + '">Decline</button></div></div></div></div>');
-            appended += 1;
-        });
-        return appended;
+    function getPickupRequestId(assignment) {
+        const value = Number(assignment?.pickup_request_id ?? assignment?.assignment_id ?? 0);
+        return Number.isFinite(value) ? value : 0;
     }
 
-    function updateLiveAssignments(assignments) {
-        if (!assignmentList || !Array.isArray(assignments)) return 0;
-        let updated = 0;
-        assignments.forEach(function (assignment) {
-            const assignmentId = Number(assignment.assignment_id || 0);
-            const card = assignmentList.querySelector('[data-assignment-id="' + assignmentId + '"]');
-            if (!card) return;
-            const assignmentStatus = String(assignment.assignment_status || 'Matched');
-            const currentStatus = String(assignment.current_status || 'Matched');
-            const assignmentStatusNode = card.querySelector('[data-live-assignment-status]');
-            const currentStatusNode = card.querySelector('[data-live-current-status]');
-            if (assignmentStatusNode && assignmentStatusNode.textContent !== assignmentStatus) {
-                assignmentStatusNode.textContent = assignmentStatus;
-                assignmentStatusNode.className = 'status-badge ' + (assignmentStatus.toLowerCase() === 'accepted' ? 'approved' : (assignmentStatus.toLowerCase() === 'declined' ? 'rejected' : 'pending'));
-                updated += 1;
-            }
-            if (currentStatusNode && currentStatusNode.textContent !== currentStatus) {
-                currentStatusNode.textContent = currentStatus;
-                updated += 1;
-            }
+    function openScheduleModal(requestId) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form id="schedule-modal-form"><div class="modal-header"><h5 class="modal-title">Set Pickup Schedule</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><label class="form-label">Confirmed pickup date</label><input class="form-control mb-3" name="scheduled_date" type="date" min="<?php echo date('Y-m-d'); ?>" required><label class="form-label">Confirmed pickup time</label><input class="form-control" name="scheduled_time" type="time" required></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Set Schedule</button></div></form></div></div>';
+        document.body.appendChild(modal);
+        const instance = bootstrap.Modal.getOrCreateInstance(modal);
+        instance.show();
+        modal.querySelector('form').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            if (!event.target.checkValidity()) { event.target.classList.add('was-validated'); return; }
+            const form = new FormData(event.target);
+            form.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+            form.append('action', 'schedule');
+            form.append('pickup_request_id', requestId);
+            const response = await fetch(apiUrl, { method: 'POST', body: form, credentials: 'same-origin' });
+            const payload = await response.json();
+            if (!payload.success) { showFeedback(payload.message || 'Unable to set the pickup schedule.', false); return; }
+            instance.hide();
+            showSuccessAndReload(payload.message || 'Pickup schedule confirmed.');
         });
-        return updated;
+        modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
     }
 
-    if (window.EcoPickLiveUpdates && assignmentList) {
-        window.EcoPickLiveUpdates.startPolling({
-            key: 'junkshop-matched-requests',
-            url: apiUrl,
-            interval: 3000,
-            onSuccess: function (payload) {
-                const assignments = payload.data?.assignments || [];
-                const added = appendLiveAssignments(assignments);
-                const updated = updateLiveAssignments(assignments);
-                if (added > 0) showFeedback(added === 1 ? 'A new pickup request matched your accepted materials.' : added + ' new pickup requests matched your accepted materials.', true);
-                else if (updated > 0) showFeedback('A matched pickup request was updated.', true);
-            }
+    async function openCompletionModal(requestId) {
+        const response = await fetch(apiUrl + '?action=list-matched', { credentials: 'same-origin' });
+        const payload = await response.json();
+        const request = (payload.data?.requests || []).find(item => getPickupRequestId(item) === requestId);
+        if (!request) { showFeedback('Unable to load the pickup materials.', false); return; }
+        const rows = String(request.settlement_items || '').split('|').filter(Boolean).map(item => {
+            const parts = item.split(':');
+            return '<div class="row g-2 mb-2 settlement-material-row"><div class="col-md-4"><label class="form-label">' + escapeHtml(parts[1] || 'Material') + '</label><input class="form-control" value="' + escapeHtml(parts[2] || '') + ' kg estimated" readonly></div><div class="col-md-3"><label class="form-label">Actual kg</label><input class="form-control actual-weight" data-item-id="' + Number(parts[0] || 0) + '" data-price="' + Number(parts[3] || 0) + '" type="number" min="0" step="0.01" required></div><div class="col-md-5"><label class="form-label">Condition</label><input class="form-control material-condition" type="text" maxlength="120" placeholder="Good, Mixed, Contaminated" required></div></div>';
+        }).join('');
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form id="completion-form"><div class="modal-header"><h5 class="modal-title">Complete Transaction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="small text-muted mb-3">Enter the actual weight and condition received for each material.</div>' + rows + '<div class="row g-3 mt-2"><div class="col-md-4"><label class="form-label">Pickup collection fee</label><input class="form-control" name="pickup_collection_fee" type="number" min="0" step="0.01" value="0" required></div><div class="col-md-4"><label class="form-label">Payment method</label><select class="form-select" name="payment_method" required><option value="Cash">Cash</option></select></div><div class="col-md-4"><label class="form-label">Payment status</label><select class="form-select" name="payment_status" required><option value="Unpaid">Unpaid</option><option value="Paid">Paid</option></select></div></div><div class="row g-2 mt-3 small"><div class="col-md-4"><span class="text-muted">Final recyclable value</span><strong class="d-block live-final-value">₱0.00</strong></div><div class="col-md-4"><span class="text-muted">EcoPick service fee</span><strong class="d-block live-service-fee">₱0.00</strong></div><div class="col-md-4"><span class="text-muted">Final net amount</span><strong class="d-block live-net-amount text-success">₱0.00</strong></div></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Complete Transaction</button></div></form></div></div>';
+        document.body.appendChild(modal);
+        const instance = bootstrap.Modal.getOrCreateInstance(modal);
+        instance.show();
+        const updatePreview = function () {
+            const finalValue = Array.from(modal.querySelectorAll('.actual-weight')).reduce((total, input) => total + (Number(input.value || 0) * Number(input.dataset.price || 0)), 0);
+            const serviceFee = finalValue * (Number(request.service_fee_pct || 5) / 100);
+            const collectionFee = Number(modal.querySelector('[name="pickup_collection_fee"]').value || 0);
+            modal.querySelector('.live-final-value').textContent = '₱' + finalValue.toFixed(2);
+            modal.querySelector('.live-service-fee').textContent = '₱' + serviceFee.toFixed(2);
+            modal.querySelector('.live-net-amount').textContent = '₱' + (finalValue - collectionFee - serviceFee).toFixed(2);
+        };
+        modal.querySelectorAll('.actual-weight, .material-condition, [name="pickup_collection_fee"]').forEach(input => input.addEventListener('input', updatePreview));
+        modal.querySelector('form').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            if (!event.target.checkValidity()) { event.target.classList.add('was-validated'); return; }
+            const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
+            const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, pickup_collection_fee: modal.querySelector('[name="pickup_collection_fee"]').value, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
+            const resultPayload = await result.json();
+            if (!resultPayload.success) { showFeedback(resultPayload.message || 'Unable to complete this transaction.', false); return; }
+            instance.hide();
+            showSuccessAndReload(resultPayload.message);
         });
+        modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
     }
+
+    function renderLifecycleControls(request, requestId) {
+        const status = request.current_status || 'Pending Request';
+        if (status === 'Accepted') {
+            return '<button type="button" class="btn btn-primary schedule-request" data-pickup-request-id="' + requestId + '">Set Schedule</button>';
+        }
+        if (status === 'Pending Request') {
+            return '<button type="button" class="btn btn-success accept-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Accept</button><button type="button" class="btn btn-outline-danger decline-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Decline</button>';
+        }
+        if (status === 'Scheduled') {
+            return '<button type="button" class="btn btn-primary mark-for-pickup" data-pickup-request-id="' + requestId + '">Mark as For Pickup</button>';
+        }
+        if (status === 'For Pickup') {
+            return '<button type="button" class="btn btn-success complete-transaction" data-pickup-request-id="' + requestId + '">Complete Transaction</button>';
+        }
+        if (status === 'Completed') {
+            return '<span class="status-badge approved">Completed</span>';
+        }
+        return '';
+    }
+
+    function renderMatchedRequests(requests) {
+        if (!assignmentList) return;
+        if (!requests.length) {
+            assignmentList.innerHTML = '<div class="empty-state" data-empty-assignments><div class="display-6 text-muted"><i class="bi bi-inbox"></i></div><h5 class="mt-3 mb-2 fw-bold">No matched requests yet</h5><p class="text-muted mb-0">New pickup requests will appear here as soon as they are matched to your junkshop.</p></div>';
+            return;
+        }
+
+        assignmentList.innerHTML = requests.map(function (request) {
+            const requestId = getPickupRequestId(request);
+            const status = request.current_status || 'Pending Request';
+            const statusClass = status === 'Completed' ? 'approved' : (status === 'Pending Request' ? 'pending' : 'scheduled');
+            const distance = request.distance_km === null || request.distance_km === undefined ? 'Pending' : Number(request.distance_km).toFixed(2) + ' km';
+            const pickupDate = request.confirmed_pickup_date || request.preferred_pickup_date || '';
+            const pickupTime = request.confirmed_pickup_time || request.preferred_pickup_time || '';
+            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div><span class="status-badge ' + statusClass + '">' + escapeHtml(status) + '</span></div><div class="row g-3 small mb-3"><div class="col-md-3"><div class="text-muted">Status</div><strong>' + escapeHtml(status) + '</strong></div><div class="col-md-3"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-3"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-3"><div class="text-muted">Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + ', ' + escapeHtml(request.barangay) + '</div><div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
+        }).join('');
+    }
+
+    async function fetchMatchedRequests() {
+        try {
+            const response = await fetch(apiUrl + '?action=list-matched', { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const payload = await response.json();
+            if (payload.session_expired && payload.redirect) {
+                window.location.href = payload.redirect;
+                return;
+            }
+            if (!response.ok || !payload.success) throw new Error(payload.message || 'Unable to refresh matched requests.');
+            renderMatchedRequests(payload.data?.requests || []);
+        } catch (error) {
+            showFeedback(error.message || 'Unable to refresh matched requests.', false);
+        }
+    }
+
+    fetchMatchedRequests();
+    window.setInterval(fetchMatchedRequests, 5000);
 
     document.querySelectorAll('.schedule-form').forEach(form => {
         form.addEventListener('submit', async function (event) {
@@ -305,24 +394,6 @@ window.addEventListener('DOMContentLoaded', function () {
                 if (!payload.success) { showFeedback(payload.message || 'Unable to schedule this pickup.', false); return false; }
                 showFeedback(payload.message || 'Pickup scheduled successfully.', true);
                 showSuccessAndReload(payload.message || 'Pickup scheduled successfully.');
-                return true;
-            });
-        });
-    });
-
-    document.querySelectorAll('.mark-for-pickup').forEach(button => {
-        button.addEventListener('click', async function () {
-            confirmation.open('Are you sure you want to mark this request as out for pickup?', async function () {
-                const requestId = button.dataset.pickupRequestId;
-                const formData = new FormData();
-                formData.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
-                formData.append('action', 'mark-for-pickup');
-                formData.append('pickup_request_id', requestId);
-                const response = await fetch(apiUrl, { method: 'POST', body: formData, credentials: 'same-origin' });
-                const payload = await response.json();
-                if (!payload.success) { showFeedback(payload.message || 'Unable to mark pickup as in transit.', false); return false; }
-                showFeedback(payload.message || 'Pickup marked for pickup.', true);
-                showSuccessAndReload(payload.message || 'Pickup marked for pickup successfully.');
                 return true;
             });
         });

@@ -19,7 +19,7 @@ class BookingLifecycleController
 
     public function schedulePickup(int $pickupRequestId, int $junkshopAccountId, string $scheduledDate, string $scheduledTime): array
     {
-        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId);
+        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'Accepted');
         if ($pickupRequest === null) {
             return ['success' => false, 'message' => 'Pickup request not found.'];
         }
@@ -46,14 +46,14 @@ class BookingLifecycleController
         if (!$date || $date->format('Y-m-d') !== $scheduledDate || $date < new DateTime('today', $timezone) || !$time) {
             return ['success' => false, 'message' => 'A valid pickup schedule is required.'];
         }
-        $scheduledTime = $time->format('g:i A');
+        $confirmedTime = $time->format('H:i:s');
 
         try {
             $statement = $this->db->query(
-                'UPDATE pickup_requests SET preferred_pickup_date = :scheduled_date, preferred_pickup_time = :scheduled_time, current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                'UPDATE pickup_requests SET confirmed_pickup_date = :confirmed_date, confirmed_pickup_time = :confirmed_time, current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                 [
-                    'scheduled_date' => $scheduledDate,
-                    'scheduled_time' => $scheduledTime,
+                    'confirmed_date' => $scheduledDate,
+                    'confirmed_time' => $confirmedTime,
                     'status' => 'Scheduled',
                     'pickup_request_id' => $pickupRequestId,
                     'expected_status' => 'Accepted',
@@ -75,7 +75,7 @@ class BookingLifecycleController
 
     public function markForPickup(int $pickupRequestId, int $junkshopAccountId): array
     {
-        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId);
+        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'Scheduled');
         if ($pickupRequest === null) {
             return ['success' => false, 'message' => 'Pickup request not found.'];
         }
@@ -109,7 +109,7 @@ class BookingLifecycleController
 
     public function previewFinalSettlement(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements): array
     {
-        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId);
+        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'For Pickup');
         if ($pickupRequest === null) {
             return ['success' => false, 'message' => 'Pickup request not found.'];
         }
@@ -133,9 +133,9 @@ class BookingLifecycleController
         return ['success' => true, 'message' => 'Final settlement preview ready.', 'data' => $settlement];
     }
 
-    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, string $paymentMethod, string $paymentStatus, string $paymentReference = '', string $materialConditionNotes = ''): array
+    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, float $pickupCollectionFee, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = ''): array
     {
-        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId);
+        $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'For Pickup');
         if ($pickupRequest === null) {
             return ['success' => false, 'message' => 'Pickup request not found.'];
         }
@@ -153,15 +153,11 @@ class BookingLifecycleController
         if (!$preparedMaterials['success']) {
             return $preparedMaterials;
         }
-        if (!in_array($paymentMethod, ['Cash', 'GCash'], true) || !in_array($paymentStatus, ['Unpaid', 'Paid', 'Confirmed'], true)) {
+        if ($paymentMethod !== 'Cash' || !in_array($paymentStatus, ['Unpaid', 'Paid'], true)) {
             return ['success' => false, 'message' => 'A valid payment method and payment status are required.'];
         }
-        if ($paymentStatus === 'Unpaid' && $paymentMethod !== 'GCash') {
-            return ['success' => false, 'message' => 'Cash payments must be settled before completing the transaction.'];
-        }
 
-        $pickupFee = $this->getPickupFeeConfig();
-        $settlement = FeeCalculator::calculateMaterialSettlement($preparedMaterials['materials'], $pickupFee);
+        $settlement = FeeCalculator::calculateMaterialSettlement($preparedMaterials['materials'], $pickupCollectionFee);
 
         try {
             $this->db->beginTransaction();
@@ -191,6 +187,15 @@ class BookingLifecycleController
             $transactionId = (int) $this->db->getPDO()->lastInsertId();
             foreach ($preparedMaterials['materials'] as $material) {
                 $this->db->query(
+                    'UPDATE pickup_request_items SET actual_weight = :actual_weight, material_condition = :material_condition WHERE id = :pickup_request_item_id AND pickup_request_id = :pickup_request_id',
+                    [
+                        'actual_weight' => number_format((float) $material['actual_weight_kg'], 2, '.', ''),
+                        'material_condition' => trim((string) ($material['material_condition'] ?? '')),
+                        'pickup_request_item_id' => $material['pickup_request_item_id'],
+                        'pickup_request_id' => $pickupRequestId,
+                    ]
+                );
+                $this->db->query(
                     'INSERT INTO transaction_materials (transaction_id, pickup_request_item_id, material_id, actual_weight_kg, buying_price_per_kg, final_material_value, accepted) VALUES (:transaction_id, :pickup_request_item_id, :material_id, :actual_weight_kg, :buying_price_per_kg, :final_material_value, :accepted)',
                     [
                         'transaction_id' => $transactionId,
@@ -204,11 +209,17 @@ class BookingLifecycleController
                 );
             }
 
-            if ($paymentStatus !== 'Unpaid') {
+            {
                 $statusStatement = $this->db->query(
-                    'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                    'UPDATE pickup_requests SET current_status = :status, final_recyclable_value = :final_recyclable_value, pickup_collection_fee = :pickup_collection_fee, ecopick_service_fee = :ecopick_service_fee, final_amount_paid = :final_amount_paid, payment_method = :payment_method, payment_status = :payment_status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                     [
                         'status' => 'Completed',
+                        'final_recyclable_value' => number_format((float) $settlement['final_recyclable_value'], 2, '.', ''),
+                        'pickup_collection_fee' => number_format((float) $settlement['pickup_fee'], 2, '.', ''),
+                        'ecopick_service_fee' => number_format((float) $settlement['ecopick_service_fee'], 2, '.', ''),
+                        'final_amount_paid' => number_format((float) $settlement['final_seller_amount'], 2, '.', ''),
+                        'payment_method' => $paymentMethod,
+                        'payment_status' => $paymentStatus,
                         'pickup_request_id' => $pickupRequestId,
                         'expected_status' => 'For Pickup',
                     ]
@@ -263,14 +274,14 @@ class BookingLifecycleController
         }
     }
 
-    private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId): ?array
+    private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array
     {
         $row = $this->db->query(
-            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr JOIN junkshop_assignments ja ON ja.pickup_request_id = pr.id WHERE pr.id = :pickup_request_id AND ja.junkshop_id = :junkshop_id AND ja.status = :assignment_status LIMIT 1',
+            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,
-                'assignment_status' => 'Accepted',
+                'current_status' => $currentStatus,
             ]
         )->fetch();
 
@@ -280,11 +291,11 @@ class BookingLifecycleController
     private function getAcceptedAssignment(int $pickupRequestId, int $junkshopAccountId): ?array
     {
         $row = $this->db->query(
-            'SELECT id, pickup_request_id, junkshop_id, status, distance_km, assigned_at, responded_at FROM junkshop_assignments WHERE pickup_request_id = :pickup_request_id AND junkshop_id = :junkshop_id AND status = :status ORDER BY responded_at DESC, assigned_at DESC LIMIT 1',
+            'SELECT pr.id AS pickup_request_id, pr.junkshop_id, pr.current_status AS status FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,
-                'status' => 'Accepted',
+                'status' => 'For Pickup',
             ]
         )->fetch();
 
@@ -316,6 +327,10 @@ class BookingLifecycleController
                 return ['success' => false, 'message' => 'Every requested material requires a settlement line.'];
             }
             $submitted = $submittedByItem[$itemId];
+            $materialCondition = trim((string) ($submitted['material_condition'] ?? ''));
+            if ($materialCondition === '') {
+                return ['success' => false, 'message' => 'A material condition is required for every assessed material.'];
+            }
             $accepted = (bool) ($submitted['accepted'] ?? true);
             $weight = max(0.0, (float) ($submitted['actual_weight_kg'] ?? 0.0));
             $priceRow = $this->db->query(
@@ -334,6 +349,7 @@ class BookingLifecycleController
                 'pickup_request_item_id' => $itemId,
                 'material_id' => (int) $item['material_id'],
                 'actual_weight_kg' => $weight,
+                'material_condition' => $materialCondition,
                 'buying_price_per_kg' => $price,
                 'final_material_value' => round($weight * $price, 2),
                 'accepted' => $accepted,

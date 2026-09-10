@@ -4,7 +4,6 @@
  */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
-require_once __DIR__ . '/../services/MatchingEngine.php';
 
 class PickupRequestController
 {
@@ -46,6 +45,7 @@ class PickupRequestController
         try {
             $stmt = $this->db->call('sp_create_pickup_request', [
                 (int) $sellerAccountId,
+                (int) ($normalized['junkshop_id'] ?? 0),
                 json_encode($normalized['items'], JSON_UNESCAPED_SLASHES),
                 $normalized['pickup_address'],
                 $normalized['barangay'],
@@ -65,8 +65,6 @@ class PickupRequestController
             }
 
             $requestId = (int) ($result['p_request_id'] ?? 0);
-            $matches = [];
-            $materialIds = array_map(static fn (array $item): int => (int) $item['material_id'], $normalized['items']);
 
             $this->db->query(
                 'UPDATE pickup_requests SET pickup_location_name = :location_name, approximate_distance_km = :distance_km WHERE id = :request_id AND seller_account_id = :seller_id',
@@ -80,10 +78,6 @@ class PickupRequestController
 
             if ($requestId > 0) {
                 StatusLogger::logChange($requestId, null, 'Pending Request', 'Seller', (int) $sellerAccountId);
-            }
-
-            if ($requestId > 0 && !empty($materialIds)) {
-                $matches = MatchingEngine::onNewPickupRequestCreated($requestId, $materialIds, (float) $normalized['approximate_distance_km']);
             }
 
             return [
@@ -109,6 +103,18 @@ class PickupRequestController
         return $this->fetchAll('sp_get_seller_pickup_requests', [(int) $sellerAccountId]);
     }
 
+    public function getPendingRequestJunkshopIds(int $sellerAccountId): array
+    {
+        $rows = $this->db->query(
+            "SELECT DISTINCT junkshop_id FROM pickup_requests WHERE seller_account_id = :seller_account_id AND current_status IN ('Pending Request', 'Accepted', 'Scheduled', 'For Pickup') AND junkshop_id IS NOT NULL ORDER BY junkshop_id ASC",
+            [
+                'seller_account_id' => $sellerAccountId,
+            ]
+        )->fetchAll();
+
+        return array_values(array_filter(array_map(static fn (array $row): int => (int) ($row['junkshop_id'] ?? 0), $rows), static fn (int $junkshopId): bool => $junkshopId > 0));
+    }
+
     public function getSellerRequestDetails($requestId, $sellerAccountId)
     {
         $rows = $this->fetchAll('sp_get_pickup_request_details', [(int) $requestId, (int) $sellerAccountId]);
@@ -130,7 +136,7 @@ class PickupRequestController
         if (!empty($itemIds)) {
             $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
             $snapshotRows = $this->db->query(
-                'SELECT id, estimated_buying_price_per_kg, estimated_material_value, estimate_snapshot_at FROM pickup_request_items WHERE id IN (' . $placeholders . ')',
+                'SELECT pri.id, COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> \'Pending Request\' THEN jmp.buying_price END) AS matched_price_per_kg, COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> \'Pending Request\' THEN ROUND(pri.estimated_weight * jmp.buying_price, 2) END) AS estimated_value, tm.final_material_value AS actual_value, pri.estimated_buying_price_per_kg, pri.estimated_material_value, pri.estimate_snapshot_at FROM pickup_request_items pri JOIN pickup_requests pr ON pr.id = pri.pickup_request_id LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id WHERE pri.id IN (' . $placeholders . ') ORDER BY tm.id DESC',
                 $itemIds
             )->fetchAll();
             foreach ($snapshotRows as $snapshotRow) {
@@ -146,6 +152,9 @@ class PickupRequestController
                 'category' => $row['category'],
                 'unit_of_measure' => $row['unit_of_measure'],
                 'estimated_weight' => $row['estimated_weight'],
+                'matched_price_per_kg' => $snapshot['matched_price_per_kg'] ?? null,
+                'estimated_value' => $snapshot['estimated_value'] ?? null,
+                'actual_value' => $snapshot['actual_value'] ?? null,
                 'estimated_buying_price_per_kg' => $snapshot['estimated_buying_price_per_kg'] ?? null,
                 'estimated_material_value' => $snapshot['estimated_material_value'] ?? null,
                 'estimate_snapshot_at' => $snapshot['estimate_snapshot_at'] ?? null,
@@ -158,10 +167,12 @@ class PickupRequestController
     public function getSellerRequestAssignmentSummary($requestId, $sellerAccountId): array
     {
         $row = $this->db->query(
-            'SELECT ja.id AS assignment_id, ja.pickup_request_id, ja.junkshop_id, ja.status AS assignment_status, ja.distance_km, ja.assigned_at, ja.responded_at, jp.business_name, jp.complete_address, jp.owner_name, a.full_name AS junkshop_contact_name FROM junkshop_assignments ja JOIN pickup_requests pr ON pr.id = ja.pickup_request_id LEFT JOIN junkshop_profiles jp ON jp.account_id = ja.junkshop_id LEFT JOIN accounts a ON a.id = ja.junkshop_id WHERE ja.pickup_request_id = :pickup_request_id AND pr.seller_account_id = :seller_account_id ORDER BY ja.assigned_at DESC, ja.id DESC LIMIT 1',
+            'SELECT pr.id AS assignment_id, pr.id AS pickup_request_id, pr.junkshop_id, CASE WHEN pr.current_status = :pending_status THEN :matched_status ELSE pr.current_status END AS assignment_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, jp.business_name, jp.complete_address, jp.owner_name, a.full_name AS junkshop_contact_name FROM pickup_requests pr LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id LEFT JOIN accounts a ON a.id = pr.junkshop_id WHERE pr.id = :pickup_request_id AND pr.seller_account_id = :seller_account_id LIMIT 1',
             [
                 'pickup_request_id' => (int) $requestId,
                 'seller_account_id' => (int) $sellerAccountId,
+                'pending_status' => 'Pending Request',
+                'matched_status' => 'Matched',
             ]
         )->fetch();
 
@@ -274,6 +285,9 @@ class PickupRequestController
             }
         }
 
+        if ((int) ($data['junkshop_id'] ?? 0) <= 0) {
+            $errors[] = 'Please select a partner junkshop.';
+        }
         if (trim($data['pickup_address'] ?? '') === '') {
             $errors[] = 'Pickup address/location is required.';
         }
@@ -312,6 +326,7 @@ class PickupRequestController
         }
         return [
             'items' => $items,
+            'junkshop_id' => (int) ($data['junkshop_id'] ?? 0),
             'pickup_address' => trim((string) ($data['pickup_address'] ?? '')),
             'pickup_location_name' => trim((string) ($data['pickup_location_name'] ?? '')),
             'approximate_distance_km' => number_format(max(0.0, (float) ($data['approximate_distance_km'] ?? 0)), 2, '.', ''),

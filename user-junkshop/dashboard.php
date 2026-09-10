@@ -77,14 +77,6 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="dashboard-card--feature h-100">
-                                <div class="icon-wrap mb-3"><i class="bi bi-bookmark-check"></i></div>
-                                <h6 class="fw-bold mb-1">New Pickup Request</h6>
-                                <p class="text-muted small mb-2">Submit materials, location, and preferred pickup details.</p>
-                                <a class="btn btn-sm btn-outline-primary" href="<?php echo APP_URL; ?>/user-junkshop/new-pickup-request.php">Create request</a>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="dashboard-card--feature h-100">
                                 <div class="icon-wrap mb-3"><i class="bi bi-calendar2-check"></i></div>
                                 <h6 class="fw-bold mb-1">Current Bookings</h6>
                                 <p class="text-muted small mb-2">Track your submitted requests and current status.</p>

@@ -4,8 +4,8 @@ require_once __DIR__ . '/../app/controllers/NotificationController.php';
 
 Auth::requireLogin();
 $controller = new NotificationController();
-$controller->markRead(Auth::userId());
 $notifications = $controller->listForUser(Auth::userId());
+$controller->markRead(Auth::userId());
 $pageTitle = 'Notifications';
 $currentPage = 'notifications';
 $userDisplayName = Auth::userName();
@@ -31,19 +31,20 @@ ob_start();
 				<?php foreach ($groupedNotifications as $dateKey => $dateNotifications): ?>
 					<?php
 						$groupId = 'notification-group-' . md5($dateKey);
-						$groupHasUnread = false;
+						$unreadCount = 0;
 						foreach ($dateNotifications as $notification) {
 							$isUnread = !isset($notification['read_at']) || $notification['read_at'] === null || trim((string) $notification['read_at']) === '';
 							if ($isUnread) {
-								$groupHasUnread = true;
-								break;
+								$unreadCount++;
 							}
 						}
+						$groupHasUnread = $unreadCount > 0;
 					?>
 					<div class="notification-date-group border-bottom pb-2 mb-3" data-date-group="<?php echo Validator::escape($dateKey); ?>">
 						<button type="button" class="notification-toggle btn btn-link text-body text-decoration-none d-flex align-items-center justify-content-between w-100 px-0 py-2" data-bs-toggle="collapse" data-bs-target="#<?php echo $groupId; ?>" aria-expanded="<?php echo $groupHasUnread ? 'true' : 'false'; ?>">
 							<span class="fw-semibold"><?php echo date('M j, Y', strtotime($dateKey)); ?></span>
 							<span class="d-flex align-items-center gap-2 text-muted">
+								<?php if ($groupHasUnread): ?><span class="badge bg-danger rounded-pill" data-date-unread-badge data-unread-count="<?php echo $unreadCount; ?>"><?php echo $unreadCount; ?> unread</span><?php endif; ?>
 								<span class="small"><?php echo count($dateNotifications); ?> item<?php echo count($dateNotifications) === 1 ? '' : 's'; ?></span>
 								<i class="bi bi-chevron-<?php echo $groupHasUnread ? 'up' : 'down'; ?> toggle-icon"></i>
 							</span>
@@ -55,7 +56,7 @@ ob_start();
 										$notificationDate = strtotime((string) $notification['created_at']);
 										$isUnread = !isset($notification['read_at']) || $notification['read_at'] === null || trim((string) $notification['read_at']) === '';
 									?>
-									<a class="list-group-item list-group-item-action px-0 notification-item" href="<?php echo Validator::escape($notification['link_url'] ?: '#'); ?>" data-created-at="<?php echo Validator::escape((string) ($notification['created_at'] ?? '')); ?>" data-is-unread="<?php echo $isUnread ? '1' : '0'; ?>">
+									<a class="list-group-item list-group-item-action px-0 notification-item <?php echo $isUnread ? 'notification-unread bg-light' : ''; ?>" href="<?php echo Validator::escape($notification['link_url'] ?: '#'); ?>" data-notification-id="<?php echo (int) $notification['id']; ?>" data-created-at="<?php echo Validator::escape((string) ($notification['created_at'] ?? '')); ?>" data-is-unread="<?php echo $isUnread ? '1' : '0'; ?>">
 										<div class="d-flex justify-content-between align-items-start gap-3">
 											<strong><?php echo Validator::escape($notification['title']); ?></strong>
 											<span class="small text-muted text-nowrap"><strong><?php echo date('h:i A', $notificationDate); ?></strong></span>

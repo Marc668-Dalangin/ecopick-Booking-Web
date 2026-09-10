@@ -20,28 +20,31 @@ class JunkshopAssignmentController
      */
     public function acceptRequest(int $assignmentId, int $junkshopAccountId): array
     {
-        $assignment = $this->getAssignment($assignmentId, $junkshopAccountId);
-        if ($assignment === null) {
-            return ['success' => false, 'message' => 'Assignment not found.'];
+        $request = $this->getDirectPickupRequest($assignmentId, $junkshopAccountId);
+        if ($request === null) {
+            return ['success' => false, 'message' => 'Pickup request not found for this junkshop.'];
         }
 
         try {
+            $previousStatus = (string) ($request['current_status'] ?? 'Pending Request');
             $statement = $this->db->query(
-                'UPDATE junkshop_assignments SET status = :status, responded_at = CURRENT_TIMESTAMP WHERE id = :id AND junkshop_id = :junkshop_id AND status = :expected_status',
-                ['status' => 'Accepted', 'id' => $assignmentId, 'junkshop_id' => $junkshopAccountId, 'expected_status' => 'Matched']
+                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND junkshop_id = :junkshop_id AND current_status IN (:pending_status, :pending_legacy_status, :matched_status)',
+                [
+                    'status' => 'Accepted',
+                    'id' => $assignmentId,
+                    'junkshop_id' => $junkshopAccountId,
+                    'pending_status' => 'Pending Request',
+                    'pending_legacy_status' => 'Pending',
+                    'matched_status' => 'Matched',
+                ]
             );
             if ($statement->rowCount() !== 1) {
-                return ['success' => false, 'message' => 'Assignment is no longer available.'];
+                return ['success' => false, 'message' => 'This request is no longer available to accept.'];
             }
 
-            $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
-                ['status' => 'Accepted', 'id' => $assignment['pickup_request_id']]
-            );
+            StatusLogger::logChange((int) $assignmentId, $previousStatus === '' ? 'Pending Request' : $previousStatus, 'Accepted', 'Junkshop', (int) $junkshopAccountId);
 
-            StatusLogger::logChange((int) $assignment['pickup_request_id'], 'Matched', 'Accepted', 'Junkshop', (int) $assignment['junkshop_id']);
-
-            return ['success' => true, 'message' => 'Pickup request accepted.', 'assignment' => $assignment];
+            return ['success' => true, 'message' => 'Pickup request accepted.', 'assignment' => $request];
         } catch (Throwable $e) {
             error_log('Accept request error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to accept the pickup request.'];
@@ -49,105 +52,49 @@ class JunkshopAssignmentController
     }
 
     /**
-     * Decline a matched pickup assignment and rematch the next closest junkshop when available.
+     * Decline a pickup request for the selected junkshop.
      */
     public function declineRequest(int $assignmentId, int $junkshopAccountId): array
     {
-        $assignment = $this->getAssignment($assignmentId, $junkshopAccountId);
-        if ($assignment === null) {
-            return ['success' => false, 'message' => 'Assignment not found.'];
+        $request = $this->getDirectPickupRequest($assignmentId, $junkshopAccountId);
+        if ($request === null) {
+            return ['success' => false, 'message' => 'Pickup request not found for this junkshop.'];
         }
 
         try {
+            $previousStatus = (string) ($request['current_status'] ?? 'Pending Request');
             $statement = $this->db->query(
-                'UPDATE junkshop_assignments SET status = :status, responded_at = CURRENT_TIMESTAMP WHERE id = :id AND junkshop_id = :junkshop_id AND status = :expected_status',
-                ['status' => 'Declined', 'id' => $assignmentId, 'junkshop_id' => $junkshopAccountId, 'expected_status' => 'Matched']
-            );
-            if ($statement->rowCount() !== 1) {
-                return ['success' => false, 'message' => 'Assignment is no longer available.'];
-            }
-
-            $materialIds = $this->getMaterialIdsForRequest((int) $assignment['pickup_request_id']);
-            if (empty($materialIds)) {
-                $this->db->query(
-                    'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
-                    ['status' => 'Cancelled by Junkshop', 'id' => $assignment['pickup_request_id']]
-                );
-
-                StatusLogger::logChange((int) $assignment['pickup_request_id'], 'Matched', 'Cancelled by Junkshop', 'Junkshop', $junkshopAccountId);
-
-                return ['success' => true, 'message' => 'Request was declined and has no rematchable material data. Booking cancelled.', 'assignment' => $assignment];
-            }
-
-            $matches = MatchingEngine::findMatches(
-                (int) $assignment['pickup_request_id'],
-                $materialIds,
-                $this->getApproximateDistance((int) $assignment['pickup_request_id'])
-            );
-
-            if (empty($matches)) {
-                $this->db->query(
-                    'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
-                    ['status' => 'Cancelled by Junkshop', 'id' => $assignment['pickup_request_id']]
-                );
-
-                StatusLogger::logChange((int) $assignment['pickup_request_id'], 'Matched', 'Cancelled by Junkshop', 'Junkshop', $junkshopAccountId);
-
-                return ['success' => true, 'message' => 'No other eligible junkshops were available. Request cancelled.', 'assignment' => $assignment];
-            }
-
-            $nextMatch = $matches[0];
-            $this->db->query(
-                'INSERT INTO junkshop_assignments (pickup_request_id, junkshop_id, status, distance_km, assigned_at, responded_at) VALUES (:pickup_request_id, :junkshop_id, :status, :distance_km, CURRENT_TIMESTAMP, NULL)',
+                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND junkshop_id = :junkshop_id AND current_status IN (:pending_status, :pending_legacy_status, :matched_status)',
                 [
-                    'pickup_request_id' => $assignment['pickup_request_id'],
-                    'junkshop_id' => $nextMatch['junkshop_id'],
-                    'status' => 'Matched',
-                    'distance_km' => number_format((float) $nextMatch['distance_km'], 2, '.', ''),
+                    'status' => 'Declined',
+                    'id' => $assignmentId,
+                    'junkshop_id' => $junkshopAccountId,
+                    'pending_status' => 'Pending Request',
+                    'pending_legacy_status' => 'Pending',
+                    'matched_status' => 'Matched',
                 ]
             );
+            if ($statement->rowCount() !== 1) {
+                return ['success' => false, 'message' => 'This request is no longer available to decline.'];
+            }
 
-            $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
-                ['status' => 'Declined', 'id' => $assignment['pickup_request_id']]
-            );
-            StatusLogger::logChange((int) $assignment['pickup_request_id'], 'Matched', 'Declined', 'Junkshop', $junkshopAccountId);
+            StatusLogger::logChange((int) $assignmentId, $previousStatus === '' ? 'Pending Request' : $previousStatus, 'Declined', 'Junkshop', (int) $junkshopAccountId);
 
-            $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
-                ['status' => 'Rematched', 'id' => $assignment['pickup_request_id']]
-            );
-
-            StatusLogger::logChange((int) $assignment['pickup_request_id'], 'Declined', 'Rematched', 'System');
-            $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
-                ['status' => 'Matched', 'id' => $assignment['pickup_request_id']]
-            );
-            StatusLogger::logChange((int) $assignment['pickup_request_id'], 'Rematched', 'Matched', 'System');
-
-            return [
-                'success' => true,
-                'message' => 'Request declined and rematched.',
-                'new_assignment' => [
-                    'junkshop_id' => $nextMatch['junkshop_id'],
-                    'distance_km' => $nextMatch['distance_km'],
-                ],
-                'assignment' => $assignment,
-            ];
+            return ['success' => true, 'message' => 'Pickup request declined.', 'assignment' => $request];
         } catch (Throwable $e) {
             error_log('Decline request error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to process the decline decision.'];
         }
     }
 
-    private function getAssignment(int $assignmentId, int $junkshopAccountId): ?array
+    private function getDirectPickupRequest(int $pickupRequestId, int $junkshopAccountId): ?array
     {
         $row = $this->db->query(
-            'SELECT id, pickup_request_id, junkshop_id, status, distance_km, assigned_at, responded_at FROM junkshop_assignments WHERE id = :id AND junkshop_id = :junkshop_id LIMIT 1',
-            ['id' => $assignmentId, 'junkshop_id' => $junkshopAccountId]
+            'SELECT id AS pickup_request_id, id AS assignment_id, junkshop_id, current_status, booking_reference FROM pickup_requests WHERE id = :id AND junkshop_id = :junkshop_id LIMIT 1',
+            ['id' => $pickupRequestId, 'junkshop_id' => $junkshopAccountId]
         )->fetch();
 
-        return $row && (string) $row['status'] === 'Matched' ? $row : null;
+        return $row ?: null;
     }
 
     private function getMaterialIdsForRequest(int $pickupRequestId): array

@@ -1,4 +1,5 @@
 USE ecopickdb;
+SET NAMES utf8mb4;
 
 DELIMITER //
 
@@ -690,7 +691,7 @@ END //
 
 DROP PROCEDURE IF EXISTS sp_list_approved_junkshops_with_prices //
 
-CREATE PROCEDURE sp_list_approved_junkshops_with_prices()
+CREATE PROCEDURE sp_list_approved_junkshops_with_prices(IN p_seller_account_id INT)
 BEGIN
     SELECT
         jp.account_id AS junkshop_account_id,
@@ -701,19 +702,31 @@ BEGIN
         a.full_name AS contact_person,
         a.mobile_number,
         rm.material_name,
+        jmp.material_id,
         rm.category,
         rm.unit_of_measure,
         jmp.buying_price,
         jmp.available,
-        jmp.id AS price_id
+        jmp.id AS price_id,
+                IFNULL((
+            SELECT 1
+                        FROM pickup_requests active_pr
+                        WHERE active_pr.junkshop_id = a.id
+                            AND active_pr.seller_account_id = p_seller_account_id
+                            AND active_pr.current_status IN ('Pending Request', 'Accepted', 'Scheduled', 'For Pickup')
+                        LIMIT 1
+                ), 0) AS has_active_request
     FROM junkshop_profiles jp
     JOIN accounts a ON a.id = jp.account_id
-    JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = jp.account_id
-    JOIN recyclable_materials rm ON rm.id = jmp.material_id
-        WHERE jp.approval_status = 'approved'
-            AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
-      AND rm.is_active = 1
-      AND jmp.available = 1
+    LEFT JOIN junkshop_material_prices jmp
+        ON jmp.junkshop_account_id = jp.account_id
+       AND jmp.available = 1
+    LEFT JOIN recyclable_materials rm
+        ON rm.id = jmp.material_id
+       AND rm.is_active = 1
+    WHERE a.account_status = 'active'
+      AND jp.approval_status = 'approved'
+      AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
     ORDER BY jp.business_name ASC, rm.category ASC, rm.material_name ASC;
 END //
 
@@ -749,6 +762,7 @@ DROP PROCEDURE IF EXISTS sp_create_pickup_request //
 
 CREATE PROCEDURE sp_create_pickup_request(
     IN p_seller_account_id INT,
+    IN p_junkshop_id INT,
     IN p_items_json JSON,
     IN p_pickup_address VARCHAR(255),
     IN p_barangay VARCHAR(120),
@@ -797,6 +811,16 @@ BEGIN
 
     IF v_seller_count = 0 THEN
         SELECT 'Only active sellers can create pickup requests.' AS p_result;
+    ELSEIF p_junkshop_id IS NULL OR p_junkshop_id <= 0 THEN
+        SELECT 'Please select a partner junkshop.' AS p_result;
+    ELSEIF EXISTS (
+        SELECT 1
+        FROM pickup_requests
+        WHERE seller_account_id = p_seller_account_id
+          AND junkshop_id = p_junkshop_id
+          AND current_status IN ('Pending Request', 'Accepted', 'Scheduled', 'For Pickup')
+    ) THEN
+        SELECT 'You already have an active pickup request with this junkshop.' AS p_result;
     ELSEIF v_item_count = 0 OR v_valid_item_count <> v_item_count THEN
         SELECT 'Add at least one active material with a weight greater than zero.' AS p_result;
     ELSEIF p_pickup_address IS NULL OR TRIM(p_pickup_address) = '' THEN
@@ -813,6 +837,7 @@ BEGIN
         INSERT INTO pickup_requests (
             booking_reference,
             seller_account_id,
+            junkshop_id,
             current_status,
             pickup_address,
             barangay,
@@ -823,6 +848,7 @@ BEGIN
         ) VALUES (
             '',
             p_seller_account_id,
+            p_junkshop_id,
             'Pending Request',
             TRIM(p_pickup_address),
             TRIM(p_barangay),
@@ -873,13 +899,15 @@ BEGIN
         pr.barangay,
         pr.preferred_pickup_date,
         pr.preferred_pickup_time,
+        pr.confirmed_pickup_date,
+        pr.confirmed_pickup_time,
         pr.photo_path,
         pr.notes,
         pr.created_at,
         pr.updated_at,
         COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
         COUNT(pri.id) AS item_count,
-        GROUP_CONCAT(CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+        GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
     FROM pickup_requests pr
     LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
     LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
@@ -903,6 +931,8 @@ BEGIN
         pr.barangay,
         pr.preferred_pickup_date,
         pr.preferred_pickup_time,
+        pr.confirmed_pickup_date,
+        pr.confirmed_pickup_time,
         pr.photo_path,
         pr.notes,
         pr.created_at,
@@ -912,11 +942,19 @@ BEGIN
         rm.material_name,
         rm.category,
         rm.unit_of_measure,
-        pri.estimated_weight
+        pri.estimated_weight,
+        COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> 'Pending Request' THEN jmp.buying_price END) AS matched_price_per_kg,
+        COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> 'Pending Request' THEN ROUND(pri.estimated_weight * jmp.buying_price, 2) END) AS estimated_value,
+        tm.final_material_value AS actual_value,
+        pri.estimated_buying_price_per_kg,
+        pri.estimated_material_value,
+        pri.estimate_snapshot_at
     FROM pickup_requests pr
     JOIN accounts a ON a.id = pr.seller_account_id
     JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
     JOIN recyclable_materials rm ON rm.id = pri.material_id
+    LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1
+    LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id
     WHERE pr.id = p_request_id
       AND pr.seller_account_id = p_seller_account_id
     ORDER BY rm.material_name ASC;
@@ -988,7 +1026,7 @@ BEGIN
         pr.created_at,
         pr.updated_at,
         COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
-        GROUP_CONCAT(CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+        GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
     FROM pickup_requests pr
     JOIN accounts a ON a.id = pr.seller_account_id
     JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
@@ -1140,3 +1178,22 @@ BEGIN
 END //
 
 DELIMITER ;
+
+ALTER TABLE pickup_requests
+    ADD COLUMN IF NOT EXISTS payment_method ENUM('Cash') NULL,
+    ADD COLUMN IF NOT EXISTS payment_status ENUM('Unpaid', 'Paid') NULL;
+
+ALTER TABLE pickup_request_items
+    ADD COLUMN IF NOT EXISTS actual_weight DECIMAL(10,2) NULL,
+    ADD COLUMN IF NOT EXISTS material_condition VARCHAR(120) NULL;
+
+ALTER TABLE pickup_requests
+    ADD COLUMN IF NOT EXISTS final_recyclable_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS pickup_collection_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS ecopick_service_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS final_amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS confirmed_pickup_date DATE NULL,
+    ADD COLUMN IF NOT EXISTS confirmed_pickup_time TIME NULL;
+
+ALTER TABLE pickup_request_items
+    ADD COLUMN IF NOT EXISTS actual_weight DECIMAL(10,2) NULL;

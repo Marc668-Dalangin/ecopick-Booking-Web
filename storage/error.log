@@ -189,3 +189,394 @@
 [08-Sep-2026 14:44:15 UTC] Partnership payment reconciliation error: SQLSTATE[HY093]: Invalid parameter number
 [08-Sep-2026 14:44:18 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
 [08-Sep-2026 14:44:18 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[09-Sep-2026 05:55:20 UTC] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[10-Sep-2026 00:28:38 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.junkshop_assignments' doesn't exist
+[10-Sep-2026 00:28:38 UTC] Booking notification error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.junkshop_assignments' doesn't exist
+[10-Sep-2026 00:29:24 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.junkshop_assignments' doesn't exist
+[10-Sep-2026 00:29:24 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.junkshop_assignments' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 00:33:46 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.junkshop_assignments' doesn't exist
+[10-Sep-2026 00:33:46 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.junkshop_assignments' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 00:41:40 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:40 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:41:41 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:41 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:41:42 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:42 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:41:42 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:42 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:41:42 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:42 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:41:44 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:44 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:41:47 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:41:47 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:42:38 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:42:38 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:42:40 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:42:40 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:51:12 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:51:12 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:54:13 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:54:13 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:54:16 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:54:16 UTC] Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:78
+[10-Sep-2026 00:56:57 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:57 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:57 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:57 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:59 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:59 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:59 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:56:59 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:00 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:00 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:00 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:00 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:25 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:25 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:27 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:28 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:31 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:31 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:33 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:33 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:33 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:57:33 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:18 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:18 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:23 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:23 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:23 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:23 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:25 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:25 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:25 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:25 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:39 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:58:39 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:12 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:12 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:15 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:15 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:16 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:21 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:21 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:21 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:21 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:22 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:22 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:22 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:22 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:54 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:54 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:55 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 00:59:55 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:19 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:19 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:26 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:26 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:37 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:37 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:44 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:00:44 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:07 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:07 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:08 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:08 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:08 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:08 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:09 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:11 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:11 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:11 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:11 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:20 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:20 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:20 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:20 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:22 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:22 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:22 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:22 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:41 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:41 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:44 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:44 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:44 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:44 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:45 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:45 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:45 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:45 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:46 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:46 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:46 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:46 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:46 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:46 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:47 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:47 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:47 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:47 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:47 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:07:47 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:00 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:00 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:01 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:01 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:01 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:01 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:08 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:08 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:08 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:08 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:09 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:09 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:09 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:15 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:15 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:08:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:09:31 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:09:31 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:09:31 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:09:31 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:03 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:03 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:04 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:04 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:04 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:04 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:04 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:04 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:32 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:32 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:34 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:34 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:35 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:16:35 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:41 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:41 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:41 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:41 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:48 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:48 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:48 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:32:48 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:00 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:00 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:00 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:00 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:00 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:00 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:01 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:02 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:03 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:03 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:03 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:03 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:17 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:41 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:43:41 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:10 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:10 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:11 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:11 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:11 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:11 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:16 UTC] Database error: SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 01:44:16 UTC] SQLSTATE[HY093]: Invalid parameter number
+[10-Sep-2026 02:03:39 UTC] Uncaught ParseError: syntax error, unexpected identifier "Pending", expecting ")" in C:\xampp\htdocs\booking-website-lipacity\app\controllers\DashboardController.php:267
+[10-Sep-2026 02:03:44 UTC] Uncaught ParseError: syntax error, unexpected identifier "Pending", expecting ")" in C:\xampp\htdocs\booking-website-lipacity\app\controllers\DashboardController.php:267
+[10-Sep-2026 02:37:28 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:37:28 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:38:28 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:38:28 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:38:50 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:38:50 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:38:52 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:38:52 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:38:52 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:38:52 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:38:52 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:38:52 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:38:55 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:38:55 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:39:11 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:39:11 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 02:39:18 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list'
+[10-Sep-2026 02:39:18 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.confirmed_pickup_date' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
+[10-Sep-2026 04:22:11 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:28:59 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:28:59 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:00 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:00 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:00 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:00 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:00 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:01 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:01 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:01 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:29:01 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 28
+[10-Sep-2026 04:31:15 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:15 UTC] PHP Warning:  Undefined array key "final_amount_paid" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:15 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:15 UTC] PHP Warning:  Undefined array key "final_amount_paid" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:16 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:16 UTC] PHP Warning:  Undefined array key "final_amount_paid" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:41 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:41 UTC] PHP Warning:  Undefined array key "final_amount_paid" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:42 UTC] PHP Warning:  Undefined array key "pickup_collection_fee" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 04:31:42 UTC] PHP Warning:  Undefined array key "final_amount_paid" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\transaction-history.php on line 27
+[10-Sep-2026 05:27:45 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:45 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:48 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:49 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:49 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:49 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:49 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:49 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:49 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:50 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:50 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:52 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:27:52 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:28:08 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:28:08 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:28:09 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:28:09 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:42 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:43 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:43 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:45 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:34:45 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:35:06 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:35:06 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:03 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:03 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:04 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:04 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:04 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:04 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:04 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:04 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:05 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:08 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:08 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:08 UTC] Database error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
+[10-Sep-2026 05:36:08 UTC] Material price fetch error: SQLSTATE[42000]: Syntax error or access violation: 1318 Incorrect number of arguments for PROCEDURE ecopickdb.sp_list_approved_junkshops_with_prices; expected 0, got 1
