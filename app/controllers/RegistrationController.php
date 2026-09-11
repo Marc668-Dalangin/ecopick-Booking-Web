@@ -33,25 +33,41 @@ class RegistrationController
                 return ['success' => false, 'errors' => ['Username already registered']];
             }
 
-            $stmt = $this->db->call('sp_register_seller', [
-                $data['full_name'],
-                trim((string) ($data['username'] ?? '')),
-                $data['email'],
-                $data['mobile_number'],
-                password_hash($data['password'], PASSWORD_BCRYPT),
-                $data['address'],
-                $data['barangay'],
-            ]);
+            $this->db->beginTransaction();
+            $existing = $this->db->query(
+                'SELECT id FROM accounts WHERE email = :email OR username = :username LIMIT 1',
+                ['email' => $data['email'], 'username' => trim((string) ($data['username'] ?? ''))]
+            )->fetch();
+            if ($existing) {
+                $this->db->rollBack();
+                return ['success' => false, 'errors' => ['Email or username already registered']];
+            }
 
-            $result = $stmt->fetch();
-            $this->db->closeProcedureCursor($stmt);
+            $this->db->query(
+                "INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
+                 VALUES ((SELECT id FROM roles WHERE name = 'seller'), 'seller', :email, :username, :password_hash, :full_name, :mobile_number, 'active')",
+                [
+                    'email' => $data['email'],
+                    'username' => trim((string) ($data['username'] ?? '')),
+                    'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+                    'full_name' => $data['full_name'],
+                    'mobile_number' => $data['mobile_number'],
+                ]
+            );
+            $accountId = (int) $this->db->getPDO()->lastInsertId();
+            $this->db->query(
+                'INSERT INTO seller_profiles (account_id, address, barangay) VALUES (:account_id, :address, :barangay)',
+                ['account_id' => $accountId, 'address' => $data['address'], 'barangay' => $data['barangay']]
+            );
+            $this->db->commit();
 
-            if (($result['p_result'] ?? '') === 'success') {
+            if ($accountId > 0) {
                 return ['success' => true, 'message' => 'Registration successful. Please login.'];
             }
 
-            return ['success' => false, 'errors' => [($result['p_result'] ?? 'Registration failed')]];
+            return ['success' => false, 'errors' => ['Registration failed']];
         } catch (Throwable $e) {
+            $this->db->rollBack();
             error_log('Registration error: ' . $e->getMessage());
             return ['success' => false, 'errors' => [$e->getMessage()]];
         }
@@ -73,27 +89,49 @@ class RegistrationController
                 return ['success' => false, 'errors' => ['Username already registered']];
             }
 
-            $stmt = $this->db->call('sp_register_junkshop', [
-                $data['business_name'],
-                $data['owner_name'],
-                trim((string) ($data['username'] ?? '')),
-                $data['email'],
-                $data['mobile_number'],
-                $data['complete_address'],
-                $data['operating_schedule'],
-                $data['business_permit_reference'],
-                password_hash($data['password'], PASSWORD_BCRYPT),
-            ]);
+            $this->db->beginTransaction();
+            $existing = $this->db->query(
+                'SELECT id FROM accounts WHERE email = :email OR username = :username LIMIT 1',
+                ['email' => $data['email'], 'username' => trim((string) ($data['username'] ?? ''))]
+            )->fetch();
+            if ($existing) {
+                $this->db->rollBack();
+                return ['success' => false, 'errors' => ['Email or username already registered']];
+            }
 
-            $result = $stmt->fetch();
-            $this->db->closeProcedureCursor($stmt);
+            $this->db->query(
+                "INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
+                 VALUES ((SELECT id FROM roles WHERE name = 'junkshop'), 'junkshop', :email, :username, :password_hash, :full_name, :mobile_number, 'active')",
+                [
+                    'email' => $data['email'],
+                    'username' => trim((string) ($data['username'] ?? '')),
+                    'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+                    'full_name' => $data['owner_name'],
+                    'mobile_number' => $data['mobile_number'],
+                ]
+            );
+            $accountId = (int) $this->db->getPDO()->lastInsertId();
+            $this->db->query(
+                "INSERT INTO junkshop_profiles (account_id, business_name, owner_name, complete_address, operating_schedule, business_permit_reference, approval_status)
+                 VALUES (:account_id, :business_name, :owner_name, :complete_address, :operating_schedule, :permit_reference, 'pending')",
+                [
+                    'account_id' => $accountId,
+                    'business_name' => $data['business_name'],
+                    'owner_name' => $data['owner_name'],
+                    'complete_address' => $data['complete_address'],
+                    'operating_schedule' => $data['operating_schedule'],
+                    'permit_reference' => $data['business_permit_reference'],
+                ]
+            );
+            $this->db->commit();
 
-            if (($result['p_result'] ?? '') === 'success') {
+            if ($accountId > 0) {
                 return ['success' => true, 'message' => 'Registration successful. Please login.'];
             }
 
-            return ['success' => false, 'errors' => [($result['p_result'] ?? 'Registration failed')]];
+            return ['success' => false, 'errors' => ['Registration failed']];
         } catch (Throwable $e) {
+            $this->db->rollBack();
             error_log('Registration error: ' . $e->getMessage());
             return ['success' => false, 'errors' => [$e->getMessage()]];
         }

@@ -25,9 +25,19 @@ class LoginController
         }
 
         try {
-            $stmt = $this->db->call('sp_get_login_user_by_email', [$input]);
-            $user = $stmt->fetch();
-            $this->db->closeProcedureCursor($stmt);
+            $user = $this->db->query(
+                "SELECT a.id, a.role_id, COALESCE(a.account_role, r.name) AS account_role,
+                        a.email, a.username, a.password_hash, a.full_name, a.account_status,
+                        r.name AS role_name,
+                        CASE WHEN r.name = 'junkshop' THEN (
+                            SELECT approval_status FROM junkshop_profiles WHERE account_id = a.id
+                        ) ELSE NULL END AS approval_status
+                 FROM accounts a
+                 JOIN roles r ON a.role_id = r.id
+                 WHERE a.email = :input_email OR a.username = :input_username
+                 LIMIT 1",
+                ['input_email' => $input, 'input_username' => $input]
+            )->fetch();
 
             if (!$user) {
                 return ['success' => false, 'error' => 'Invalid email or password'];

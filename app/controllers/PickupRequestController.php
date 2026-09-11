@@ -43,40 +43,79 @@ class PickupRequestController
         }
 
         try {
-            $stmt = $this->db->call('sp_create_pickup_request', [
-                (int) $sellerAccountId,
-                (int) ($normalized['junkshop_id'] ?? 0),
-                json_encode($normalized['items'], JSON_UNESCAPED_SLASHES),
-                $normalized['pickup_address'],
-                $normalized['barangay'],
-                $normalized['preferred_pickup_date'],
-                $normalized['preferred_pickup_time'],
-                $photoPath,
-                $normalized['notes'] !== '' ? $normalized['notes'] : null,
-            ]);
-            $result = $stmt->fetch();
-            $this->db->closeProcedureCursor($stmt);
-
-            if (($result['p_result'] ?? '') !== 'success') {
-                if ($photoPath !== null) {
-                    $this->deletePhoto($photoPath);
-                }
-                return ['success' => false, 'message' => $result['p_result'] ?? 'Unable to create the pickup request.', 'validation_errors' => []];
+            $this->db->beginTransaction();
+            $seller = $this->db->query(
+                "SELECT id FROM accounts WHERE id = :seller_id AND account_role = 'seller' AND account_status = 'active' LIMIT 1",
+                ['seller_id' => (int) $sellerAccountId]
+            )->fetch();
+            if (!$seller) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Only active sellers can create pickup requests.', 'validation_errors' => []];
             }
 
-            $requestId = (int) ($result['p_request_id'] ?? 0);
+            $activeRequest = $this->db->query(
+                "SELECT id FROM pickup_requests
+                 WHERE seller_account_id = :seller_id AND junkshop_id = :junkshop_id
+                   AND current_status IN ('Pending Request', 'Accepted', 'Scheduled', 'For Pickup') LIMIT 1",
+                ['seller_id' => (int) $sellerAccountId, 'junkshop_id' => (int) $normalized['junkshop_id']]
+            )->fetch();
+            if ($activeRequest) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'You already have an active pickup request with this junkshop.', 'validation_errors' => []];
+            }
+
+            foreach ($normalized['items'] as $item) {
+                $material = $this->db->query(
+                    'SELECT id FROM recyclable_materials WHERE id = :material_id AND is_active = 1 LIMIT 1',
+                    ['material_id' => (int) $item['material_id']]
+                )->fetch();
+                if (!$material || (float) $item['estimated_weight'] <= 0) {
+                    $this->db->rollBack();
+                    return ['success' => false, 'message' => 'Add at least one active material with a weight greater than zero.', 'validation_errors' => []];
+                }
+            }
 
             $this->db->query(
-                'UPDATE pickup_requests SET pickup_location_name = :location_name, approximate_distance_km = :distance_km, seller_lat = :seller_lat, seller_lng = :seller_lng WHERE id = :request_id AND seller_account_id = :seller_id',
+                "INSERT INTO pickup_requests
+                    (booking_reference, seller_account_id, junkshop_id, current_status, pickup_address, barangay,
+                     preferred_pickup_date, preferred_pickup_time, photo_path, notes, pickup_location_name,
+                     approximate_distance_km, seller_lat, seller_lng)
+                 VALUES ('', :seller_id, :junkshop_id, 'Pending Request', :pickup_address, :barangay,
+                         :pickup_date, :pickup_time, :photo_path, :notes, :location_name,
+                         :distance_km, :seller_lat, :seller_lng)",
                 [
+                    'seller_id' => (int) $sellerAccountId,
+                    'junkshop_id' => (int) $normalized['junkshop_id'],
+                    'pickup_address' => $normalized['pickup_address'],
+                    'barangay' => $normalized['barangay'],
+                    'pickup_date' => $normalized['preferred_pickup_date'],
+                    'pickup_time' => $normalized['preferred_pickup_time'],
+                    'photo_path' => $photoPath,
+                    'notes' => $normalized['notes'] !== '' ? $normalized['notes'] : null,
                     'location_name' => $normalized['pickup_location_name'],
                     'distance_km' => $normalized['approximate_distance_km'],
                     'seller_lat' => $normalized['seller_lat'],
                     'seller_lng' => $normalized['seller_lng'],
-                    'request_id' => $requestId,
-                    'seller_id' => (int) $sellerAccountId,
                 ]
             );
+            $requestId = (int) $this->db->getPDO()->lastInsertId();
+            $bookingReference = 'ECP-' . date('Ymd') . '-' . str_pad((string) $requestId, 4, '0', STR_PAD_LEFT);
+            $this->db->query(
+                'UPDATE pickup_requests SET booking_reference = :booking_reference WHERE id = :request_id',
+                ['booking_reference' => $bookingReference, 'request_id' => $requestId]
+            );
+            foreach ($normalized['items'] as $item) {
+                $this->db->query(
+                    'INSERT INTO pickup_request_items (pickup_request_id, material_id, estimated_weight) VALUES (:request_id, :material_id, :estimated_weight)',
+                    ['request_id' => $requestId, 'material_id' => (int) $item['material_id'], 'estimated_weight' => $item['estimated_weight']]
+                );
+            }
+            $this->db->query(
+                "INSERT INTO pickup_request_status_history (pickup_request_id, status, changed_by_account_id)
+                 VALUES (:request_id, 'Pending Request', :seller_id)",
+                ['request_id' => $requestId, 'seller_id' => (int) $sellerAccountId]
+            );
+            $this->db->commit();
 
             if ($requestId > 0) {
                 StatusLogger::logChange($requestId, null, 'Pending Request', 'Seller', (int) $sellerAccountId);
@@ -88,7 +127,7 @@ class PickupRequestController
                 'validation_errors' => [],
                 'request' => [
                     'id' => $requestId,
-                    'booking_reference' => $result['p_booking_reference'],
+                    'booking_reference' => $bookingReference,
                 ],
             ];
         } catch (Exception $e) {
@@ -102,7 +141,21 @@ class PickupRequestController
 
     public function listSellerRequests($sellerAccountId)
     {
-        return $this->fetchAll('sp_get_seller_pickup_requests', [(int) $sellerAccountId]);
+        return $this->db->query(
+            "SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay,
+                    pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
+                    pr.confirmed_pickup_time, DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+                    TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path,
+                    pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
+                    COUNT(pri.id) AS item_count,
+                    GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+             FROM pickup_requests pr
+             LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+             LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
+             WHERE pr.seller_account_id = :seller_id
+             GROUP BY pr.id ORDER BY pr.created_at DESC",
+            ['seller_id' => (int) $sellerAccountId]
+        )->fetchAll();
     }
 
     public function getPendingRequestJunkshopIds(int $sellerAccountId): array
@@ -119,7 +172,22 @@ class PickupRequestController
 
     public function getSellerRequestDetails($requestId, $sellerAccountId)
     {
-        $rows = $this->fetchAll('sp_get_pickup_request_details', [(int) $requestId, (int) $sellerAccountId]);
+        $rows = $this->db->query(
+            "SELECT pr.id, pr.booking_reference, pr.seller_account_id, a.full_name AS seller_name, a.email AS seller_email,
+                    pr.current_status, pr.pickup_location_name, pr.pickup_address, pr.barangay, pr.approximate_distance_km,
+                    pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date, pr.confirmed_pickup_time,
+                    DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+                    TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,
+                    pr.created_at, pr.updated_at, pri.id AS item_id, pri.material_id, rm.material_name, rm.category,
+                    rm.unit_of_measure, pri.estimated_weight
+             FROM pickup_requests pr
+             JOIN accounts a ON a.id = pr.seller_account_id
+             JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+             JOIN recyclable_materials rm ON rm.id = pri.material_id
+             WHERE pr.id = :request_id AND pr.seller_account_id = :seller_id
+             ORDER BY rm.material_name ASC",
+            ['request_id' => (int) $requestId, 'seller_id' => (int) $sellerAccountId]
+        )->fetchAll();
         if (empty($rows)) {
             return null;
         }
@@ -258,7 +326,29 @@ class PickupRequestController
             return ['success' => false, 'message' => 'Cancellation is not allowed once the request has been accepted.'];
         }
 
-        $result = $this->executeResult('sp_cancel_pickup_request', [(int) $requestId, (int) $sellerAccountId], 'Pickup request cancelled successfully.');
+        try {
+            $this->db->beginTransaction();
+            $statement = $this->db->query(
+                "UPDATE pickup_requests SET current_status = 'Cancelled by Seller', updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :request_id AND seller_account_id = :seller_id AND current_status = 'Pending Request'",
+                ['request_id' => (int) $requestId, 'seller_id' => (int) $sellerAccountId]
+            );
+            if ($statement->rowCount() !== 1) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'The pickup request could not be cancelled.'];
+            }
+            $this->db->query(
+                "INSERT INTO pickup_request_status_history (pickup_request_id, status, changed_by_account_id)
+                 VALUES (:request_id, 'Cancelled', :seller_id)",
+                ['request_id' => (int) $requestId, 'seller_id' => (int) $sellerAccountId]
+            );
+            $this->db->commit();
+            $result = ['success' => true, 'message' => 'Pickup request cancelled successfully.'];
+        } catch (Throwable $exception) {
+            $this->db->rollBack();
+            error_log('Pickup request cancellation error: ' . $exception->getMessage());
+            $result = ['success' => false, 'message' => 'Unable to process the pickup request right now.'];
+        }
         if ($result['success']) {
             StatusLogger::logChange((int) $requestId, $currentStatus, 'Cancelled by Seller', 'Seller', (int) $sellerAccountId);
         }
@@ -268,7 +358,18 @@ class PickupRequestController
 
     public function listAdminPendingRequests()
     {
-        return $this->fetchAll('sp_get_admin_pending_pickup_requests');
+        return $this->db->query(
+            "SELECT pr.id, pr.booking_reference, pr.current_status, a.full_name AS seller_name, a.email AS seller_email,
+                    pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time,
+                    pr.photo_path, pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
+                    GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+             FROM pickup_requests pr
+             JOIN accounts a ON a.id = pr.seller_account_id
+             JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+             JOIN recyclable_materials rm ON rm.id = pri.material_id
+             WHERE pr.current_status = 'Pending Request'
+             GROUP BY pr.id ORDER BY pr.created_at ASC"
+        )->fetchAll();
     }
 
     public function validateRequestData($data)
@@ -391,30 +492,4 @@ class PickupRequestController
         }
     }
 
-    private function fetchAll($procedureName, $params = [])
-    {
-        try {
-            $stmt = $this->db->call($procedureName, $params);
-            $rows = $stmt->fetchAll();
-            $this->db->closeProcedureCursor($stmt);
-            return $rows;
-        } catch (Exception $e) {
-            error_log('Pickup request read error: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    private function executeResult($procedureName, $params, $successMessage)
-    {
-        try {
-            $stmt = $this->db->call($procedureName, $params);
-            $row = $stmt->fetch();
-            $this->db->closeProcedureCursor($stmt);
-            $result = $row['p_result'] ?? '';
-            return ['success' => $result === 'success', 'message' => $result === 'success' ? $successMessage : ($result ?: 'Unable to process the pickup request.')];
-        } catch (Exception $e) {
-            error_log('Pickup request write error: ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Unable to process the pickup request right now.'];
-        }
-    }
 }

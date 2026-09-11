@@ -42,33 +42,6 @@ class Database
     }
 
     /**
-     * Call stored procedure
-     */
-    public function call($procedureName, $params = [])
-    {
-        try {
-            $placeholders = implode(',', array_fill(0, count($params), '?'));
-            $sql = "CALL $procedureName($placeholders)";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            return $stmt;
-        } catch (PDOException $e) {
-            error_log('Database error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    /**
-     * Close any remaining MySQL result set from a stored procedure
-     */
-    public function closeProcedureCursor($stmt)
-    {
-        if ($stmt instanceof PDOStatement) {
-            $stmt->closeCursor();
-        }
-    }
-
-    /**
      * Execute query with parameters
      */
     public function query($sql, $params = [])

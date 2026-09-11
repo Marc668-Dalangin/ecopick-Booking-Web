@@ -17,11 +17,13 @@ class DashboardController
     public function getAdminStats()
     {
         try {
-            $stmt = $this->db->call('sp_get_admin_dashboard_stats');
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
-            }
+            $row = $this->db->query(
+                "SELECT
+                    (SELECT COUNT(*) FROM accounts a JOIN roles r ON r.id = a.role_id WHERE r.name = 'seller') AS total_sellers,
+                    (SELECT COUNT(*) FROM accounts a JOIN roles r ON r.id = a.role_id WHERE r.name = 'junkshop') AS total_junkshops,
+                    (SELECT COUNT(*) FROM junkshop_profiles WHERE approval_status = 'pending') AS pending_junkshop_applications,
+                    (SELECT COUNT(*) FROM junkshop_profiles WHERE approval_status = 'approved') AS approved_junkshops"
+            )->fetch();
             return $row ?: [
                 'total_sellers' => 0,
                 'total_junkshops' => 0,
@@ -81,12 +83,29 @@ class DashboardController
 
     public function listPendingJunkshops()
     {
-        return $this->fetchAll('sp_list_pending_junkshops');
+        return $this->db->query(
+            "SELECT jp.account_id, jp.business_name, a.full_name AS contact_person, a.email, a.mobile_number,
+                    jp.complete_address AS address, jp.operating_schedule, jp.business_permit_reference,
+                    jp.created_at AS registration_date, jp.approval_status AS status, a.account_status
+             FROM junkshop_profiles jp
+             JOIN accounts a ON a.id = jp.account_id
+             WHERE jp.approval_status = 'pending'
+             ORDER BY jp.created_at DESC"
+        )->fetchAll();
     }
 
     public function listSellers()
     {
-        return $this->fetchAll('sp_list_sellers');
+        return $this->db->query(
+            "SELECT a.id, a.full_name, a.email, a.mobile_number,
+                    CONCAT(COALESCE(sp.address, ''), IF(sp.barangay IS NOT NULL AND sp.barangay <> '', CONCAT(', ', sp.barangay), '')) AS address,
+                    a.account_status, a.created_at
+             FROM accounts a
+             JOIN roles r ON r.id = a.role_id
+             LEFT JOIN seller_profiles sp ON sp.account_id = a.id
+             WHERE r.name = 'seller'
+             ORDER BY a.full_name ASC"
+        )->fetchAll();
     }
 
     public function updateAccountStatus(int $accountId, string $status): array
@@ -129,7 +148,15 @@ class DashboardController
 
     public function listApprovedJunkshops()
     {
-        return $this->fetchAll('sp_list_approved_junkshops');
+        return $this->db->query(
+            "SELECT jp.account_id, jp.business_name, a.full_name AS contact_person, a.email, a.mobile_number,
+                    jp.complete_address AS address, jp.operating_schedule, jp.business_permit_reference,
+                    jp.created_at AS registration_date, jp.approval_status AS status
+             FROM junkshop_profiles jp
+             JOIN accounts a ON a.id = jp.account_id
+             WHERE jp.approval_status = 'approved'
+             ORDER BY jp.created_at DESC"
+        )->fetchAll();
     }
 
     public function updateJunkshopApproval($accountId, $status)
@@ -140,19 +167,30 @@ class DashboardController
         }
 
         try {
-            $stmt = $this->db->call('sp_update_junkshop_approval', [$accountId, $status]);
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
+            $this->db->beginTransaction();
+            $profile = $this->db->query(
+                'SELECT account_id FROM junkshop_profiles WHERE account_id = :account_id LIMIT 1',
+                ['account_id' => (int) $accountId]
+            )->fetch();
+            if (!$profile) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Junkshop account not found'];
             }
-
-            $message = $row['p_result'] ?? 'success';
-            if ($message === 'success') {
+            $this->db->query(
+                'UPDATE junkshop_profiles SET approval_status = :status, updated_at = CURRENT_TIMESTAMP WHERE account_id = :account_id',
+                ['status' => $status, 'account_id' => (int) $accountId]
+            );
+            $this->db->query(
+                "UPDATE accounts SET account_status = 'active', updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :account_id AND account_status <> 'inactive'",
+                ['account_id' => (int) $accountId]
+            );
+            $this->db->commit();
+            if ($profile) {
                 return ['success' => true, 'message' => 'Junkshop status updated successfully'];
             }
-
-            return ['success' => false, 'message' => $message];
         } catch (Exception $e) {
+            $this->db->rollBack();
             error_log('Junkshop approval update error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update junkshop status'];
         }
@@ -160,21 +198,41 @@ class DashboardController
 
     public function getSellerProfile($accountId)
     {
-        return $this->fetchOne('sp_get_seller_profile', [$accountId]);
+        return $this->db->query(
+            "SELECT a.id AS account_id, a.username, a.full_name, a.email, a.mobile_number, a.account_status,
+                    sp.address, sp.barangay, a.created_at
+             FROM accounts a
+             LEFT JOIN seller_profiles sp ON sp.account_id = a.id
+             WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'seller')",
+            ['account_id' => (int) $accountId]
+        )->fetch() ?: null;
     }
 
     public function updateSellerProfile($accountId, $fullName, $mobileNumber, $address, $barangay)
     {
         try {
-            $stmt = $this->db->call('sp_update_seller_profile', [$accountId, $fullName, $mobileNumber, $address, $barangay]);
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
+            $this->db->beginTransaction();
+            $account = $this->db->query(
+                "SELECT id FROM accounts WHERE id = :account_id AND role_id = (SELECT id FROM roles WHERE name = 'seller') LIMIT 1",
+                ['account_id' => (int) $accountId]
+            )->fetch();
+            if (!$account) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Seller account not found'];
             }
-
-            $message = $row['p_result'] ?? 'success';
-            return ['success' => $message === 'success', 'message' => $message === 'success' ? 'Profile updated successfully.' : $message];
+            $this->db->query(
+                'UPDATE accounts SET full_name = :full_name, mobile_number = :mobile_number, updated_at = CURRENT_TIMESTAMP WHERE id = :account_id',
+                ['full_name' => $fullName, 'mobile_number' => $mobileNumber, 'account_id' => (int) $accountId]
+            );
+            $this->db->query(
+                'INSERT INTO seller_profiles (account_id, address, barangay) VALUES (:account_id, :address, :barangay)
+                 ON DUPLICATE KEY UPDATE address = VALUES(address), barangay = VALUES(barangay), updated_at = CURRENT_TIMESTAMP',
+                ['account_id' => (int) $accountId, 'address' => $address, 'barangay' => $barangay]
+            );
+            $this->db->commit();
+            return ['success' => true, 'message' => 'Profile updated successfully.'];
         } catch (Exception $e) {
+            $this->db->rollBack();
             error_log('Seller profile update error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update profile'];
         }
@@ -182,31 +240,56 @@ class DashboardController
 
     public function getJunkshopProfile($accountId)
     {
-        return $this->fetchOne('sp_get_junkshop_profile', [$accountId]);
+        return $this->db->query(
+            "SELECT a.id AS account_id, a.username, a.email, a.full_name AS owner_name, a.mobile_number,
+                    a.account_status, jp.business_name, jp.complete_address, jp.operating_schedule,
+                    jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number,
+                    jp.approval_status, jp.created_at
+             FROM accounts a
+             JOIN junkshop_profiles jp ON jp.account_id = a.id
+             WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
+            ['account_id' => (int) $accountId]
+        )->fetch() ?: null;
     }
 
     public function updateJunkshopProfile($accountId, $businessName, $ownerName, $mobileNumber, $completeAddress, $operatingSchedule, $permitReference, $gcashAccountName = '', $gcashAccountNumber = '')
     {
         try {
-            $stmt = $this->db->call('sp_update_junkshop_profile', [
-                $accountId,
-                $businessName,
-                $ownerName,
-                $mobileNumber,
-                $completeAddress,
-                $operatingSchedule,
-                $permitReference,
-                trim((string) $gcashAccountName),
-                trim((string) $gcashAccountNumber),
-            ]);
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
+            $this->db->beginTransaction();
+            $account = $this->db->query(
+                "SELECT id FROM accounts WHERE id = :account_id AND role_id = (SELECT id FROM roles WHERE name = 'junkshop') LIMIT 1",
+                ['account_id' => (int) $accountId]
+            )->fetch();
+            if (!$account) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Junkshop account not found'];
             }
-
-            $message = $row['p_result'] ?? 'success';
-            return ['success' => $message === 'success', 'message' => $message === 'success' ? 'Profile updated successfully.' : $message];
+            $this->db->query(
+                'UPDATE accounts SET full_name = :account_owner_name, mobile_number = :mobile_number, updated_at = CURRENT_TIMESTAMP WHERE id = :account_id',
+                ['account_owner_name' => $ownerName, 'mobile_number' => $mobileNumber, 'account_id' => (int) $accountId]
+            );
+            $this->db->query(
+                "UPDATE junkshop_profiles
+                 SET business_name = :business_name, owner_name = :profile_owner_name, complete_address = :complete_address,
+                     operating_schedule = :operating_schedule, business_permit_reference = :permit_reference,
+                     gcash_account_name = NULLIF(TRIM(:gcash_name), ''), gcash_account_number = NULLIF(TRIM(:gcash_number), ''),
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE account_id = :account_id",
+                [
+                    'business_name' => $businessName,
+                    'profile_owner_name' => $ownerName,
+                    'complete_address' => $completeAddress,
+                    'operating_schedule' => $operatingSchedule,
+                    'permit_reference' => $permitReference,
+                    'gcash_name' => trim((string) $gcashAccountName),
+                    'gcash_number' => trim((string) $gcashAccountNumber),
+                    'account_id' => (int) $accountId,
+                ]
+            );
+            $this->db->commit();
+            return ['success' => true, 'message' => 'Profile updated successfully.'];
         } catch (Exception $e) {
+            $this->db->rollBack();
             error_log('Junkshop profile update error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update profile'];
         }
@@ -349,33 +432,4 @@ class DashboardController
         return [];
     }
 
-    private function fetchAll($procedureName, $params = [])
-    {
-        try {
-            $stmt = $this->db->call($procedureName, $params);
-            $rows = $stmt->fetchAll();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
-            }
-            return $rows;
-        } catch (Exception $e) {
-            error_log('Stored procedure fetch error: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    private function fetchOne($procedureName, $params = [])
-    {
-        try {
-            $stmt = $this->db->call($procedureName, $params);
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
-            }
-            return $row ?: null;
-        } catch (Exception $e) {
-            error_log('Stored procedure read error: ' . $e->getMessage());
-            return null;
-        }
-    }
 }

@@ -16,27 +16,54 @@ class MaterialPriceController
 
     public function listActiveMaterials()
     {
-        return $this->fetchAll('sp_list_active_materials');
+        return $this->db->query(
+            'SELECT id, material_name, category, unit_of_measure, is_active, created_at, updated_at
+             FROM recyclable_materials WHERE is_active = 1 ORDER BY category ASC, material_name ASC'
+        )->fetchAll();
     }
 
     public function getJunkshopMaterialPrices($accountId)
     {
-        return $this->fetchAll('sp_get_junkshop_material_prices', [$accountId]);
+        return $this->db->query(
+            'SELECT jmp.id, jmp.junkshop_account_id, jmp.material_id, rm.material_name, rm.category,
+                    rm.unit_of_measure, jmp.buying_price, jmp.available, jmp.created_at, jmp.updated_at
+             FROM junkshop_material_prices jmp
+             JOIN recyclable_materials rm ON rm.id = jmp.material_id
+             WHERE jmp.junkshop_account_id = :account_id
+             ORDER BY rm.category ASC, rm.material_name ASC',
+            ['account_id' => (int) $accountId]
+        )->fetchAll();
     }
 
     public function addMaterialPrice($accountId, $materialId, $buyingPrice, $available = 1)
     {
-        return $this->executeResult('sp_add_junkshop_material_price', [$accountId, (int) $materialId, (string) $buyingPrice, (int) $available]);
+        return $this->writeMaterialPrice(
+            'INSERT INTO junkshop_material_prices (junkshop_account_id, material_id, buying_price, available)
+             VALUES (:account_id, :material_id, :buying_price, :available)',
+            ['account_id' => (int) $accountId, 'material_id' => (int) $materialId,
+             'buying_price' => (string) $buyingPrice, 'available' => (int) $available],
+            'Material already added. Please update the existing price instead.'
+        );
     }
 
     public function updateMaterialPrice($accountId, $priceId, $buyingPrice, $available = 1)
     {
-        return $this->executeResult('sp_update_junkshop_material_price', [$accountId, (int) $priceId, (string) $buyingPrice, (int) $available]);
+        return $this->writeMaterialPrice(
+            'UPDATE junkshop_material_prices SET buying_price = :buying_price, available = :available,
+             updated_at = CURRENT_TIMESTAMP WHERE id = :price_id AND junkshop_account_id = :account_id',
+            ['account_id' => (int) $accountId, 'price_id' => (int) $priceId,
+             'buying_price' => (string) $buyingPrice, 'available' => (int) $available],
+            'Price record not found for this junkshop.'
+        );
     }
 
     public function removeMaterialPrice($accountId, $priceId)
     {
-        return $this->executeResult('sp_remove_junkshop_material_price', [$accountId, (int) $priceId]);
+        return $this->writeMaterialPrice(
+            'DELETE FROM junkshop_material_prices WHERE id = :price_id AND junkshop_account_id = :account_id',
+            ['account_id' => (int) $accountId, 'price_id' => (int) $priceId],
+            'Price record not found for this junkshop.'
+        );
     }
 
     public function listApprovedJunkshopsWithPrices(int $sellerAccountId = 0)
@@ -148,60 +175,66 @@ class MaterialPriceController
 
     public function getAdminPriceOverview()
     {
-        return $this->fetchAll('sp_get_admin_price_overview');
+        return $this->db->query(
+            "SELECT jp.account_id AS junkshop_account_id, jp.business_name, jp.complete_address AS location,
+                    jp.operating_schedule, a.full_name AS contact_person, a.email, a.mobile_number,
+                    rm.material_name, rm.category, rm.unit_of_measure, jmp.buying_price, jmp.available,
+                    jmp.id AS price_id, jmp.updated_at
+             FROM junkshop_profiles jp
+             JOIN accounts a ON a.id = jp.account_id
+             JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = jp.account_id
+             JOIN recyclable_materials rm ON rm.id = jmp.material_id
+             WHERE jp.approval_status = 'approved' AND rm.is_active = 1
+             ORDER BY jp.business_name ASC, rm.category ASC, rm.material_name ASC"
+        )->fetchAll();
     }
 
     public function getJunkshopApprovalStatus($accountId)
     {
-        $profile = $this->fetchOne('sp_get_junkshop_profile', [$accountId]);
+        $profile = $this->db->query(
+            'SELECT approval_status FROM junkshop_profiles WHERE account_id = :account_id LIMIT 1',
+            ['account_id' => (int) $accountId]
+        )->fetch();
         return strtolower((string)($profile['approval_status'] ?? 'pending'));
     }
 
-    private function fetchAll($procedureName, $params = [])
+    private function writeMaterialPrice(string $sql, array $params, string $missingMessage): array
     {
         try {
-            $stmt = $this->db->call($procedureName, $params);
-            $rows = $stmt->fetchAll();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
-            }
-            return $rows;
-        } catch (Exception $e) {
-            error_log('Material price fetch error: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    private function fetchOne($procedureName, $params = [])
-    {
-        try {
-            $stmt = $this->db->call($procedureName, $params);
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
-            }
-            return $row ?: null;
-        } catch (Exception $e) {
-            error_log('Material price read error: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    private function executeResult($procedureName, $params = [])
-    {
-        try {
-            $stmt = $this->db->call($procedureName, $params);
-            $row = $stmt->fetch();
-            if ($stmt instanceof PDOStatement) {
-                $stmt->closeCursor();
+            $this->db->beginTransaction();
+            $isInsert = str_starts_with($sql, 'INSERT');
+            $isDelete = str_starts_with($sql, 'DELETE');
+            $approved = $this->db->query(
+                "SELECT account_id FROM junkshop_profiles WHERE account_id = :account_id AND approval_status = 'approved' LIMIT 1",
+                ['account_id' => (int) $params['account_id']]
+            )->fetch();
+            if (!$approved) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Only approved junkshops can manage materials and prices.', 'result' => null];
             }
 
-            return [
-                'success' => ($row['p_result'] ?? 'success') === 'success',
-                'message' => ($row['p_result'] ?? 'success') === 'success' ? 'Success.' : ($row['p_result'] ?? 'Unable to process request.'),
-                'result' => $row,
-            ];
+            if (array_key_exists('material_id', $params)) {
+                $existing = $this->db->query(
+                    'SELECT id FROM junkshop_material_prices WHERE junkshop_account_id = :account_id AND material_id = :material_id LIMIT 1',
+                    ['account_id' => (int) $params['account_id'], 'material_id' => (int) $params['material_id']]
+                )->fetch();
+            } else {
+                $existing = $this->db->query(
+                    'SELECT id FROM junkshop_material_prices WHERE id = :price_id AND junkshop_account_id = :account_id LIMIT 1',
+                    ['price_id' => (int) $params['price_id'], 'account_id' => (int) $params['account_id']]
+                )->fetch();
+            }
+            if ((!$isInsert && !$existing) || ($isInsert && $existing)) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => $missingMessage, 'result' => null];
+            }
+
+            $statement = $this->db->query($sql, $params);
+            $this->db->commit();
+            $success = !$isDelete || $statement->rowCount() > 0;
+            return ['success' => $success, 'message' => $success ? 'Success.' : $missingMessage, 'result' => null];
         } catch (Exception $e) {
+            $this->db->rollBack();
             error_log('Material price write error: ' . $e->getMessage());
             return [
                 'success' => false,
