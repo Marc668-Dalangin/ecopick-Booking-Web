@@ -173,11 +173,23 @@ ob_start();
                                 <h6 class="fw-bold mb-0">Estimated calculation</h6>
                                 <span class="badge bg-primary-subtle text-primary">Live estimate</span>
                             </div>
-                            <div class="row g-3">
-                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Estimated recyclable value</div><div class="fw-bold fs-5" id="calc-estimated-recyclable-value">₱0.00</div></div>
-                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Pickup fee</div><div class="fw-bold fs-5" id="calc-pickup-fee">₱0.00</div></div>
-                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Service fee</div><div class="fw-bold fs-5" id="calc-service-fee">₱0.00</div></div>
-                                <div class="col-md-6 col-xl-3"><div class="small text-muted">Estimated net amount</div><div class="fw-bold fs-5 text-success" id="calc-estimated-net-amount">₱0.00</div></div>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                    <span>Estimated recyclable value</span>
+                                    <span class="fw-semibold" id="calc-estimated-recyclable-value">₱0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                    <span>Pickup / Collection fee</span>
+                                    <span class="text-danger" id="calc-pickup-fee">- ₱0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                    <span>Ecopick service fee</span>
+                                    <span class="text-danger" id="calc-service-fee">- ₱0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-3 border-top pt-2 mt-1">
+                                    <strong>Estimated net amount to receive</strong>
+                                    <strong id="calc-estimated-net-amount">₱0.00</strong>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -330,8 +342,8 @@ ob_start();
             const serviceFee = recyclableValue * (Number(serviceFeePct || 0) / 100);
             const netAmount = recyclableValue - Number(defaultPickupFee || 0) - serviceFee;
             document.getElementById('calc-estimated-recyclable-value').textContent = formatMoney(recyclableValue);
-            document.getElementById('calc-pickup-fee').textContent = formatMoney(Number(defaultPickupFee || 0));
-            document.getElementById('calc-service-fee').textContent = formatMoney(serviceFee);
+            document.getElementById('calc-pickup-fee').textContent = '- ' + formatMoney(Number(defaultPickupFee || 0));
+            document.getElementById('calc-service-fee').textContent = '- ' + formatMoney(serviceFee);
             document.getElementById('calc-estimated-net-amount').textContent = formatMoney(netAmount);
         }
 

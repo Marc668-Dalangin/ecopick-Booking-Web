@@ -5,6 +5,25 @@
 
 require_once __DIR__ . '/app/bootstrap.php';
 
+$approvedJunkshops = Database::getInstance()->query(
+    'SELECT jp.business_name, jp.complete_address, jp.operating_schedule,
+        COUNT(t.id) AS transaction_count
+         FROM junkshop_profiles jp
+         INNER JOIN accounts a ON a.id = jp.account_id
+     LEFT JOIN transactions t ON t.junkshop_id = a.id
+         WHERE a.account_role = :role
+             AND a.account_status = :account_status
+             AND jp.approval_status = :approval_status
+     GROUP BY jp.account_id, jp.business_name, jp.complete_address, jp.operating_schedule, jp.created_at
+     ORDER BY transaction_count DESC, jp.created_at DESC
+         LIMIT 3',
+        [
+                'role' => 'junkshop',
+                'account_status' => 'active',
+                'approval_status' => 'approved',
+        ]
+)->fetchAll(PDO::FETCH_ASSOC);
+
 $pageTitle = '';
 ?>
 <?php require_once __DIR__ . '/app/views/header.php'; ?>
@@ -255,49 +274,45 @@ $pageTitle = '';
             </div>
         </div>
 
-        <div class="row g-4">
-            <?php for ($i = 1; $i <= 3; $i++): ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-start justify-content-between mb-3">
-                            <div>
-                                <h5 class="card-title fw-bold mb-1">Eco Traders <?php echo $i; ?></h5>
-                                <p class="text-muted small mb-2">Verified Partner</p>
+        <?php if (empty($approvedJunkshops)): ?>
+            <div class="alert alert-info text-center">No registered and approved junkshops yet.</div>
+        <?php else: ?>
+            <div class="row g-4">
+                <?php foreach ($approvedJunkshops as $junkshop): ?>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-start justify-content-between mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="display-6 text-success"><i class="bi bi-shop"></i></div>
+                                        <div>
+                                            <h5 class="card-title fw-bold mb-1"><?php echo Validator::escape($junkshop['business_name'] ?? ''); ?></h5>
+                                            <p class="text-muted small mb-0">Verified Partner</p>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Verified</span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-geo-alt"></i> <?php echo Validator::escape($junkshop['complete_address'] ?? 'Address unavailable'); ?>
+                                    </small>
+                                    <?php if (!empty($junkshop['operating_schedule'])): ?>
+                                        <small class="text-muted d-block">
+                                            <i class="bi bi-clock"></i> <?php echo Validator::escape($junkshop['operating_schedule']); ?>
+                                        </small>
+                                    <?php endif; ?>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        <?php echo (int) ($junkshop['transaction_count'] ?? 0); ?> Completed Transactions
+                                    </small>
+                                </div>
                             </div>
-                            <span class="badge bg-success">
-                                <i class="bi bi-check-circle-fill"></i> Verified
-                            </span>
-                        </div>
-
-                        <p class="text-muted small mb-3">
-                            Professional junkshop with years of experience in recyclable materials collection and fair pricing.
-                        </p>
-
-                        <div class="mb-3">
-                            <small class="text-muted d-block">
-                                <i class="bi bi-geo-alt"></i> Lipa City, Barangay <?php echo ['Poblacion', 'San Juan', 'Maligaya'][array_rand([0,1,2])]; ?>
-                            </small>
-                            <small class="text-muted d-block">
-                                <i class="bi bi-clock"></i> Mon-Sun 8:00 AM - 5:00 PM
-                            </small>
-                        </div>
-
-                        <div class="pt-3 border-top">
-                            <p class="text-muted small mb-0">
-                                <i class="bi bi-star-fill" style="color: #f39c12;"></i>
-                                <i class="bi bi-star-fill" style="color: #f39c12;"></i>
-                                <i class="bi bi-star-fill" style="color: #f39c12;"></i>
-                                <i class="bi bi-star-fill" style="color: #f39c12;"></i>
-                                <i class="bi bi-star-fill" style="color: #f39c12;"></i>
-                                <span class="ms-2">(45 transactions)</span>
-                            </p>
                         </div>
                     </div>
-                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endfor; ?>
-        </div>
+        <?php endif; ?>
 
     </div>
 </section>
