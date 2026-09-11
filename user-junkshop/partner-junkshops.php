@@ -267,13 +267,16 @@ ob_start();
         let selectedPrices = {};
 
         function updatePickupAddress(lat, lng) {
-            return fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&zoom=18&addressdetails=1', { headers: { 'Accept': 'application/json' } })
+            return fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, { headers: { 'Accept': 'application/json' } })
                 .then(function (response) { return response.json(); })
                 .then(function (data) {
                     const address = data.address || {};
-                    const parts = [address.house_number, address.road, address.city || address.town || address.municipality, address.province]
-                        .filter(function (part, index, values) { return part && values.indexOf(part) === index; });
-                    pickupAddress.value = parts.join(', ') || data.display_name || '';
+                    const road = address.road || address.pedestrian || address.street;
+                    const barangay = address.village || address.suburb || address.neighbourhood || address.quarter;
+                    const city = address.city || address.town || address.municipality || address.city_district;
+                    const province = address.state || address.region;
+                    const completeAddress = [road, barangay, city, province].filter(Boolean).join(', ');
+                    pickupAddress.value = completeAddress || data.display_name || '';
                 });
         }
 
