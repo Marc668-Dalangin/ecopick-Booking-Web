@@ -141,17 +141,20 @@ class PickupRequestController
     {
         return $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address,
-                    pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
-                    pr.confirmed_pickup_time, DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
-                    TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path,
-                    pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
-                    COUNT(pri.id) AS item_count,
-                    GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+                pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
+                pr.confirmed_pickup_time, DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+                TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path,
+                pr.notes, pr.created_at, pr.updated_at, COALESCE(jp.business_name, junkshop.full_name, 'Junkshop') AS junkshop_name,
+                COUNT(pri.id) AS item_count,
+                COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
+                GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
              LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
              LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
+            LEFT JOIN accounts junkshop ON junkshop.id = pr.junkshop_id
              WHERE pr.seller_account_id = :seller_id
-             GROUP BY pr.id ORDER BY pr.created_at DESC",
+             GROUP BY pr.id, jp.account_id, junkshop.id ORDER BY pr.created_at DESC",
             ['seller_id' => (int) $sellerAccountId]
         )->fetchAll();
     }

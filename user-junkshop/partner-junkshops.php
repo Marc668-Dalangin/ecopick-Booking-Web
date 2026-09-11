@@ -74,7 +74,7 @@ ob_start();
             <div id="seller-price-list" class="row g-4">
                 <?php foreach ($rowsByJunkshop as $junkshopId => $rows): ?>
                     <?php $junkshop = $rows[0]; ?>
-                    <div class="col-lg-6 seller-junkshop-card" data-junkshop-name="<?php echo Validator::escape(strtolower((string)($junkshop['business_name'] ?? ''))); ?>" data-is-preferred="<?php echo !empty($junkshop['is_preferred']) ? '1' : '0'; ?>">
+                    <div class="col-lg-6 seller-junkshop-card" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-junkshop-name="<?php echo Validator::escape(strtolower((string)($junkshop['business_name'] ?? ''))); ?>" data-is-preferred="<?php echo !empty($junkshop['is_preferred']) ? '1' : '0'; ?>">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="card-body p-4 position-relative">
                                 <button type="button" class="btn btn-link p-0 position-absolute top-0 start-0 m-3 preferred-star" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" aria-label="<?php echo !empty($junkshop['is_preferred']) ? 'Remove preferred junkshop' : 'Set as preferred junkshop'; ?>" title="<?php echo !empty($junkshop['is_preferred']) ? 'Remove preferred junkshop' : 'Set as preferred junkshop'; ?>">
@@ -257,6 +257,7 @@ ob_start();
         const serviceFeePct = <?php echo json_encode($serviceFeePct); ?>;
         const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
         const preferredApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/toggle_preferred_junkshop.php';
+        const materialsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_junkshop_materials.php';
         const csrfToken = '<?php echo CSRF::token(); ?>';
         const getLocationButton = document.getElementById('btn-get-location');
         const pickupAddress = document.getElementById('pickup_address');
@@ -395,6 +396,81 @@ ob_start();
                 card.style.display = visible ? '' : 'none';
             });
         }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, function (character) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[character];
+            });
+        }
+
+        function renderLatestMaterials(card, materials) {
+            const tableBody = card.querySelector('table tbody');
+            if (!tableBody) return;
+
+            if (!materials.length) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="text-muted fst-italic text-center py-3">No materials listed yet</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = materials.map(function (material) {
+                const materialName = escapeHtml(material.material_name);
+                return '<tr data-material-name="' + escapeHtml(String(material.material_name || '').toLowerCase()) + '">' +
+                    '<td>' + materialName + '</td>' +
+                    '<td>' + escapeHtml(material.category) + '</td>' +
+                    '<td class="text-end fw-semibold">' + formatMoney(material.buying_price) + ' / ' + escapeHtml(material.unit_of_measure || 'kg') + '</td>' +
+                '</tr>';
+            }).join('');
+
+            pricesByJunkshop[card.dataset.junkshopId] = materials.reduce(function (prices, material) {
+                prices[Number(material.material_id)] = Number(material.buying_price || 0);
+                return prices;
+            }, {});
+            applySellerFilters();
+        }
+
+        function fetchLatestMaterials(junkshopId) {
+            const card = cards.find(function (candidate) {
+                return candidate.dataset.junkshopId === String(junkshopId);
+            });
+            if (!card) return Promise.resolve();
+
+            return fetch(materialsApiUrl + '?junkshop_id=' + encodeURIComponent(junkshopId), {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            })
+                .then(function (response) {
+                    return response.json().then(function (payload) {
+                        if (!response.ok || !payload.success) {
+                            throw new Error(payload.message || 'Unable to load materials.');
+                        }
+                        return payload.materials || [];
+                    });
+                })
+                .then(function (materials) {
+                    renderLatestMaterials(card, materials);
+                })
+                .catch(function (error) {
+                    console.error('Failed to refresh junkshop materials:', error);
+                });
+        }
+
+        const activeJunkshops = new Set();
+        const junkshopVisibility = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                const junkshopId = entry.target.dataset.junkshopId;
+                if (entry.isIntersecting) {
+                    activeJunkshops.add(junkshopId);
+                    fetchLatestMaterials(junkshopId);
+                } else {
+                    activeJunkshops.delete(junkshopId);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(function (card) { junkshopVisibility.observe(card); });
+        setInterval(function () {
+            activeJunkshops.forEach(function (junkshopId) { fetchLatestMaterials(junkshopId); });
+        }, 5000);
 
         function formatMoney(value) {
             return '₱' + Number(value || 0).toFixed(2);
