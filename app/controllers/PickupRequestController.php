@@ -214,8 +214,16 @@ class PickupRequestController
                 $snapshotByItemId[(int) $snapshotRow['id']] = $snapshotRow;
             }
         }
+        $estimatedWeight = 0.0;
+        $estimatedRecyclableValue = 0.0;
         foreach ($rows as $row) {
             $snapshot = $snapshotByItemId[(int) $row['item_id']] ?? [];
+            $itemWeight = (float) $row['estimated_weight'];
+            $matchedPrice = $snapshot['matched_price_per_kg'] ?? null;
+            $estimatedWeight += $itemWeight;
+            if ($matchedPrice !== null) {
+                $estimatedRecyclableValue += $itemWeight * (float) $matchedPrice;
+            }
             $request['items'][] = [
                 'item_id' => (int) $row['item_id'],
                 'material_id' => (int) $row['material_id'],
@@ -231,6 +239,15 @@ class PickupRequestController
                 'estimate_snapshot_at' => $snapshot['estimate_snapshot_at'] ?? null,
             ];
         }
+        $feeConfigs = FeeCalculator::getConfigs();
+        $pickupFee = (float) ($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
+        $serviceFeePercentage = (float) ($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
+        $estServiceFee = $estimatedRecyclableValue * ($serviceFeePercentage / 100);
+        $request['estimated_recyclable_value'] = round($estimatedRecyclableValue, 2);
+        $request['pickup_fee'] = round($pickupFee, 2);
+        $request['ecopick_service_fee'] = round($estServiceFee, 2);
+        $request['estimated_net_amount'] = round($estimatedRecyclableValue - $pickupFee - $estServiceFee, 2);
+        $request['service_fee_percentage'] = round($serviceFeePercentage, 2);
         $request['status_history'] = $history;
         $request['formatted_pickup_date'] = $request['formatted_pickup_date'] ?? null;
         $request['formatted_pickup_time'] = $request['formatted_pickup_time'] ?? null;

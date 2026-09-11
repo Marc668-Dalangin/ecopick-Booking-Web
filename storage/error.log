@@ -648,3 +648,7 @@
 [11-Sep-2026 07:03:49 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
 [11-Sep-2026 07:03:50 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
 [11-Sep-2026 15:25:40 UTC] PHP Warning:  session_destroy(): Trying to destroy uninitialized session in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 76
+[11-Sep-2026 15:43:51 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.booking_logs' doesn't exist
+[11-Sep-2026 15:43:51 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.booking_logs' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[11-Sep-2026 15:43:53 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.booking_logs' doesn't exist
+[11-Sep-2026 15:43:53 UTC] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.booking_logs' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
