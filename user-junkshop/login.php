@@ -111,6 +111,9 @@ $pageTitle = 'Login';
                                     <i class="bi bi-eye"></i>
                                 </button>
                             </div>
+                            <div class="text-end mt-2">
+                                <a href="<?php echo APP_URL; ?>/user-junkshop/forgot-password.php" class="text-decoration-none">Forgot Password?</a>
+                            </div>
                         </div>
 
                         <!-- Remember Me -->
