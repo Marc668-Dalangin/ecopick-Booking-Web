@@ -11,7 +11,12 @@ class Auth
     public static function check()
     {
         Session::start();
-        if (!Session::isLoggedIn() || Session::isExpired()) {
+        if (!Session::isLoggedIn()) {
+            return false;
+        }
+
+        if (Session::isExpired()) {
+            self::logout();
             return false;
         }
 
@@ -40,7 +45,7 @@ class Auth
     public static function requireLogin()
     {
         if (!self::check()) {
-            session_destroy();
+            self::logout();
             header('Location: ' . APP_URL . '/user-junkshop/login.php');
             exit;
         }
@@ -123,6 +128,10 @@ class Auth
      */
     public static function userRole()
     {
+        if (!self::check()) {
+            return null;
+        }
+
         return Session::get(SESSION_ROLE_NAME);
     }
 

@@ -636,3 +636,7 @@
                         WHEN 'Ca...' at line 34 in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:77
 [11-Sep-2026 00:48:30 UTC] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.password_resets' doesn't exist
 [11-Sep-2026 00:48:30 UTC] Password recovery error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.password_resets' doesn't exist
+[11-Sep-2026 02:21:12 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 15
+[11-Sep-2026 02:21:12 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 16
+[11-Sep-2026 02:21:12 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 17
+[11-Sep-2026 02:21:12 UTC] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 18
