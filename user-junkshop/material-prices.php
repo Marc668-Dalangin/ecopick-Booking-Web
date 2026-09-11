@@ -146,6 +146,7 @@ ob_start();
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('material-price-form');
         const statusBox = document.getElementById('materials-status');
+        const addModalEl = document.getElementById('addMaterialPriceModal');
         const removeModalEl = document.getElementById('removePriceModal');
         const removeModal = removeModalEl ? new bootstrap.Modal(removeModalEl) : null;
         const removeConfirmation = window.ecopick && window.ecopick.setupActionConfirmation
@@ -192,8 +193,42 @@ ob_start();
             bindRowActions();
         }
 
-        function bindRowActions() {
-            document.querySelectorAll('.edit-price-btn').forEach(function (button) {
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, function (character) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[character];
+            });
+        }
+
+        function appendMaterialRow(row) {
+            const emptyState = document.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const content = statusBox.parentElement;
+            let table = document.getElementById('material-price-table');
+            if (!table) {
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = 'table-responsive';
+                tableWrapper.innerHTML = '<table class="table align-middle mb-0" id="material-price-table"><thead class="table-light"><tr><th>Material</th><th>Category</th><th class="text-end">Price</th><th class="text-end">Actions</th></tr></thead><tbody></tbody></table>';
+                content.appendChild(tableWrapper);
+                table = tableWrapper.querySelector('#material-price-table');
+            }
+
+            const tableBody = table.querySelector('tbody');
+            const materialRow = document.createElement('tr');
+            materialRow.dataset.priceId = String(Number(row.id || 0));
+            materialRow.innerHTML = '<td>' + escapeHtml(row.material_name) + '</td>' +
+                '<td>' + escapeHtml(row.category) + '</td>' +
+                '<td class="text-end fw-semibold">₱' + Number(row.buying_price || 0).toFixed(2) + ' / ' + escapeHtml(row.unit_of_measure || 'kg') + '</td>' +
+                '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary edit-price-btn" data-price-id="' + Number(row.id || 0) + '" data-price="' + Number(row.buying_price || 0).toFixed(2) + '"><i class="bi bi-pencil"></i> Edit</button> <button type="button" class="btn btn-sm btn-outline-danger remove-price-btn" data-price-id="' + Number(row.id || 0) + '" data-material="' + escapeHtml(row.material_name) + '"><i class="bi bi-trash"></i> Remove</button></td>';
+            tableBody.prepend(materialRow);
+            bindRowActions(materialRow);
+        }
+
+        function bindRowActions(root) {
+            const scope = root || document;
+            scope.querySelectorAll('.edit-price-btn').forEach(function (button) {
                 button.addEventListener('click', function () {
                     const id = Number(button.dataset.priceId || 0);
                     const currentPrice = button.dataset.price || '0';
@@ -226,7 +261,7 @@ ob_start();
                 });
             });
 
-            document.querySelectorAll('.remove-price-btn').forEach(function (button) {
+            scope.querySelectorAll('.remove-price-btn').forEach(function (button) {
                 button.addEventListener('click', function () {
                     const id = Number(button.dataset.priceId || 0);
                     pendingPriceId = id;
@@ -299,13 +334,38 @@ ob_start();
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
-            const materialId = document.getElementById('material_id')?.value || '';
-            const price = document.getElementById('buying_price')?.value || '';
-            if (!materialId || !price || Number(price) <= 0) {
-                showStatus('Please select a material and enter a valid positive price.', false);
-                return;
-            }
-            submitPriceAction('add', { material_id: materialId, buying_price: price });
+            const formData = new FormData(form);
+
+            fetch('<?php echo APP_URL; ?>/user-junkshop/api/material-prices.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+                .then(function (response) {
+                    return response.json().then(function (json) {
+                        if (!response.ok && !json.success) {
+                            throw new Error(json.message || 'Unable to add the material.');
+                        }
+                        return json;
+                    });
+                })
+                .then(function (response) {
+                    if (!response.success) {
+                        showStatus(response.message || 'Unable to add this material.', false);
+                        return;
+                    }
+
+                    appendMaterialRow(response.data);
+                    form.reset();
+                    if (addModalEl) {
+                        bootstrap.Modal.getInstance(addModalEl)?.hide();
+                    }
+                    showStatus(response.message || 'Material price added successfully.', true);
+                })
+                .catch(function (error) {
+                    console.error('Failed to add material price:', error);
+                    showStatus(error.message || 'Unable to add the material right now.', false);
+                });
         });
 
         document.getElementById('confirm-remove-price')?.addEventListener('click', function () {

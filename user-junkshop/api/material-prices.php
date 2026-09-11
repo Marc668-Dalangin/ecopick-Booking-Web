@@ -60,6 +60,25 @@ if ($method === 'POST') {
         $result = ['success' => false, 'message' => 'Unsupported action.'];
     }
 
+    if ($action === 'add' && !empty($result['success'])) {
+        $newMaterialData = null;
+        foreach ($controller->getJunkshopMaterialPrices($accountId) as $price) {
+            if ((int)($price['material_id'] ?? 0) === $materialId) {
+                $newMaterialData = $price;
+                break;
+            }
+        }
+
+        if ($newMaterialData === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'The material was added but could not be loaded.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        echo json_encode(['success' => true, 'data' => $newMaterialData], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $prices = $controller->getJunkshopMaterialPrices($accountId);
     $materials = $controller->listActiveMaterials();
 
