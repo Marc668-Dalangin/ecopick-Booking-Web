@@ -399,6 +399,7 @@ class PickupRequestController
         if (!is_numeric($data['seller_lat'] ?? null) || (float) $data['seller_lat'] < -90 || (float) $data['seller_lat'] > 90 || !is_numeric($data['seller_lng'] ?? null) || (float) $data['seller_lng'] < -180 || (float) $data['seller_lng'] > 180) {
             $errors[] = 'Current location coordinates are required.';
         }
+
         $date = trim((string) ($data['preferred_pickup_date'] ?? ''));
         $dateObject = DateTime::createFromFormat('Y-m-d', $date);
         if (!$dateObject || $dateObject->format('Y-m-d') !== $date) {

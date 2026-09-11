@@ -573,7 +573,7 @@ ALTER TABLE pickup_requests
     ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(10,8) NULL AFTER seller_lng,
     ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(10,8) NULL AFTER junkshop_lat,
     ADD COLUMN IF NOT EXISTS last_location_update DATETIME NULL AFTER junkshop_lng,
-    ADD COLUMN IF NOT EXISTS approximate_distance_km DECIMAL(6,2) NULL AFTER last_location_update;
+    ADD COLUMN IF NOT EXISTS approximate_distance_km DECIMAL(6,2) NULL AFTER pickup_address;
 
 CREATE TABLE IF NOT EXISTS payment_proofs (
     id INT PRIMARY KEY AUTO_INCREMENT,

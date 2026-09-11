@@ -92,8 +92,6 @@ try {
             [ 'material_id' => $secondMaterialId, 'estimated_weight' => 3.0 ],
         ],
         'pickup_address' => '123 Seller Street',
-        'pickup_location_name' => 'Seller Residence',
-        'barangay' => 'Banay-Banay',
         'approximate_distance_km' => 4.5,
         'preferred_pickup_date' => date('Y-m-d', strtotime('+2 days')),
         'preferred_pickup_time' => '10:00 AM',
