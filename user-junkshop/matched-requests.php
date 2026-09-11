@@ -219,6 +219,7 @@ window.addEventListener('DOMContentLoaded', function () {
     const successModalElement = document.getElementById('matchedRequestSuccessModal');
     const successModal = bootstrap.Modal.getOrCreateInstance(successModalElement);
     const successMessage = successModalElement.querySelector('[data-success-message]');
+    const liveLocationWatches = new Set();
 
     function showFeedback(message, isSuccess) {
         if (!feedback) return;
@@ -237,6 +238,20 @@ window.addEventListener('DOMContentLoaded', function () {
         successMessage.textContent = message || 'Action completed successfully.';
         successModal.show();
         window.setTimeout(function () { window.location.reload(); }, 900);
+    }
+
+    function startLiveLocationWatch(requestId) {
+        if (!navigator.geolocation || liveLocationWatches.has(requestId)) return;
+        liveLocationWatches.add(requestId);
+        const watchId = navigator.geolocation.watchPosition(function (position) {
+            const data = new FormData();
+            data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+            data.append('booking_id', String(requestId));
+            data.append('lat', String(position.coords.latitude));
+            data.append('lng', String(position.coords.longitude));
+            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' }).catch(function () {});
+        }, function () {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+        window.setTimeout(function () { navigator.geolocation.clearWatch(watchId); liveLocationWatches.delete(requestId); }, 300000);
     }
 
     assignmentList?.addEventListener('click', async function (event) {
@@ -260,6 +275,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const payload = await response.json();
             if (!payload.success) { showFeedback(payload.message || 'Unable to update this request.', false); button.disabled = false; return false; }
             showFeedback(payload.message || 'Request updated.', true);
+            if (action === 'mark-for-pickup') startLiveLocationWatch(requestId);
             showSuccessAndReload(payload.message || 'Request updated successfully.');
             return true;
         });
@@ -412,7 +428,9 @@ window.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             if (!response.ok || !payload.success) throw new Error(payload.message || 'Unable to refresh matched requests.');
-            renderMatchedRequests(payload.data?.requests || []);
+            const requests = payload.data?.requests || [];
+            renderMatchedRequests(requests);
+            requests.forEach(function (request) { if (request.current_status === 'For Pickup') startLiveLocationWatch(getPickupRequestId(request)); });
         } catch (error) {
             showFeedback(error.message || 'Unable to refresh matched requests.', false);
         }

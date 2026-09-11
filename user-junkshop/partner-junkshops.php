@@ -145,6 +145,7 @@ ob_start();
     </div>
 </div>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <div class="modal fade" id="sellerPickupRequestModal" tabindex="-1" aria-labelledby="sellerPickupRequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
@@ -196,7 +197,8 @@ ob_start();
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-4"><label class="form-label" for="pickup_location_name">Location name <span class="text-danger">*</span></label><input class="form-control" id="pickup_location_name" name="pickup_location_name" required maxlength="160" placeholder="Subdivision, landmark, or sitio"></div>
-                        <div class="col-md-4"><label class="form-label" for="pickup_address">Pickup address <span class="text-danger">*</span></label><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" placeholder="House number, street, subdivision"></div>
+                        <div class="col-md-4"><label class="form-label" for="pickup_address">Complete address <span class="text-danger">*</span></label><div class="input-group"><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" readonly placeholder="Use Get Current Location"><button type="button" class="btn btn-primary" id="btn-get-location">Get Current Location</button></div><input type="hidden" id="seller_lat" name="seller_lat"><input type="hidden" id="seller_lng" name="seller_lng"></div>
+                        <div class="col-12"><div id="pickup-map" style="height: 250px; width: 100%; display: none; margin-bottom: 15px; z-index: 1; touch-action: none;"></div></div>
                         <div class="col-md-4"><label class="form-label" for="barangay">Barangay <span class="text-danger">*</span></label><input class="form-control" id="barangay" name="barangay" required maxlength="120" placeholder="Barangay name"></div>
                         <div class="col-md-4"><label class="form-label" for="approximate_distance_km">Approximate distance (km) <span class="text-danger">*</span></label><input type="number" min="0" max="15" step="0.01" class="form-control" id="approximate_distance_km" name="approximate_distance_km" required placeholder="Example: 4.50"></div>
                         <div class="col-md-4"><label class="form-label" for="preferred_pickup_date">Preferred pickup date <span class="text-danger">*</span></label><input type="date" class="form-control" id="preferred_pickup_date" name="preferred_pickup_date" required></div>
@@ -224,7 +226,11 @@ ob_start();
     </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    let pickupMap = null;
+    let pickupMarker = null;
+
     document.addEventListener('DOMContentLoaded', function () {
         const nameFilter = document.getElementById('filter-junkshop-name');
         const materialFilter = document.getElementById('filter-material');
@@ -254,8 +260,90 @@ ob_start();
         const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
         const preferredApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/toggle_preferred_junkshop.php';
         const csrfToken = '<?php echo CSRF::token(); ?>';
+        const getLocationButton = document.getElementById('btn-get-location');
+        const pickupAddress = document.getElementById('pickup_address');
+        const sellerLat = document.getElementById('seller_lat');
+        const sellerLng = document.getElementById('seller_lng');
+        const pickupMapElement = document.getElementById('pickup-map');
         let rowIndex = 0;
         let selectedPrices = {};
+
+        function updatePickupAddress(lat, lng) {
+            return fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&zoom=18&addressdetails=1', { headers: { 'Accept': 'application/json' } })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    const address = data.address || {};
+                    const barangay = address.village || address.suburb || address.neighbourhood || '';
+                    const parts = [address.house_number, address.road, barangay, address.city || address.town || address.municipality, address.province]
+                        .filter(function (part, index, values) { return part && values.indexOf(part) === index; });
+                    pickupAddress.value = parts.join(', ') || data.display_name || '';
+                });
+        }
+
+        function initializePickupMap(lat, lng) {
+            pickupMapElement.style.display = 'block';
+            if (!pickupMap) {
+                pickupMap = L.map('pickup-map').setView([lat, lng], 18);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(pickupMap);
+            } else {
+                pickupMap.setView([lat, lng], 18);
+            }
+            if (pickupMarker) pickupMarker.setLatLng([lat, lng]);
+            else {
+                pickupMarker = L.marker([lat, lng], { draggable: true }).addTo(pickupMap);
+                pickupMarker.on('dragend', function () {
+                    const position = pickupMarker.getLatLng();
+                    sellerLat.value = position.lat;
+                    sellerLng.value = position.lng;
+                    updatePickupAddress(position.lat, position.lng).catch(function () {});
+                });
+            }
+            pickupMap.invalidateSize();
+        }
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            if (pickupMap) pickupMap.invalidateSize();
+        });
+
+        function resetLocationButton() {
+            getLocationButton.disabled = false;
+            getLocationButton.textContent = 'Get Current Location';
+        }
+
+        function handleLocationError(error) {
+            if (!window.isSecureContext) {
+                alert('Geolocation requires a secure HTTPS connection on mobile devices.');
+            } else if (error.code === 1) {
+                alert('Location permission was denied. Please allow location access and try again.');
+            } else if (error.code === 2 || error.code === 3) {
+                alert('Unable to get your location. Please enable GPS and try again.');
+            } else {
+                alert('Unable to get your current location. Please try again.');
+            }
+            resetLocationButton();
+        }
+
+        getLocationButton?.addEventListener('click', function () {
+            if (!window.isSecureContext) {
+                handleLocationError({ code: 0 });
+                return;
+            }
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by this browser.');
+                resetLocationButton();
+                return;
+            }
+            getLocationButton.disabled = true;
+            getLocationButton.textContent = 'Locating...';
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                sellerLat.value = lat;
+                sellerLng.value = lng;
+                initializePickupMap(lat, lng);
+                updatePickupAddress(lat, lng).catch(function () {}).finally(resetLocationButton);
+            }, handleLocationError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        });
 
         function sortPreferredCards() {
             const list = document.getElementById('seller-price-list');

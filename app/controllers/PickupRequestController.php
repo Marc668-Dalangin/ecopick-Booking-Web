@@ -67,10 +67,12 @@ class PickupRequestController
             $requestId = (int) ($result['p_request_id'] ?? 0);
 
             $this->db->query(
-                'UPDATE pickup_requests SET pickup_location_name = :location_name, approximate_distance_km = :distance_km WHERE id = :request_id AND seller_account_id = :seller_id',
+                'UPDATE pickup_requests SET pickup_location_name = :location_name, approximate_distance_km = :distance_km, seller_lat = :seller_lat, seller_lng = :seller_lng WHERE id = :request_id AND seller_account_id = :seller_id',
                 [
                     'location_name' => $normalized['pickup_location_name'],
                     'distance_km' => $normalized['approximate_distance_km'],
+                    'seller_lat' => $normalized['seller_lat'],
+                    'seller_lng' => $normalized['seller_lng'],
                     'request_id' => $requestId,
                     'seller_id' => (int) $sellerAccountId,
                 ]
@@ -298,6 +300,9 @@ class PickupRequestController
         if (!is_numeric($data['approximate_distance_km'] ?? null) || (float) $data['approximate_distance_km'] < 0) {
             $errors[] = 'Approximate distance must be zero or greater.';
         }
+        if (!is_numeric($data['seller_lat'] ?? null) || (float) $data['seller_lat'] < -90 || (float) $data['seller_lat'] > 90 || !is_numeric($data['seller_lng'] ?? null) || (float) $data['seller_lng'] < -180 || (float) $data['seller_lng'] > 180) {
+            $errors[] = 'Current location coordinates are required.';
+        }
         if (trim($data['barangay'] ?? '') === '') {
             $errors[] = 'Barangay is required.';
         }
@@ -331,6 +336,8 @@ class PickupRequestController
             'pickup_address' => trim((string) ($data['pickup_address'] ?? '')),
             'pickup_location_name' => trim((string) ($data['pickup_location_name'] ?? '')),
             'approximate_distance_km' => number_format(max(0.0, (float) ($data['approximate_distance_km'] ?? 0)), 2, '.', ''),
+            'seller_lat' => number_format((float) ($data['seller_lat'] ?? 0), 8, '.', ''),
+            'seller_lng' => number_format((float) ($data['seller_lng'] ?? 0), 8, '.', ''),
             'barangay' => trim((string) ($data['barangay'] ?? '')),
             'preferred_pickup_date' => trim((string) ($data['preferred_pickup_date'] ?? '')),
             'preferred_pickup_time' => trim((string) ($data['preferred_pickup_time'] ?? '')),

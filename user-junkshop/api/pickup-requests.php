@@ -46,6 +46,8 @@ if ($method === 'POST') {
             'pickup_address' => $_POST['pickup_address'] ?? '',
             'barangay' => $_POST['barangay'] ?? '',
             'approximate_distance_km' => $_POST['approximate_distance_km'] ?? '',
+            'seller_lat' => $_POST['seller_lat'] ?? '',
+            'seller_lng' => $_POST['seller_lng'] ?? '',
             'preferred_pickup_date' => $_POST['preferred_pickup_date'] ?? '',
             'preferred_pickup_time' => $_POST['preferred_pickup_time'] ?? '',
             'notes' => $_POST['notes'] ?? '',

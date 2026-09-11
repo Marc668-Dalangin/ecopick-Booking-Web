@@ -1,10 +1,6 @@
-CREATE TABLE IF NOT EXISTS password_resets (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(255) NOT NULL,
-    token VARCHAR(255) NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_password_reset_email (email),
-    UNIQUE KEY uq_password_reset_token (token),
-    INDEX idx_password_reset_expires_at (expires_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE pickup_requests
+    ADD COLUMN IF NOT EXISTS seller_lat DECIMAL(10,8) NULL AFTER pickup_address,
+    ADD COLUMN IF NOT EXISTS seller_lng DECIMAL(10,8) NULL AFTER seller_lat,
+    ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(10,8) NULL AFTER seller_lng,
+    ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(10,8) NULL AFTER junkshop_lat,
+    ADD COLUMN IF NOT EXISTS last_location_update DATETIME NULL AFTER junkshop_lng;

@@ -170,16 +170,6 @@ $pageTitle = 'Admin Login';
                             </button>
                         </form>
 
-                        <hr>
-
-                        <!-- Back to Public -->
-                        <div class="text-center">
-                            <p class="text-muted small mb-0">
-                                <a href="<?php echo APP_URL; ?>" class="text-decoration-none">
-                                    <i class="bi bi-house"></i> Back to EcoPick Public Site
-                                </a>
-                            </p>
-                        </div>
                     </div>
                 </div>
 
