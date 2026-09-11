@@ -642,3 +642,8 @@
 [11-Sep-2026 02:21:12 UTC] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 18
 [11-Sep-2026 04:17:28 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'junkshop_lat' in 'field list'
 [11-Sep-2026 04:17:28 UTC] Live location update error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'junkshop_lat' in 'field list'
+[11-Sep-2026 07:03:46 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[11-Sep-2026 07:03:48 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[11-Sep-2026 07:03:49 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[11-Sep-2026 07:03:49 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[11-Sep-2026 07:03:50 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'

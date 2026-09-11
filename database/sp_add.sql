@@ -1,41 +1,3 @@
-USE ecopickdb;
-SET NAMES utf8mb4;
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS seller_lat DECIMAL(10,8) NULL AFTER pickup_address,
-    ADD COLUMN IF NOT EXISTS seller_lng DECIMAL(10,8) NULL AFTER seller_lat,
-    ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(10,8) NULL AFTER seller_lng,
-    ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(10,8) NULL AFTER junkshop_lat,
-    ADD COLUMN IF NOT EXISTS last_location_update DATETIME NULL AFTER junkshop_lng;
-
-CREATE TABLE IF NOT EXISTS password_resets (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(255) NOT NULL,
-    token VARCHAR(255) NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_password_reset_email (email),
-    UNIQUE KEY uq_password_reset_token (token),
-    INDEX idx_password_reset_expires_at (expires_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS preferred_junkshops (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    seller_id INT NOT NULL,
-    junkshop_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_preferred_junkshop (seller_id, junkshop_id),
-    FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    INDEX idx_preferred_seller_id (seller_id),
-    INDEX idx_preferred_junkshop_id (junkshop_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-UPDATE fee_configurations
-SET config_value = 0.00,
-    updated_at = CURRENT_TIMESTAMP
-WHERE config_key = 'default_pickup_fee';
-
 DELIMITER //
 
 DROP PROCEDURE IF EXISTS sp_register_seller //
@@ -1234,22 +1196,3 @@ BEGIN
 END //
 
 DELIMITER ;
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS payment_method ENUM('Cash') NULL,
-    ADD COLUMN IF NOT EXISTS payment_status ENUM('Unpaid', 'Paid') NULL;
-
-ALTER TABLE pickup_request_items
-    ADD COLUMN IF NOT EXISTS actual_weight DECIMAL(10,2) NULL,
-    ADD COLUMN IF NOT EXISTS material_condition VARCHAR(120) NULL;
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS final_recyclable_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    ADD COLUMN IF NOT EXISTS pickup_collection_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    ADD COLUMN IF NOT EXISTS ecopick_service_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    ADD COLUMN IF NOT EXISTS final_amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    ADD COLUMN IF NOT EXISTS confirmed_pickup_date DATE NULL,
-    ADD COLUMN IF NOT EXISTS confirmed_pickup_time TIME NULL;
-
-ALTER TABLE pickup_request_items
-    ADD COLUMN IF NOT EXISTS actual_weight DECIMAL(10,2) NULL;
