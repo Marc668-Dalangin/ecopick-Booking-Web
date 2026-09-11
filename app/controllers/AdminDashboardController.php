@@ -57,7 +57,7 @@ class AdminDashboardController
     {
         $this->ensureAdminAccess();
 
-        $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.seller_account_id, a.full_name AS seller_name, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id';
+        $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.seller_account_id, a.full_name AS seller_name, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id';
         $params = [];
 
         if ($statusFilter !== null && trim($statusFilter) !== '') {

@@ -42,9 +42,7 @@ if ($method === 'POST') {
         $result = $controller->createRequest($sellerId, [
             'items' => $items,
             'junkshop_id' => $_POST['junkshop_id'] ?? 0,
-            'pickup_location_name' => $_POST['pickup_location_name'] ?? '',
             'pickup_address' => $_POST['pickup_address'] ?? '',
-            'barangay' => $_POST['barangay'] ?? '',
             'approximate_distance_km' => $_POST['approximate_distance_km'] ?? '',
             'seller_lat' => $_POST['seller_lat'] ?? '',
             'seller_lng' => $_POST['seller_lng'] ?? '',

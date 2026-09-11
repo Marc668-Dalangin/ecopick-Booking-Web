@@ -298,7 +298,7 @@ class DashboardController
     public function getSellerTransactionHistory(int $sellerId): array
     {
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(SUM(pri.actual_weight), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(SUM(pri.actual_weight), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, pr.current_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
             ['seller_id' => $sellerId]
         )->fetchAll();
     }
@@ -307,7 +307,7 @@ class DashboardController
     {
         try {
             return $this->db->query(
-                'SELECT pr.id AS pickup_request_id, pr.id AS assignment_id, pr.booking_reference, pr.current_status, pr.pickup_location_name, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at, a.full_name AS seller_name, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight, GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary, GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items, CASE WHEN pr.current_status = :pending_status THEN :matched_status ELSE pr.current_status END AS assignment_status, NULL AS distance_km, NULL AS assigned_at, NULL AS responded_at FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id WHERE pr.junkshop_id = :junkshop_id AND pr.current_status IN (:pending_status, :pending_legacy_status, :matched_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status, :cancelled_status) GROUP BY pr.id ORDER BY pr.created_at DESC',
+                'SELECT pr.id AS pickup_request_id, pr.id AS assignment_id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at, a.full_name AS seller_name, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight, GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary, GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items, CASE WHEN pr.current_status = :pending_status THEN :matched_status ELSE pr.current_status END AS assignment_status, NULL AS distance_km, NULL AS assigned_at, NULL AS responded_at FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id WHERE pr.junkshop_id = :junkshop_id AND pr.current_status IN (:pending_status, :pending_legacy_status, :matched_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status, :cancelled_status) GROUP BY pr.id ORDER BY pr.created_at DESC',
                 [
                     'junkshop_id' => $junkshopId,
                     'pending_status' => 'Pending Request',
@@ -334,9 +334,7 @@ class DashboardController
                 pr.id AS assignment_id,
                 pr.booking_reference,
                 pr.current_status,
-                pr.pickup_location_name,
                 pr.pickup_address,
-                pr.barangay,
                 pr.preferred_pickup_date,
                 pr.preferred_pickup_time,
                 pr.confirmed_pickup_date,
@@ -412,7 +410,7 @@ class DashboardController
         $placeholders = implode(',', array_fill(0, count($statuses), '?'));
 
         if ($role === 'seller') {
-            $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr WHERE pr.seller_account_id = :user_id AND pr.current_status IN (' . $placeholders . ') ORDER BY pr.updated_at DESC';
+            $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr WHERE pr.seller_account_id = :user_id AND pr.current_status IN (' . $placeholders . ') ORDER BY pr.updated_at DESC';
             $params = [$userId];
             foreach ($statuses as $status) {
                 $params[] = $status;
@@ -421,7 +419,7 @@ class DashboardController
         }
 
         if ($role === 'junkshop') {
-            $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr WHERE pr.junkshop_id = :user_id AND pr.current_status IN (' . $placeholders . ') ORDER BY pr.updated_at DESC';
+            $sql = 'SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.created_at FROM pickup_requests pr WHERE pr.junkshop_id = :user_id AND pr.current_status IN (' . $placeholders . ') ORDER BY pr.updated_at DESC';
             $params = [$userId];
             foreach ($statuses as $status) {
                 $params[] = $status;

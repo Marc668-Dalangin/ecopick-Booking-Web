@@ -304,7 +304,6 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     junkshop_lat DECIMAL(10,8) NULL,
     junkshop_lng DECIMAL(10,8) NULL,
     last_location_update DATETIME NULL,
-    barangay VARCHAR(120) NOT NULL,
     preferred_pickup_date DATE NOT NULL,
     preferred_pickup_time VARCHAR(40) NOT NULL,
     confirmed_pickup_date DATE NULL,
@@ -574,8 +573,7 @@ ALTER TABLE pickup_requests
     ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(10,8) NULL AFTER seller_lng,
     ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(10,8) NULL AFTER junkshop_lat,
     ADD COLUMN IF NOT EXISTS last_location_update DATETIME NULL AFTER junkshop_lng,
-    ADD COLUMN IF NOT EXISTS pickup_location_name VARCHAR(160) NULL AFTER pickup_address,
-    ADD COLUMN IF NOT EXISTS approximate_distance_km DECIMAL(6,2) NULL AFTER pickup_location_name;
+    ADD COLUMN IF NOT EXISTS approximate_distance_km DECIMAL(6,2) NULL AFTER last_location_update;
 
 CREATE TABLE IF NOT EXISTS payment_proofs (
     id INT PRIMARY KEY AUTO_INCREMENT,

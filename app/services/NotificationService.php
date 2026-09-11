@@ -12,7 +12,7 @@ class NotificationService
         try {
             $db = Database::getInstance();
             $booking = $db->query(
-                'SELECT pr.booking_reference, pr.seller_account_id, pr.junkshop_id, pr.barangay, pr.pickup_address, pr.confirmed_pickup_date, pr.confirmed_pickup_time, seller.email AS seller_email, seller.full_name AS seller_name, junkshop.email AS junkshop_email, junkshop.full_name AS junkshop_name, COALESCE(jp.business_name, junkshop.full_name) AS junkshop_display_name, COALESCE(t.final_seller_amount, pr.final_amount_paid, 0) AS final_seller_amount, COALESCE(t.final_recyclable_value, pr.final_recyclable_value, 0) AS final_recyclable_value FROM pickup_requests pr JOIN accounts seller ON seller.id = pr.seller_account_id LEFT JOIN accounts junkshop ON junkshop.id = pr.junkshop_id LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id LEFT JOIN transactions t ON t.pickup_request_id = pr.id WHERE pr.id = :pickup_request_id ORDER BY t.id DESC LIMIT 1',
+                'SELECT pr.booking_reference, pr.seller_account_id, pr.junkshop_id, pr.pickup_address, pr.confirmed_pickup_date, pr.confirmed_pickup_time, seller.email AS seller_email, seller.full_name AS seller_name, junkshop.email AS junkshop_email, junkshop.full_name AS junkshop_name, COALESCE(jp.business_name, junkshop.full_name) AS junkshop_display_name, COALESCE(t.final_seller_amount, pr.final_amount_paid, 0) AS final_seller_amount, COALESCE(t.final_recyclable_value, pr.final_recyclable_value, 0) AS final_recyclable_value FROM pickup_requests pr JOIN accounts seller ON seller.id = pr.seller_account_id LEFT JOIN accounts junkshop ON junkshop.id = pr.junkshop_id LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id LEFT JOIN transactions t ON t.pickup_request_id = pr.id WHERE pr.id = :pickup_request_id ORDER BY t.id DESC LIMIT 1',
                 ['pickup_request_id' => $pickupRequestId]
             )->fetch();
 
@@ -97,9 +97,8 @@ class NotificationService
 
     private static function location(array $booking): string
     {
-        $barangay = trim((string) ($booking['barangay'] ?? ''));
         $address = trim((string) ($booking['pickup_address'] ?? ''));
-        return $barangay !== '' && $address !== '' ? "{$barangay}, {$address}" : ($barangay !== '' ? $barangay : $address);
+        return $address;
     }
 
     private static function formatDate(?string $date): string

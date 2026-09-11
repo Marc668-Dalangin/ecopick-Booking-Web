@@ -277,7 +277,7 @@ class BookingLifecycleController
     private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array
     {
         $row = $this->db->query(
-            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
+            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,

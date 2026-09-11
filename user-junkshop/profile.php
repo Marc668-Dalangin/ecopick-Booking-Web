@@ -190,7 +190,7 @@ ob_start();
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="complete_address">Complete Address</label>
+                                <label class="form-label" for="complete_address">Address</label>
                                 <input type="text" class="form-control" id="complete_address" name="complete_address" value="<?php echo Validator::escape($currentProfile['complete_address'] ?? ''); ?>" required>
                             </div>
                             <div class="col-md-12">

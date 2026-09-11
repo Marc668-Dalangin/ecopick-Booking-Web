@@ -77,22 +77,20 @@ class PickupRequestController
 
             $this->db->query(
                 "INSERT INTO pickup_requests
-                    (booking_reference, seller_account_id, junkshop_id, current_status, pickup_address, barangay,
-                     preferred_pickup_date, preferred_pickup_time, photo_path, notes, pickup_location_name,
+                    (booking_reference, seller_account_id, junkshop_id, current_status, pickup_address,
+                     preferred_pickup_date, preferred_pickup_time, photo_path, notes,
                      approximate_distance_km, seller_lat, seller_lng)
-                 VALUES ('', :seller_id, :junkshop_id, 'Pending Request', :pickup_address, :barangay,
-                         :pickup_date, :pickup_time, :photo_path, :notes, :location_name,
+                 VALUES ('', :seller_id, :junkshop_id, 'Pending Request', :pickup_address,
+                         :pickup_date, :pickup_time, :photo_path, :notes,
                          :distance_km, :seller_lat, :seller_lng)",
                 [
                     'seller_id' => (int) $sellerAccountId,
                     'junkshop_id' => (int) $normalized['junkshop_id'],
                     'pickup_address' => $normalized['pickup_address'],
-                    'barangay' => $normalized['barangay'],
                     'pickup_date' => $normalized['preferred_pickup_date'],
                     'pickup_time' => $normalized['preferred_pickup_time'],
                     'photo_path' => $photoPath,
                     'notes' => $normalized['notes'] !== '' ? $normalized['notes'] : null,
-                    'location_name' => $normalized['pickup_location_name'],
                     'distance_km' => $normalized['approximate_distance_km'],
                     'seller_lat' => $normalized['seller_lat'],
                     'seller_lng' => $normalized['seller_lng'],
@@ -142,7 +140,7 @@ class PickupRequestController
     public function listSellerRequests($sellerAccountId)
     {
         return $this->db->query(
-            "SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address, pr.barangay,
+            "SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address,
                     pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
                     pr.confirmed_pickup_time, DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                     TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path,
@@ -174,7 +172,7 @@ class PickupRequestController
     {
         $rows = $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.seller_account_id, a.full_name AS seller_name, a.email AS seller_email,
-                    pr.current_status, pr.pickup_location_name, pr.pickup_address, pr.barangay, pr.approximate_distance_km,
+                    pr.current_status, pr.pickup_address, pr.approximate_distance_km,
                     pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date, pr.confirmed_pickup_time,
                     DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                     TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,
@@ -239,7 +237,7 @@ class PickupRequestController
     public function getSellerRequestAssignmentSummary($requestId, $sellerAccountId): array
     {
         $row = $this->db->query(
-            'SELECT pr.id AS assignment_id, pr.id AS pickup_request_id, pr.junkshop_id, CASE WHEN pr.current_status = :pending_status THEN :matched_status ELSE pr.current_status END AS assignment_status, pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time, jp.business_name, jp.complete_address, jp.owner_name, a.full_name AS junkshop_contact_name FROM pickup_requests pr LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id LEFT JOIN accounts a ON a.id = pr.junkshop_id WHERE pr.id = :pickup_request_id AND pr.seller_account_id = :seller_account_id LIMIT 1',
+            'SELECT pr.id AS assignment_id, pr.id AS pickup_request_id, pr.junkshop_id, CASE WHEN pr.current_status = :pending_status THEN :matched_status ELSE pr.current_status END AS assignment_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, jp.business_name, jp.complete_address, jp.owner_name, a.full_name AS junkshop_contact_name FROM pickup_requests pr LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id LEFT JOIN accounts a ON a.id = pr.junkshop_id WHERE pr.id = :pickup_request_id AND pr.seller_account_id = :seller_account_id LIMIT 1',
             [
                 'pickup_request_id' => (int) $requestId,
                 'seller_account_id' => (int) $sellerAccountId,
@@ -360,7 +358,7 @@ class PickupRequestController
     {
         return $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.current_status, a.full_name AS seller_name, a.email AS seller_email,
-                    pr.pickup_address, pr.barangay, pr.preferred_pickup_date, pr.preferred_pickup_time,
+                    pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time,
                     pr.photo_path, pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
                     GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
@@ -395,19 +393,12 @@ class PickupRequestController
         if (trim($data['pickup_address'] ?? '') === '') {
             $errors[] = 'Pickup address/location is required.';
         }
-        if (trim($data['pickup_location_name'] ?? '') === '') {
-            $errors[] = 'Pickup location name is required.';
-        }
         if (!is_numeric($data['approximate_distance_km'] ?? null) || (float) $data['approximate_distance_km'] < 0) {
             $errors[] = 'Approximate distance must be zero or greater.';
         }
         if (!is_numeric($data['seller_lat'] ?? null) || (float) $data['seller_lat'] < -90 || (float) $data['seller_lat'] > 90 || !is_numeric($data['seller_lng'] ?? null) || (float) $data['seller_lng'] < -180 || (float) $data['seller_lng'] > 180) {
             $errors[] = 'Current location coordinates are required.';
         }
-        if (trim($data['barangay'] ?? '') === '') {
-            $errors[] = 'Barangay is required.';
-        }
-
         $date = trim((string) ($data['preferred_pickup_date'] ?? ''));
         $dateObject = DateTime::createFromFormat('Y-m-d', $date);
         if (!$dateObject || $dateObject->format('Y-m-d') !== $date) {
@@ -435,11 +426,9 @@ class PickupRequestController
             'items' => $items,
             'junkshop_id' => (int) ($data['junkshop_id'] ?? 0),
             'pickup_address' => trim((string) ($data['pickup_address'] ?? '')),
-            'pickup_location_name' => trim((string) ($data['pickup_location_name'] ?? '')),
             'approximate_distance_km' => number_format(max(0.0, (float) ($data['approximate_distance_km'] ?? 0)), 2, '.', ''),
             'seller_lat' => number_format((float) ($data['seller_lat'] ?? 0), 8, '.', ''),
             'seller_lng' => number_format((float) ($data['seller_lng'] ?? 0), 8, '.', ''),
-            'barangay' => trim((string) ($data['barangay'] ?? '')),
             'preferred_pickup_date' => trim((string) ($data['preferred_pickup_date'] ?? '')),
             'preferred_pickup_time' => trim((string) ($data['preferred_pickup_time'] ?? '')),
             'notes' => trim((string) ($data['notes'] ?? '')),
