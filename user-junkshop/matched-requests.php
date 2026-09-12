@@ -52,7 +52,7 @@ ob_start();
             <div class="tracking-info">
                 <p><strong>Seller Location:</strong> <span id="seller-address-text"></span></p>
                 <p><strong>Your Current Location:</strong> <span id="junkshop-address-text">Fetching...</span></p>
-                <p><strong>Distance:</strong> <span id="live-distance">Calculating...</span></p>
+                <p><strong>Exact Distance:</strong> <span id="live-distance">Calculating...</span></p>
             </div>
         </div>
 
@@ -86,7 +86,7 @@ ob_start();
                                 <div class="row g-3 small mb-3">
                                     <div class="col-md-4"><div class="text-muted">Seller</div><strong><?php echo Validator::escape($assignment['seller_name'] ?? ''); ?></strong></div>
                                     <div class="col-md-4"><div class="text-muted">Pickup</div><strong><?php echo Validator::escape($pickupDate); ?></strong><br><?php echo Validator::escape($pickupTime); ?></div>
-                                    <div class="col-md-4"><div class="text-muted">Distance</div><strong><?php echo isset($assignment['distance_km']) ? number_format((float)$assignment['distance_km'], 2) . ' km' : 'Pending'; ?></strong></div>
+                                    <div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong><?php echo isset($assignment['distance_km']) ? number_format((float)$assignment['distance_km'], 2) . ' km' : 'Pending'; ?></strong></div>
                                 </div>
 
                                 <div class="small text-muted mb-3"><?php echo Validator::escape($assignment['pickup_address'] ?? ''); ?></div>
@@ -575,7 +575,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const mapMarkup = status.toLowerCase().replace(/ /g, '_') === 'for_pickup'
                 ? '<div id="seller-map-' + requestId + '" class="seller-location-map" data-lat="' + escapeHtml(request.seller_lat) + '" data-lng="' + escapeHtml(request.seller_lng) + '" style="height: 300px; width: 100%; border-radius: 8px; margin-top: 15px;"></div>'
                 : '';
-            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
+            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
         }).join('');
         initializeSellerMaps();
     }
