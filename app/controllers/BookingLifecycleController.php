@@ -100,7 +100,13 @@ class BookingLifecycleController
 
             StatusLogger::logChange($pickupRequestId, 'Scheduled', 'For Pickup', 'Junkshop', $junkshopAccountId);
 
-            return ['success' => true, 'message' => 'Pickup is now marked as for pickup.'];
+            return [
+                'success' => true,
+                'message' => 'Pickup is now marked as for pickup.',
+                'seller_lat' => isset($pickupRequest['seller_lat']) ? (float) $pickupRequest['seller_lat'] : null,
+                'seller_lng' => isset($pickupRequest['seller_lng']) ? (float) $pickupRequest['seller_lng'] : null,
+                'seller_address' => (string) ($pickupRequest['pickup_address'] ?? ''),
+            ];
         } catch (Throwable $e) {
             error_log('Mark for pickup error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update the pickup status.'];
@@ -277,7 +283,7 @@ class BookingLifecycleController
     private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array
     {
         $row = $this->db->query(
-            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
+            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,

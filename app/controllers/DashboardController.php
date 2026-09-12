@@ -335,6 +335,8 @@ class DashboardController
                 pr.booking_reference,
                 pr.current_status,
                 pr.pickup_address,
+                pr.seller_lat,
+                pr.seller_lng,
                 pr.preferred_pickup_date,
                 pr.preferred_pickup_time,
                 pr.confirmed_pickup_date,

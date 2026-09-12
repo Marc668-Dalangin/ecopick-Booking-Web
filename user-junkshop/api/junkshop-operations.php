@@ -4,7 +4,17 @@ require_once __DIR__ . '/../../app/controllers/JunkshopAssignmentController.php'
 require_once __DIR__ . '/../../app/controllers/BookingLifecycleController.php';
 require_once __DIR__ . '/../../app/controllers/DashboardController.php';
 
-header('Content-Type: application/json; charset=UTF-8');
+header('Content-Type: application/json');
+
+set_exception_handler(static function (Throwable $e): void {
+    error_log('Matched Requests SQL Error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'EcoPick is temporarily unavailable. Please try again later.',
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+});
 
 if (!Auth::check()) {
     http_response_code(401);

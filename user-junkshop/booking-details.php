@@ -48,6 +48,11 @@ ob_start();
 
             <h5 class="fw-bold mb-3">Submitted materials</h5><div class="table-responsive mb-4"><table class="table align-middle"><thead class="table-light"><tr><th>Material</th><th>Category</th><th class="text-end">Estimated weight</th><?php if (!empty($assignment)): ?><th class="text-end">Matched price/kg</th><th class="text-end">Estimated value</th><?php endif; ?></tr></thead><tbody><?php $total_weight = 0; $total_price_per_kg = 0; $total_estimated_value = 0; foreach ($request['items'] as $item): $estimatedWeight = (float) $item['estimated_weight']; $matchedPrice = $item['matched_price_per_kg'] ?? null; $total_weight += $estimatedWeight; $total_price_per_kg += (float) $matchedPrice; $total_estimated_value += $estimatedWeight * (float) $matchedPrice; $estimatedValue = $item['actual_value'] ?? ($item['estimated_value'] ?? null); $isPendingMatch = $request['current_status'] === 'Pending Request' && $matchedPrice === null; ?><tr><td><?php echo Validator::escape($item['material_name']); ?></td><td><?php echo Validator::escape($item['category']); ?></td><td class="text-end"><?php echo number_format($estimatedWeight, 2); ?> <?php echo Validator::escape($item['unit_of_measure']); ?></td><?php if (!empty($assignment)): ?><td class="text-end"><?php echo $isPendingMatch ? '<span class="text-muted">Pending</span>' : '₱' . number_format((float) $matchedPrice, 2) . '/kg'; ?></td><td class="text-end"><?php echo $estimatedValue !== null ? '₱' . number_format((float) $estimatedValue, 2) : ($isPendingMatch ? '<span class="text-muted">Pending</span>' : '₱0.00'); ?></td><?php endif; ?></tr><?php endforeach; ?></tbody><tfoot><tr><th colspan="2">TOTAL</th><th class="text-end"><?php echo number_format($total_weight, 2); ?> kg</th><?php if (!empty($assignment)): ?><th class="text-end">₱<?php echo number_format($total_price_per_kg, 2); ?></th><th class="text-end">₱<?php echo number_format($total_estimated_value, 2); ?></th><?php endif; ?></tr></tfoot></table></div>
             <h5 class="fw-bold mb-3">Pickup information</h5><dl class="row mb-0"><dt class="col-sm-4 text-muted">Address</dt><dd class="col-sm-8"><?php echo Validator::escape($request['pickup_address']); ?></dd><dt class="col-sm-4 text-muted">Approximate distance</dt><dd class="col-sm-8"><?php echo number_format((float)($request['approximate_distance_km'] ?? 0), 2); ?> km</dd><dt class="col-sm-4 text-muted">Preferred date</dt><dd class="col-sm-8"><?php echo Validator::escape($request['preferred_pickup_date']); ?></dd><dt class="col-sm-4 text-muted">Preferred time</dt><dd class="col-sm-8"><?php echo Validator::escape($request['preferred_pickup_time']); ?></dd><dt class="col-sm-4 text-muted">Notes</dt><dd class="col-sm-8"><?php echo $request['notes'] !== null && $request['notes'] !== '' ? nl2br(Validator::escape($request['notes'])) : '<span class="text-muted">None provided</span>'; ?></dd><dt class="col-sm-4 text-muted">Photo</dt><dd class="col-sm-8"><?php echo $request['photo_path'] ? 'Photo uploaded with request' : '<span class="text-muted">None provided</span>'; ?></dd></dl>
+            <?php if (($request['current_status'] ?? '') === 'For Pickup'): ?>
+                <section id="seller-live-tracking" class="mt-4" data-status="For Pickup">
+                    <div class="tracking-info"><p><strong>Seller Location:</strong> <span id="seller-location-label"><?php echo Validator::escape($request['pickup_address']); ?></span></p><p><strong>Junkshop Location:</strong> <span id="junkshop-location-label">Fetching...</span></p><p><strong>Distance:</strong> <span id="seller-live-distance">Calculating...</span></p></div>
+                </section>
+            <?php endif; ?>
             <?php if (strtolower((string) ($request['current_status'] ?? '')) === 'completed'): ?><hr class="my-4"><section aria-labelledby="final-transaction-heading"><h5 id="final-transaction-heading" class="fw-bold mb-3">Final transaction calculation</h5><div class="d-flex justify-content-between gap-3"><span>Total Recyclable Value:</span><span>₱<?php echo number_format((float) $request['final_recyclable_value'], 2); ?></span></div><div class="d-flex justify-content-between gap-3"><span>Pickup / Collection fee:</span><span class="text-danger">- ₱<?php echo number_format((float) $request['final_pickup_fee'], 2); ?></span></div><div class="d-flex justify-content-between gap-3"><span>Ecopick service fee:</span><span class="text-danger">- ₱<?php echo number_format((float) $request['final_service_fee'], 2); ?></span></div><hr class="my-2"><div class="d-flex justify-content-between gap-3"><strong>Final net amount received:</strong><strong>₱<?php echo number_format((float) $request['final_net_amount'], 2); ?></strong></div></section><?php endif; ?>
         </div></div>
     </div>
@@ -75,6 +80,77 @@ window.addEventListener('DOMContentLoaded', function () {
     const requestId = <?php echo (int) $requestId; ?>;
     const detailsUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php?action=details&request_id=' + requestId;
     const statusOrder = <?php echo json_encode($statusOrder, JSON_UNESCAPED_UNICODE); ?>;
+    const sellerLat = parseFloat(<?php echo json_encode($request['seller_lat']); ?>);
+    const sellerLng = parseFloat(<?php echo json_encode($request['seller_lng']); ?>);
+    const liveLocationUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_junkshop_live_location.php?booking_id=' + encodeURIComponent(requestId);
+    let liveLocationInterval = null;
+    let lastGeocodedJunkshopLocation = null;
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const earthRadiusKm = 6371;
+        const latitudeDelta = (lat2 - lat1) * Math.PI / 180;
+        const longitudeDelta = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(latitudeDelta / 2) ** 2
+            + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(longitudeDelta / 2) ** 2;
+        return Number((earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
+    }
+
+    function formatFullAddress(addressObj) {
+        const address = addressObj || {};
+        return [
+            address.village || address.suburb || address.neighbourhood || address.quarter || '',
+            address.city || address.town || address.municipality || '',
+            address.state || address.province || address.region || ''
+        ].filter(Boolean).join(', ');
+    }
+
+    function reverseGeocodeJunkshopLocation(lat, lng) {
+        if (lastGeocodedJunkshopLocation && calculateDistance(lastGeocodedJunkshopLocation.lat, lastGeocodedJunkshopLocation.lng, lat, lng) < 0.05) return;
+        lastGeocodedJunkshopLocation = { lat: lat, lng: lng };
+        const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
+        fetch(url, { headers: { Accept: 'application/json' } })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                const label = document.getElementById('junkshop-location-label');
+                const address = formatFullAddress(data?.address);
+                if (label && address) label.textContent = address;
+            })
+            .catch(function () {});
+    }
+
+    function stopLiveLocationPolling() {
+        if (liveLocationInterval !== null) {
+            clearInterval(liveLocationInterval);
+            liveLocationInterval = null;
+        }
+    }
+
+    function updateSellerLiveText(payload) {
+        const container = document.getElementById('seller-live-tracking');
+        if (!container || payload.status === 'Completed') {
+            stopLiveLocationPolling();
+            if (container) container.remove();
+            return;
+        }
+        const junkshopLat = parseFloat(payload.junkshop_lat);
+        const junkshopLng = parseFloat(payload.junkshop_lng);
+        if (!Number.isFinite(sellerLat) || sellerLat < -90 || sellerLat > 90 || !Number.isFinite(sellerLng) || sellerLng < -180 || sellerLng > 180 || !Number.isFinite(junkshopLat) || junkshopLat < -90 || junkshopLat > 90 || !Number.isFinite(junkshopLng) || junkshopLng < -180 || junkshopLng > 180) return;
+        reverseGeocodeJunkshopLocation(junkshopLat, junkshopLng);
+        document.getElementById('seller-live-distance').textContent = calculateDistance(sellerLat, sellerLng, junkshopLat, junkshopLng).toFixed(2) + ' km';
+    }
+
+    function pollJunkshopLiveLocation() {
+        if (document.hidden) return;
+        fetch(liveLocationUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => response.ok ? response.json() : null)
+            .then(payload => { if (payload?.success) updateSellerLiveText(payload); })
+            .catch(function () {});
+    }
+
+    if (document.getElementById('seller-live-tracking')) {
+        pollJunkshopLiveLocation();
+        liveLocationInterval = window.setInterval(pollJunkshopLiveLocation, 2000);
+    }
 
     const formatTime = (value) => {
         const date = new Date('1970-01-01T' + String(value || '').trim().slice(0, 8));
@@ -168,6 +244,7 @@ window.addEventListener('DOMContentLoaded', function () {
         updateProgress(request.current_status);
         updateTimeline(request.status_history, request);
         updateItemPrices(request.items);
+        if (request.current_status === 'Completed') stopLiveLocationPolling();
     }
 
     function stopBookingPolling() {

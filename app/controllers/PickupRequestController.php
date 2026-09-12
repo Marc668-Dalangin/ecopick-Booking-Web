@@ -175,7 +175,7 @@ class PickupRequestController
     {
         $rows = $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.seller_account_id, a.full_name AS seller_name, a.email AS seller_email,
-                    pr.current_status, pr.pickup_address, pr.approximate_distance_km,
+                    pr.current_status, pr.pickup_address, pr.approximate_distance_km, pr.seller_lat, pr.seller_lng,
                     pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date, pr.confirmed_pickup_time,
                       DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                       TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,

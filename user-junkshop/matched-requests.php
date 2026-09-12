@@ -25,6 +25,13 @@ $formatPickupTime = static function ($time): string {
     $timestamp = strtotime((string) $time);
     return $timestamp === false ? '' : date('h:i A', $timestamp);
 };
+$activeTrackingAssignment = null;
+foreach ($assignments as $assignment) {
+    if (($assignment['current_status'] ?? '') === 'For Pickup') {
+        $activeTrackingAssignment = $assignment;
+        break;
+    }
+}
 ob_start();
 ?>
 <div class="card border-0 shadow-sm">
@@ -39,6 +46,14 @@ ob_start();
         </div>
 
         <div id="assignment-feedback" class="alert d-none" role="status" aria-live="polite"></div>
+
+        <div id="live-tracking-container" style="display: <?php echo $activeTrackingAssignment !== null ? 'block' : 'none'; ?>;" data-booking-id="<?php echo (int) ($activeTrackingAssignment['pickup_request_id'] ?? 0); ?>">
+            <div class="tracking-info">
+                <p><strong>Seller Location:</strong> <span id="seller-address-text"></span></p>
+                <p><strong>Your Current Location:</strong> <span id="junkshop-address-text">Fetching...</span></p>
+                <p><strong>Distance:</strong> <span id="live-distance">Calculating...</span></p>
+            </div>
+        </div>
 
         <div class="row g-4" id="assignment-list">
         <?php if (empty($assignments)): ?>
@@ -220,6 +235,89 @@ window.addEventListener('DOMContentLoaded', function () {
     const successModal = bootstrap.Modal.getOrCreateInstance(successModalElement);
     const successMessage = successModalElement.querySelector('[data-success-message]');
     const liveLocationWatches = new Set();
+    const trackingContainer = document.getElementById('live-tracking-container');
+    const sellerAddressText = document.getElementById('seller-address-text');
+    const junkshopAddressText = document.getElementById('junkshop-address-text');
+    const liveDistance = document.getElementById('live-distance');
+    let trackingWatchId = null;
+    let lastGeocodedJunkshopLocation = null;
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const earthRadiusKm = 6371;
+        const latitudeDelta = (lat2 - lat1) * Math.PI / 180;
+        const longitudeDelta = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(latitudeDelta / 2) ** 2
+            + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(longitudeDelta / 2) ** 2;
+        return Number((earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
+    }
+
+    function formatFullAddress(addressObj) {
+        const address = addressObj || {};
+        return [
+            address.village || address.suburb || address.neighbourhood || address.quarter || '',
+            address.city || address.town || address.municipality || '',
+            address.state || address.province || address.region || ''
+        ].filter(Boolean).join(', ');
+    }
+
+    function reverseGeocodeSellerLocation(lat, lng) {
+        const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
+        fetch(url, { headers: { Accept: 'application/json' } })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                const address = formatFullAddress(data?.address);
+                if (address && sellerAddressText) sellerAddressText.textContent = address;
+            })
+            .catch(function () {});
+    }
+
+    function reverseGeocodeJunkshopLocation(lat, lng) {
+        if (lastGeocodedJunkshopLocation && calculateDistance(lastGeocodedJunkshopLocation.lat, lastGeocodedJunkshopLocation.lng, lat, lng) < 0.05) return;
+        lastGeocodedJunkshopLocation = { lat: lat, lng: lng };
+        const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
+        fetch(url, { headers: { Accept: 'application/json' } })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                const address = formatFullAddress(data?.address);
+                if (address && junkshopAddressText) junkshopAddressText.textContent = address;
+            })
+            .catch(function () {});
+    }
+
+    function showLiveTracking(payload, requestId) {
+        const sellerLat = parseFloat(payload.seller_lat);
+        const sellerLng = parseFloat(payload.seller_lng);
+        if (!Number.isFinite(sellerLat) || sellerLat < -90 || sellerLat > 90 || !Number.isFinite(sellerLng) || sellerLng < -180 || sellerLng > 180) {
+            showFeedback('Pickup marked, but the seller location is unavailable.', false);
+            return;
+        }
+
+        trackingContainer.style.display = 'block';
+        sellerAddressText.textContent = 'Fetching...';
+        reverseGeocodeSellerLocation(sellerLat, sellerLng);
+        liveLocationWatches.add(requestId);
+        if (trackingWatchId !== null) navigator.geolocation.clearWatch(trackingWatchId);
+        if (!navigator.geolocation) {
+            junkshopAddressText.textContent = 'Geolocation unavailable';
+            return;
+        }
+        trackingWatchId = navigator.geolocation.watchPosition(function (position) {
+            const junkshopLat = parseFloat(position.coords.latitude);
+            const junkshopLng = parseFloat(position.coords.longitude);
+            if (!Number.isFinite(junkshopLat) || !Number.isFinite(junkshopLng)) return;
+            reverseGeocodeJunkshopLocation(junkshopLat, junkshopLng);
+            liveDistance.textContent = calculateDistance(sellerLat, sellerLng, junkshopLat, junkshopLng).toFixed(2) + ' km';
+
+            const data = new FormData();
+            data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+            data.append('booking_id', String(requestId));
+            data.append('lat', String(junkshopLat));
+            data.append('lng', String(junkshopLng));
+            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' }).catch(function () {});
+        }, function () {
+            junkshopAddressText.textContent = 'Unable to access current location';
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
+    }
 
     function showFeedback(message, isSuccess) {
         if (!feedback) return;
@@ -249,10 +347,18 @@ window.addEventListener('DOMContentLoaded', function () {
             data.append('booking_id', String(requestId));
             data.append('lat', String(position.coords.latitude));
             data.append('lng', String(position.coords.longitude));
-            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' }).catch(function () {});
-        }, function () {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' }).catch(function () {});
+        }, function () {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
         window.setTimeout(function () { navigator.geolocation.clearWatch(watchId); liveLocationWatches.delete(requestId); }, 300000);
     }
+
+    <?php if ($activeTrackingAssignment !== null): ?>
+    showLiveTracking(<?php echo json_encode([
+        'seller_lat' => $activeTrackingAssignment['seller_lat'] ?? null,
+        'seller_lng' => $activeTrackingAssignment['seller_lng'] ?? null,
+        'seller_address' => $activeTrackingAssignment['seller_address'] ?? null,
+    ], JSON_UNESCAPED_SLASHES); ?>, <?php echo (int) $activeTrackingAssignment['pickup_request_id']; ?>);
+    <?php endif; ?>
 
     assignmentList?.addEventListener('click', async function (event) {
         const button = event.target.closest('.accept-request, .decline-request, .schedule-request, .mark-for-pickup, .complete-transaction');
@@ -275,7 +381,11 @@ window.addEventListener('DOMContentLoaded', function () {
             const payload = await response.json();
             if (!payload.success) { showFeedback(payload.message || 'Unable to update this request.', false); button.disabled = false; return false; }
             showFeedback(payload.message || 'Request updated.', true);
-            if (action === 'mark-for-pickup') startLiveLocationWatch(requestId);
+            if (action === 'mark-for-pickup') {
+                const trackingRequest = payload.data?.requests?.find(function (request) { return Number(request.pickup_request_id) === requestId; });
+                showLiveTracking(trackingRequest || payload, requestId);
+                return true;
+            }
             showSuccessAndReload(payload.message || 'Request updated successfully.');
             return true;
         });

@@ -305,11 +305,10 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     payment_method ENUM('Cash') NULL,
     payment_status ENUM('Unpaid', 'Paid') NULL,
     pickup_address VARCHAR(255) NOT NULL,
-    seller_lat DECIMAL(10,8) NULL,
-    seller_lng DECIMAL(10,8) NULL,
-    junkshop_lat DECIMAL(10,8) NULL,
-    junkshop_lng DECIMAL(10,8) NULL,
-    last_location_update DATETIME NULL,
+    seller_lat DECIMAL(11,8) NULL,
+    seller_lng DECIMAL(11,8) NULL,
+    junkshop_lat DECIMAL(11,8) NULL,
+    junkshop_lng DECIMAL(11,8) NULL,
     preferred_pickup_date DATE NOT NULL,
     preferred_pickup_time VARCHAR(40) NOT NULL,
     confirmed_pickup_date DATE NULL,
@@ -574,11 +573,10 @@ ALTER TABLE junkshop_profiles
     ADD COLUMN IF NOT EXISTS gcash_account_number VARCHAR(32) NULL AFTER gcash_account_name;
 
 ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS seller_lat DECIMAL(10,8) NULL AFTER pickup_address,
-    ADD COLUMN IF NOT EXISTS seller_lng DECIMAL(10,8) NULL AFTER seller_lat,
-    ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(10,8) NULL AFTER seller_lng,
-    ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(10,8) NULL AFTER junkshop_lat,
-    ADD COLUMN IF NOT EXISTS last_location_update DATETIME NULL AFTER junkshop_lng,
+    ADD COLUMN IF NOT EXISTS seller_lat DECIMAL(11,8) NULL AFTER pickup_address,
+    ADD COLUMN IF NOT EXISTS seller_lng DECIMAL(11,8) NULL AFTER seller_lat,
+    ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(11,8) NULL AFTER seller_lng,
+    ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(11,8) NULL AFTER junkshop_lat,
     ADD COLUMN IF NOT EXISTS approximate_distance_km DECIMAL(6,2) NULL AFTER pickup_address;
 
 CREATE TABLE IF NOT EXISTS payment_proofs (
