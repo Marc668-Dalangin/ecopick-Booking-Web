@@ -140,6 +140,10 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
                                     <i class="bi bi-calendar2-check"></i>
                                     <span>Current Bookings</span>
                                 </a>
+                                <a class="nav-link <?php echo $currentPage === 'transaction-history' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/transaction-history.php">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Transaction History</span>
+                                </a>
                                 <a class="nav-link <?php echo $currentPage === 'partner-prices' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/partner-junkshops.php">
                                     <i class="bi bi-shop-window"></i>
                                     <span>Partner Prices</span>
@@ -153,6 +157,10 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
                                 <a class="nav-link <?php echo $currentPage === 'matched-requests' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/matched-requests.php">
                                     <i class="bi bi-broadcast"></i>
                                     <span>Matched Requests <span class="badge bg-danger rounded-pill ms-2" data-matched-requests-badge style="display: none;">0</span></span>
+                                </a>
+                                <a class="nav-link <?php echo $currentPage === 'completed-transactions' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/completed-transactions.php">
+                                    <i class="bi bi-journal-check"></i>
+                                    <span>Completed Transactions</span>
                                 </a>
                             <?php endif; ?>
                             <a class="nav-link" href="<?php echo APP_URL; ?>/user-junkshop/notifications.php"><i class="bi bi-bell"></i><span>Notifications <span class="badge rounded-pill bg-danger <?php echo $notificationCount > 0 ? '' : 'd-none'; ?>" data-notification-count><?php echo $notificationCount; ?></span></span></a>
