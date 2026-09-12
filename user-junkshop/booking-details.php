@@ -82,7 +82,7 @@ window.addEventListener('DOMContentLoaded', function () {
     const sellerLat = parseFloat(<?php echo json_encode($request['seller_lat']); ?>);
     const sellerLng = parseFloat(<?php echo json_encode($request['seller_lng']); ?>);
     const liveLocationUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_junkshop_live_location.php?booking_id=' + encodeURIComponent(requestId);
-    let liveLocationInterval = null;
+    let liveLocationTimeout = null;
     let lastGeocodedJunkshopLocation = null;
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -118,9 +118,9 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 
     function stopLiveLocationPolling() {
-        if (liveLocationInterval !== null) {
-            clearInterval(liveLocationInterval);
-            liveLocationInterval = null;
+        if (liveLocationTimeout !== null) {
+            clearTimeout(liveLocationTimeout);
+            liveLocationTimeout = null;
         }
     }
 
@@ -139,16 +139,30 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 
     function pollJunkshopLiveLocation() {
-        if (document.hidden) return;
+        if (document.hidden) {
+            liveLocationTimeout = window.setTimeout(pollJunkshopLiveLocation, 10000);
+            return;
+        }
         fetch(liveLocationUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(response => response.ok ? response.json() : null)
-            .then(payload => { if (payload?.success) updateSellerLiveText(payload); })
-            .catch(function () {});
+            .then(response => {
+                if (!response.ok) throw new Error('Live location request failed.');
+                return response.json();
+            })
+            .then(payload => {
+                if (payload?.success) updateSellerLiveText(payload);
+                if (document.getElementById('seller-live-tracking')) {
+                    liveLocationTimeout = window.setTimeout(pollJunkshopLiveLocation, 10000);
+                }
+            })
+            .catch(function () {
+                if (document.getElementById('seller-live-tracking')) {
+                    liveLocationTimeout = window.setTimeout(pollJunkshopLiveLocation, 30000);
+                }
+            });
     }
 
     if (document.getElementById('seller-live-tracking')) {
         pollJunkshopLiveLocation();
-        liveLocationInterval = window.setInterval(pollJunkshopLiveLocation, 2000);
     }
 
     const formatTime = (value) => {

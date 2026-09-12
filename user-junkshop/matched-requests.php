@@ -246,8 +246,43 @@ window.addEventListener('DOMContentLoaded', function () {
     const junkshopAddressText = document.getElementById('junkshop-address-text');
     const liveDistance = document.getElementById('live-distance');
     const sellerMaps = new Map();
+    const liveLocationUpdates = new Map();
     let trackingWatchId = null;
     let lastGeocodedJunkshopLocation = null;
+
+    function queueLiveLocationUpdate(requestId, lat, lng) {
+        const key = String(requestId);
+        const state = liveLocationUpdates.get(key) || { lastSentAt: 0, timer: null, pending: null };
+        state.pending = { lat: lat, lng: lng };
+        if (state.timer !== null) return;
+
+        const send = function () {
+            state.timer = null;
+            if (!state.pending) return;
+            const location = state.pending;
+            state.pending = null;
+            const elapsed = Date.now() - state.lastSentAt;
+            if (elapsed < 10000) {
+                state.timer = window.setTimeout(send, 10000 - elapsed);
+                return;
+            }
+
+            state.lastSentAt = Date.now();
+            const data = new FormData();
+            data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+            data.append('booking_id', key);
+            data.append('lat', String(location.lat));
+            data.append('lng', String(location.lng));
+            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' })
+                .catch(function () {})
+                .finally(function () {
+                    if (state.pending) state.timer = window.setTimeout(send, 10000);
+                });
+        };
+
+        send();
+        liveLocationUpdates.set(key, state);
+    }
 
     function removeSellerMap(requestId) {
         const mapElement = document.getElementById('seller-map-' + requestId);
@@ -340,12 +375,7 @@ window.addEventListener('DOMContentLoaded', function () {
             reverseGeocodeJunkshopLocation(junkshopLat, junkshopLng);
             liveDistance.textContent = calculateDistance(sellerLat, sellerLng, junkshopLat, junkshopLng).toFixed(2) + ' km';
 
-            const data = new FormData();
-            data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
-            data.append('booking_id', String(requestId));
-            data.append('lat', String(junkshopLat));
-            data.append('lng', String(junkshopLng));
-            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' }).catch(function () {});
+            queueLiveLocationUpdate(requestId, junkshopLat, junkshopLng);
         }, function () {
             junkshopAddressText.textContent = 'Unable to access current location';
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
@@ -374,12 +404,7 @@ window.addEventListener('DOMContentLoaded', function () {
         if (!navigator.geolocation || liveLocationWatches.has(requestId)) return;
         liveLocationWatches.add(requestId);
         const watchId = navigator.geolocation.watchPosition(function (position) {
-            const data = new FormData();
-            data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
-            data.append('booking_id', String(requestId));
-            data.append('lat', String(position.coords.latitude));
-            data.append('lng', String(position.coords.longitude));
-            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' }).catch(function () {});
+            queueLiveLocationUpdate(requestId, position.coords.latitude, position.coords.longitude);
         }, function () {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
         window.setTimeout(function () { navigator.geolocation.clearWatch(watchId); liveLocationWatches.delete(requestId); }, 300000);
     }

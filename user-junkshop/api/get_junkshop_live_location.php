@@ -19,14 +19,19 @@ if (!$bookingId) {
 try {
     $role = Auth::userRole();
     $ownership = $role === 'seller' ? 'pr.seller_account_id = :account_id' : 'pr.junkshop_id = :account_id';
-    $request = Database::getInstance()->query(
+    $database = Database::getInstance();
+    $pdo = $database->getPDO();
+    $stmt = $pdo->prepare(
         "SELECT pr.current_status, pr.junkshop_lat, pr.junkshop_lng
          FROM pickup_requests pr
          WHERE pr.id = :booking_id AND {$ownership}
          LIMIT 1",
-        ['booking_id' => $bookingId, 'account_id' => (int) Auth::userId()]
-    )->fetch();
+    );
+    $stmt->execute(['booking_id' => $bookingId, 'account_id' => (int) Auth::userId()]);
+    $request = $stmt->fetch();
     if (!$request) {
+        $stmt = null;
+        $pdo = null;
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Booking not found.']);
         exit;
@@ -39,7 +44,11 @@ try {
         'junkshop_lng' => $request['junkshop_lng'] !== null ? (float) $request['junkshop_lng'] : null,
     ]);
 } catch (Throwable $exception) {
+    $stmt = null;
+    $pdo = null;
     error_log('Junkshop live location fetch failed: ' . $exception->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Unable to fetch location.']);
 }
+$stmt = null;
+$pdo = null;

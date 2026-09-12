@@ -28,15 +28,22 @@ if (!$bookingId || !preg_match($coordinatePattern, $lat) || !preg_match($coordin
 }
 
 try {
-    $updated = Database::getInstance()->query(
+    $database = Database::getInstance();
+    $pdo = $database->getPDO();
+    $stmt = $pdo->prepare(
         "UPDATE pickup_requests
          SET junkshop_lat = :lat, junkshop_lng = :lng
          WHERE id = :booking_id AND junkshop_id = :junkshop_id AND current_status <> 'Completed'",
-        ['lat' => $lat, 'lng' => $lng, 'booking_id' => $bookingId, 'junkshop_id' => (int) Auth::userId()]
-    )->rowCount();
+    );
+    $stmt->execute(['lat' => $lat, 'lng' => $lng, 'booking_id' => $bookingId, 'junkshop_id' => (int) Auth::userId()]);
+    $updated = $stmt->rowCount();
     echo json_encode(['success' => $updated > 0]);
 } catch (Throwable $exception) {
+    $stmt = null;
+    $pdo = null;
     error_log('Junkshop live location update failed: ' . $exception->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Unable to update location.']);
 }
+$stmt = null;
+$pdo = null;
