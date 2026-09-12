@@ -92,7 +92,7 @@ ob_start();
                                             <?php echo CSRF::field(); ?>
                                             <input type="hidden" name="account_id" value="<?php echo (int)($junkshop['account_id'] ?? 0); ?>">
                                             <input type="hidden" name="decision" value="approved">
-                                            <button type="submit" class="btn btn-success btn-sm decision-btn" data-confirmation="Approve this junkshop application?">
+                                            <button type="submit" class="btn btn-success btn-sm decision-btn btn-approve-junkshop" data-id="<?php echo (int)($junkshop['account_id'] ?? 0); ?>" data-confirmation="Approve this junkshop application?">
                                                 <i class="bi bi-check-circle"></i> Approve
                                             </button>
                                         </form>
@@ -100,7 +100,7 @@ ob_start();
                                             <?php echo CSRF::field(); ?>
                                             <input type="hidden" name="account_id" value="<?php echo (int)($junkshop['account_id'] ?? 0); ?>">
                                             <input type="hidden" name="decision" value="rejected">
-                                            <button type="submit" class="btn btn-outline-danger btn-sm decision-btn" data-confirmation="Reject this junkshop application?">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm decision-btn btn-reject-junkshop" data-id="<?php echo (int)($junkshop['account_id'] ?? 0); ?>" data-confirmation="Are you sure? This will permanently delete the account.">
                                                 <i class="bi bi-x-circle"></i> Reject
                                             </button>
                                         </form>
@@ -140,6 +140,7 @@ ob_start();
             rejected: 'status-badge rejected',
             pending: 'status-badge pending'
         };
+        const csrfToken = document.querySelector('input[name="_csrf_token"]')?.value || '';
         const confirmationModal = window.ecopick && window.ecopick.setupActionConfirmation
             ? window.ecopick.setupActionConfirmation({
                 modalId: 'confirmApprovalModal',
@@ -187,7 +188,7 @@ ob_start();
                     '<td>' + (junkshop.business_permit_reference || '') + '</td>' +
                     '<td>' + (junkshop.registration_date ? new Date(junkshop.registration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '') + '</td>' +
                     '<td><span class="' + statusClass + '">' + String(rowStatus || 'pending').toUpperCase() + '</span></td>' +
-                    '<td><div class="d-flex justify-content-end gap-2 flex-wrap"><form method="POST" action="" class="approval-form d-inline" data-action="approve"><input type="hidden" name="_csrf_token" value="' + (document.querySelector('input[name="_csrf_token"]')?.value || '') + '"><input type="hidden" name="account_id" value="' + id + '"><input type="hidden" name="decision" value="approved"><button type="submit" class="btn btn-success btn-sm decision-btn" data-confirmation="Approve this junkshop application?"><i class="bi bi-check-circle"></i> Approve</button></form><form method="POST" action="" class="approval-form d-inline" data-action="reject"><input type="hidden" name="_csrf_token" value="' + (document.querySelector('input[name="_csrf_token"]')?.value || '') + '"><input type="hidden" name="account_id" value="' + id + '"><input type="hidden" name="decision" value="rejected"><button type="submit" class="btn btn-outline-danger btn-sm decision-btn" data-confirmation="Reject this junkshop application?"><i class="bi bi-x-circle"></i> Reject</button></form></div></td>' +
+                    '<td><div class="d-flex justify-content-end gap-2 flex-wrap"><form method="POST" action="" class="approval-form d-inline" data-action="approve"><input type="hidden" name="_csrf_token" value="' + csrfToken + '"><input type="hidden" name="account_id" value="' + id + '"><button type="submit" class="btn btn-success btn-sm decision-btn btn-approve-junkshop" data-id="' + id + '" data-confirmation="Approve this junkshop application?"><i class="bi bi-check-circle"></i> Approve</button></form><form method="POST" action="" class="approval-form d-inline" data-action="reject"><input type="hidden" name="_csrf_token" value="' + csrfToken + '"><input type="hidden" name="account_id" value="' + id + '"><button type="submit" class="btn btn-outline-danger btn-sm decision-btn btn-reject-junkshop" data-id="' + id + '" data-confirmation="Are you sure? This will permanently delete the account."><i class="bi bi-x-circle"></i> Reject</button></form></div></td>' +
                 '</tr>';
             }).join('');
 
@@ -196,7 +197,7 @@ ob_start();
         };
 
         const bindApprovalButtons = () => {
-            document.querySelectorAll('.decision-btn').forEach(function (button) {
+            document.querySelectorAll('.btn-approve-junkshop, .btn-reject-junkshop').forEach(function (button) {
                 button.addEventListener('click', function (event) {
                     event.preventDefault();
                     const form = button.closest('form');
@@ -207,13 +208,14 @@ ob_start();
                     }
 
                     confirmationModal.open(confirmation, async function () {
-                        const payload = {};
-                        new FormData(form).forEach(function (value, key) {
-                            payload[key] = value;
-                        });
+                        const payload = {
+                            id: button.dataset.id,
+                            action: button.classList.contains('btn-reject-junkshop') ? 'reject' : 'approve',
+                            _csrf_token: csrfToken
+                        };
 
                         try {
-                            const response = await fetch('<?php echo APP_URL; ?>/admin/api/junkshop-approvals.php', {
+                            const response = await fetch('<?php echo APP_URL; ?>/admin/api/process_junkshop_approval.php', {
                                 method: 'POST',
                                 credentials: 'same-origin',
                                 headers: {
@@ -239,7 +241,19 @@ ob_start();
                             if (formRow) {
                                 formRow.remove();
                             }
-                            showLiveMessage(json.message || 'Action completed successfully.', true);
+                            if (!document.querySelector('tbody tr[data-junkshop-row]')) {
+                                const tableBody = document.querySelector('tbody');
+                                if (tableBody) {
+                                    tableBody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="display-6 text-muted"><i class="bi bi-inboxes"></i></div><h5 class="mt-3 mb-2 fw-bold">No pending junkshop applications</h5><p class="text-muted mb-0">There are no junkshop applications awaiting admin review at the moment.</p></div></td></tr>';
+                                }
+                            }
+                            if (window.fetchPendingJunkshopCount) {
+                                window.fetchPendingJunkshopCount();
+                            }
+                            const successMessage = payload.action === 'reject'
+                                ? 'Junkshop application successfully rejected and deleted.'
+                                : 'Junkshop application successfully approved.';
+                            showLiveMessage(successMessage, true);
                             if (json.data && json.data.pending) {
                                 renderPendingTable(json);
                             }

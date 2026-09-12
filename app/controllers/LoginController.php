@@ -40,12 +40,21 @@ class LoginController
             )->fetch();
 
             if (!$user) {
-                return ['success' => false, 'error' => 'Invalid email or password'];
+                $rejectedEmail = $this->db->query(
+                    'SELECT email FROM rejected_emails WHERE email = :email LIMIT 1',
+                    ['email' => $input]
+                )->fetch();
+
+                if ($rejectedEmail) {
+                    return ['success' => false, 'error' => 'Your account application was rejected and deleted. Please make a new account again.'];
+                }
+
+                return ['success' => false, 'error' => 'Invalid email or password.'];
             }
 
             // Verify password
             if (!password_verify($password, $user['password_hash'])) {
-                return ['success' => false, 'error' => 'Invalid email or password'];
+                return ['success' => false, 'error' => 'Invalid email or password.'];
             }
 
             // Check account status

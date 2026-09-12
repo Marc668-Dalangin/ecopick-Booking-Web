@@ -26,7 +26,13 @@ CREATE TABLE IF NOT EXISTS accounts (
     FOREIGN KEY (role_id) REFERENCES roles(id),
     INDEX idx_email (email),
     INDEX idx_role_id (role_id),
-    INDEX idx_account_role (account_role)
+    INDEX idx_account_role (account_role),
+    INDEX idx_account_role_status (account_role, account_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS rejected_emails (
+    email VARCHAR(255) PRIMARY KEY,
+    rejected_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS password_resets (

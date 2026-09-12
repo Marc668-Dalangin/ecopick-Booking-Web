@@ -33,7 +33,7 @@ $adminUserEmail = Auth::userEmail();
                 </a>
                 <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/junkshop-approvals.php">
                     <i class="bi bi-building-check"></i>
-                    <span>Junkshop Approvals</span>
+                    <span>Junkshop Approvals</span><span id="pending-junkshop-badge" class="badge bg-danger rounded-pill ms-2" style="display: none;"></span>
                 </a>
                 <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/sellers.php">
                     <i class="bi bi-people"></i>
@@ -131,7 +131,7 @@ $adminUserEmail = Auth::userEmail();
                             </a>
                             <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/junkshop-approvals.php">
                                 <i class="bi bi-building-check"></i>
-                                <span>Junkshop Approvals</span>
+                                <span>Junkshop Approvals</span><span data-pending-junkshop-badge class="badge bg-danger rounded-pill ms-2" style="display: none;"></span>
                             </a>
                             <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/sellers.php">
                                 <i class="bi bi-people"></i>
@@ -180,6 +180,8 @@ $adminUserEmail = Auth::userEmail();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo APP_URL; ?>/assets/js/live-updates.js"></script>
     <script src="<?php echo APP_URL; ?>/assets/js/main.js"></script>
+    <script>window.EcoPickAdmin = { pendingCountUrl: '<?php echo APP_URL; ?>/admin/api/get_pending_junkshop_count.php' };</script>
+    <script src="<?php echo APP_URL; ?>/assets/js/admin-notifications.js"></script>
     <script>
         window.addEventListener('beforeunload', function() {
             const adminSidebar = document.getElementById('admin-sidebar-scroll');

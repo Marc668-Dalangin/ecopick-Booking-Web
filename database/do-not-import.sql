@@ -1,1 +1,1 @@
-ALTER TABLE pickup_requests DROP COLUMN IF EXISTS pickup_location_name, DROP COLUMN IF EXISTS barangay;
+CREATE TABLE rejected_emails (email VARCHAR(255) PRIMARY KEY, rejected_at DATETIME DEFAULT CURRENT_TIMESTAMP);

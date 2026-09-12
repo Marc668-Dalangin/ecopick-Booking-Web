@@ -123,6 +123,10 @@ class RegistrationController
                     'permit_reference' => $data['business_permit_reference'],
                 ]
             );
+            $this->db->query(
+                'DELETE FROM rejected_emails WHERE email = :email',
+                ['email' => $data['email']]
+            );
             $this->db->commit();
 
             if ($accountId > 0) {
