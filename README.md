@@ -64,7 +64,7 @@ See `docs/future-modules.md` for detailed roadmap.
 
 4. **Access Application**
    - Public site: `http://localhost/booking-website-lipacity`
-   - Admin login: `http://localhost/booking-website-lipacity/admin/login.php`
+   - Admin login: `http://localhost/booking-website-lipacity/admin-private-dnstl/login.php`
 
 **Full setup guide:** See `docs/local-setup.md`
 
@@ -83,7 +83,7 @@ Create test accounts through the registration form:
 
 ```
 booking-website-lipacity/
-├── admin/                    # Admin panel
+├── admin-private-dnstl/      # Admin panel
 │   ├── controllers/
 │   ├── views/
 │   ├── login.php            # Admin login page

@@ -87,7 +87,7 @@ class Auth
             $role = Session::getRole();
 
             if ($role === 'admin') {
-                header('Location: ' . APP_URL . '/admin/dashboard.php');
+                header('Location: ' . APP_URL . '/admin-private-dnstl/dashboard.php');
             } else if ($role === 'junkshop') {
                 header('Location: ' . APP_URL . '/user-junkshop/dashboard.php');
             } else if ($role === 'seller') {

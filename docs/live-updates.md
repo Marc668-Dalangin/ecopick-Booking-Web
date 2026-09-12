@@ -21,7 +21,7 @@ Use it like this:
   window.addEventListener('DOMContentLoaded', function () {
     window.EcoPickLiveUpdates.startPolling({
       key: 'admin-dashboard',
-      url: '<?php echo APP_URL; ?>/admin/api/dashboard.php',
+      url: '<?php echo APP_URL; ?>/admin-private-dnstl/api/dashboard.php',
       interval: 5000,
       onSuccess: function (payload) {
         if (!payload.success || !payload.data) return;

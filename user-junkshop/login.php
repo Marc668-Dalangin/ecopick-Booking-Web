@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result['success']) {
             // Redirect based on role
             if (Auth::userRole() === 'admin') {
-                header('Location: ' . APP_URL . '/admin/dashboard.php');
+                header('Location: ' . APP_URL . '/admin-private-dnstl/dashboard.php');
             } else {
                 header('Location: ' . APP_URL . '/user-junkshop/dashboard.php');
             }

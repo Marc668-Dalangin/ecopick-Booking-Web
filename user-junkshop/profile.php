@@ -8,7 +8,7 @@ if (!Auth::check()) {
 }
 
 if (Auth::userRole() === 'admin') {
-    header('Location: ' . APP_URL . '/admin/dashboard.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/dashboard.php');
     exit;
 }
 

@@ -46,8 +46,8 @@ All Phase 1 deliverables have been successfully created and are ready for local 
 - ✅ `user-junkshop/logout.php` - Logout handler
 
 ### Admin Pages
-- ✅ `admin/login.php` - Admin login page
-- ✅ `admin/dashboard.php` - Admin dashboard
+- ✅ `admin-private-dnstl/login.php` - Admin login page
+- ✅ `admin-private-dnstl/dashboard.php` - Admin dashboard
 
 ### Database Files
 - ✅ `database/db.sql` - Complete database schema and seed data
@@ -66,7 +66,7 @@ All Phase 1 deliverables have been successfully created and are ready for local 
 ### Directory Structure
 ```
 booking-website-lipacity/
-├── admin/
+├── admin-private-dnstl/
 │   ├── controllers/
 │   ├── views/
 │   ├── login.php
@@ -208,7 +208,7 @@ booking-website-lipacity/
 
 3. **Access Application**
    - Public: `http://localhost/booking-website-lipacity`
-   - Admin: `http://localhost/booking-website-lipacity/admin/login.php`
+   - Admin: `http://localhost/booking-website-lipacity/admin-private-dnstl/login.php`
 
 ### Test Credentials
 

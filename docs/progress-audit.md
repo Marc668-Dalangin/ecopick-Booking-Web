@@ -33,7 +33,7 @@
   - Evidence: the `operating_schedule` stored for the junkshop was `Monday–Saturday | 8:00 AM–5:00 PM`.
 
 - Admin approval flow was validated end-to-end.
-  - Evidence: the admin page at [admin/junkshop-approvals.php](../admin/junkshop-approvals.php) showed the pending junkshop row and the confirmation modal succeeded.
+  - Evidence: the admin page at [admin-private-dnstl/junkshop-approvals.php](../admin-private-dnstl/junkshop-approvals.php) showed the pending junkshop row and the confirmation modal succeeded.
   - Browser evidence: after approval, the page showed “0 pending” and a success status message: “Junkshop status updated successfully.”
   - Database evidence: `SELECT account_id, business_name, approval_status FROM junkshop_profiles WHERE account_id = 22;` -> `approved`.
 
@@ -50,7 +50,7 @@
   - Evidence: [user-junkshop/partner-junkshops.php](../user-junkshop/partner-junkshops.php) is configured to list approved partner junkshops and their current buying prices, and the live data contains `Plastic` and `Aluminum Cans` entries for the approved junkshop.
 
 - Admin pricing overview was validated against the same live records.
-  - Evidence: [admin/pricing-lists.php](../admin/pricing-lists.php) lists rows by junkshop and material, and the underlying stored procedure `sp_get_admin_price_overview` is populated with the approved junkshop entries.
+  - Evidence: [admin-private-dnstl/pricing-lists.php](../admin-private-dnstl/pricing-lists.php) lists rows by junkshop and material, and the underlying stored procedure `sp_get_admin_price_overview` is populated with the approved junkshop entries.
 
 - Live refresh behavior was validated via the browser dashboard and the poller implementation.
   - Evidence: the admin dashboard displayed an explicit “Auto-refresh every 5 seconds” banner and a timestamp line, and [assets/js/live-updates.js](../assets/js/live-updates.js) contains the polling logic used for live data updates.
@@ -82,7 +82,7 @@ This means the project is ready to proceed to the next phase only after the abov
 - Added stored procedures for atomic creation, seller-scoped listing/details/history, seller cancellation, and admin pending-request monitoring.
 - Added [app/controllers/PickupRequestController.php](../app/controllers/PickupRequestController.php) with PHP validation and secure optional image handling.
 - Added seller pages [user-junkshop/new-pickup-request.php](../user-junkshop/new-pickup-request.php), [user-junkshop/current-bookings.php](../user-junkshop/current-bookings.php), and [user-junkshop/booking-details.php](../user-junkshop/booking-details.php).
-- Added seller and admin JSON endpoints and the read-only admin page [admin/pending-pickup-requests.php](../admin/pending-pickup-requests.php).
+- Added seller and admin JSON endpoints and the read-only admin page [admin-private-dnstl/pending-pickup-requests.php](../admin-private-dnstl/pending-pickup-requests.php).
 - Added seller/admin navigation links without changing later-phase matching, fee, payment, scheduling, weighing, purchase, or transaction behavior.
 
 ### Required verification evidence

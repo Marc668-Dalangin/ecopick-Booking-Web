@@ -5,7 +5,7 @@ require_once __DIR__ . '/../app/controllers/DashboardController.php';
 Auth::requireLogin();
 
 if (Auth::userRole() === 'admin') {
-    header('Location: ' . APP_URL . '/admin/dashboard.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/dashboard.php');
     exit;
 }
 

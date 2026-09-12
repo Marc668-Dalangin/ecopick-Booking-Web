@@ -20,8 +20,8 @@
 - [x] Registration type selector (user-junkshop/register.php)
 - [x] User dashboard (user-junkshop/dashboard.php)
 - [x] Logout handler (user-junkshop/logout.php)
-- [x] Admin login (admin/login.php)
-- [x] Admin dashboard (admin/dashboard.php)
+- [x] Admin login (admin-private-dnstl/login.php)
+- [x] Admin dashboard (admin-private-dnstl/dashboard.php)
 
 ### ✅ Backend Infrastructure
 - [x] Bootstrap initialization (app/bootstrap.php)

@@ -30,7 +30,7 @@ Ensure you have the following structure:
 
 ```
 booking-website-lipacity/
-├── admin/
+├── admin-private-dnstl/
 ├── user-junkshop/
 ├── app/
 ├── assets/
@@ -84,7 +84,7 @@ All tables should be present and the `accounts` table should have 1 default admi
 
 ```
 Public Site: http://localhost/booking-website-lipacity
-Admin Login: http://localhost/booking-website-lipacity/admin/login.php
+Admin Login: http://localhost/booking-website-lipacity/admin-private-dnstl/login.php
 ```
 
 ### With Virtual Hosts (Optional - Advanced)
@@ -180,7 +180,7 @@ Can be created through the public registration form:
 - Admin must approve it before you can fully use it
 
 To approve a junkshop:
-1. Login as admin: `http://localhost/booking-website-lipacity/admin/login.php`
+1. Login as admin: `http://localhost/booking-website-lipacity/admin-private-dnstl/login.php`
 2. Full admin dashboard coming in Phase 2
 3. For now, you can manually update in phpMyAdmin:
    - Go to `junkshop_profiles` table
@@ -209,7 +209,7 @@ To approve a junkshop:
    - Submit and verify pending message
 
 4. **Test Admin Login**
-   - Go to: `/admin/login.php`
+   - Go to: `/admin-private-dnstl/login.php`
    - Login with admin@ecopick.local / AdminEcoPick123
    - Verify admin dashboard loads
 
@@ -264,9 +264,9 @@ On Windows with XAMPP, this is usually not needed.
 **Problem:** Admin login page doesn't load
 
 **Solution:**
-1. Use direct URL: `http://localhost/booking-website-lipacity/admin/login.php`
+1. Use direct URL: `http://localhost/booking-website-lipacity/admin-private-dnstl/login.php`
 2. Clear browser cache
-3. Check file permissions on `admin/login.php`
+3. Check file permissions on `admin-private-dnstl/login.php`
 
 ### Form Submission Not Working
 

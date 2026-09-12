@@ -27,31 +27,31 @@ $adminUserEmail = Auth::userEmail();
             </div>
 
             <nav class="nav flex-column admin-nav flex-grow-1">
-                <a class="nav-link <?php echo $adminActive === 'dashboard' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/dashboard.php">
+                <a class="nav-link <?php echo $adminActive === 'dashboard' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/dashboard.php">
                     <i class="bi bi-speedometer2"></i>
                     <span>Dashboard</span>
                 </a>
-                <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/junkshop-approvals.php">
+                <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/junkshop-approvals.php">
                     <i class="bi bi-building-check"></i>
                     <span>Junkshop Approvals</span><span id="pending-junkshop-badge" class="badge bg-danger rounded-pill ms-2" style="display: none;"></span>
                 </a>
-                <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/sellers.php">
+                <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/sellers.php">
                     <i class="bi bi-people"></i>
                     <span>Sellers</span>
                 </a>
-                <a class="nav-link <?php echo $adminActive === 'approved-junkshops' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/approved-junkshops.php">
+                <a class="nav-link <?php echo $adminActive === 'approved-junkshops' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/approved-junkshops.php">
                     <i class="bi bi-shop-window"></i>
                     <span>Approved Junkshops</span>
                 </a>
-                <a class="nav-link <?php echo $adminActive === 'fee-config' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/fee-config.php">
+                <a class="nav-link <?php echo $adminActive === 'fee-config' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/fee-config.php">
                     <i class="bi bi-cash-coin"></i>
                     <span>Fee Configuration</span>
                 </a>
-                <a class="nav-link <?php echo $adminActive === 'pricing-lists' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/pricing-lists.php">
+                <a class="nav-link <?php echo $adminActive === 'pricing-lists' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pricing-lists.php">
                     <i class="bi bi-currency-dollar"></i>
                     <span>Pricing Lists</span>
                 </a>
-                <a class="nav-link <?php echo $adminActive === 'pending-pickups' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/pending-pickup-requests.php">
+                <a class="nav-link <?php echo $adminActive === 'pending-pickups' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pending-pickup-requests.php">
                     <i class="bi bi-inboxes"></i>
                     <span>Pending Pickup Requests</span>
                 </a>
@@ -63,10 +63,10 @@ $adminUserEmail = Auth::userEmail();
                     </button>
                     <div class="collapse <?php echo $adminSettingsActive ? 'show' : ''; ?>" id="adminSettingsMenu">
                         <div class="admin-nav-submenu">
-                            <a class="nav-link <?php echo $adminActive === 'concerns' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/concerns.php"><i class="bi bi-life-preserver"></i><span>Concerns & Disputes</span></a>
-                            <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
-                            <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
-                            <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
+                            <a class="nav-link <?php echo $adminActive === 'concerns' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/concerns.php"><i class="bi bi-life-preserver"></i><span>Concerns & Disputes</span></a>
+                            <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
+                            <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
+                            <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
                         </div>
                     </div>
                 </div>
@@ -101,7 +101,7 @@ $adminUserEmail = Auth::userEmail();
                             <i class="bi bi-person-circle"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo APP_URL; ?>/admin/profile.php">Profile</a></li>
+                            <li><a class="dropdown-item" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php">Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="<?php echo APP_URL; ?>/user-junkshop/logout.php">Logout</a></li>
                         </ul>
@@ -125,31 +125,31 @@ $adminUserEmail = Auth::userEmail();
                     </div>
                     <div class="offcanvas-body p-0">
                         <nav class="nav flex-column admin-nav px-3 py-3">
-                            <a class="nav-link <?php echo $adminActive === 'dashboard' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/dashboard.php">
+                            <a class="nav-link <?php echo $adminActive === 'dashboard' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/dashboard.php">
                                 <i class="bi bi-speedometer2"></i>
                                 <span>Dashboard</span>
                             </a>
-                            <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/junkshop-approvals.php">
+                            <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/junkshop-approvals.php">
                                 <i class="bi bi-building-check"></i>
                                 <span>Junkshop Approvals</span><span data-pending-junkshop-badge class="badge bg-danger rounded-pill ms-2" style="display: none;"></span>
                             </a>
-                            <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/sellers.php">
+                            <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/sellers.php">
                                 <i class="bi bi-people"></i>
                                 <span>Sellers</span>
                             </a>
-                            <a class="nav-link <?php echo $adminActive === 'approved-junkshops' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/approved-junkshops.php">
+                            <a class="nav-link <?php echo $adminActive === 'approved-junkshops' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/approved-junkshops.php">
                                 <i class="bi bi-shop-window"></i>
                                 <span>Approved Junkshops</span>
                             </a>
-                            <a class="nav-link <?php echo $adminActive === 'fee-config' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/fee-config.php">
+                            <a class="nav-link <?php echo $adminActive === 'fee-config' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/fee-config.php">
                                 <i class="bi bi-cash-coin"></i>
                                 <span>Fee Configuration</span>
                             </a>
-                            <a class="nav-link <?php echo $adminActive === 'pricing-lists' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/pricing-lists.php">
+                            <a class="nav-link <?php echo $adminActive === 'pricing-lists' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pricing-lists.php">
                                 <i class="bi bi-currency-dollar"></i>
                                 <span>Pricing Lists</span>
                             </a>
-                            <a class="nav-link <?php echo $adminActive === 'pending-pickups' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/pending-pickup-requests.php">
+                            <a class="nav-link <?php echo $adminActive === 'pending-pickups' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pending-pickup-requests.php">
                                 <i class="bi bi-inboxes"></i>
                                 <span>Pending Pickup Requests</span>
                             </a>
@@ -161,10 +161,10 @@ $adminUserEmail = Auth::userEmail();
                                 </button>
                                 <div class="collapse <?php echo $adminSettingsActive ? 'show' : ''; ?>" id="adminSettingsMenuMobile">
                                     <div class="admin-nav-submenu">
-                                        <a class="nav-link <?php echo $adminActive === 'concerns' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/concerns.php"><i class="bi bi-life-preserver"></i><span>Concerns & Disputes</span></a>
-                                        <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
-                                        <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
-                                        <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
+                                        <a class="nav-link <?php echo $adminActive === 'concerns' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/concerns.php"><i class="bi bi-life-preserver"></i><span>Concerns & Disputes</span></a>
+                                        <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
+                                        <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
+                                        <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
                                     </div>
                                 </div>
                             </div>
@@ -180,7 +180,7 @@ $adminUserEmail = Auth::userEmail();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo APP_URL; ?>/assets/js/live-updates.js"></script>
     <script src="<?php echo APP_URL; ?>/assets/js/main.js"></script>
-    <script>window.EcoPickAdmin = { pendingCountUrl: '<?php echo APP_URL; ?>/admin/api/get_pending_junkshop_count.php' };</script>
+    <script>window.EcoPickAdmin = { pendingCountUrl: '<?php echo APP_URL; ?>/admin-private-dnstl/api/get_pending_junkshop_count.php' };</script>
     <script src="<?php echo APP_URL; ?>/assets/js/admin-notifications.js"></script>
     <script>
         window.addEventListener('beforeunload', function() {
