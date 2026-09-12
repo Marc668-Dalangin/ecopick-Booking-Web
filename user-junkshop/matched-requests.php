@@ -36,6 +36,7 @@ ob_start();
 ?>
 <div class="card border-0 shadow-sm">
     <div class="card-body p-4 p-lg-5">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
             <div>
                 <p class="eyebrow mb-1">Junkshop operations</p>
@@ -89,6 +90,11 @@ ob_start();
                                 </div>
 
                                 <div class="small text-muted mb-3"><?php echo Validator::escape($assignment['pickup_address'] ?? ''); ?></div>
+
+                                <?php $booking = ['id' => (int)($assignment['pickup_request_id'] ?? 0), 'status' => strtolower(str_replace(' ', '_', (string)($assignment['current_status'] ?? ''))), 'seller_lat' => $assignment['seller_lat'] ?? null, 'seller_lng' => $assignment['seller_lng'] ?? null]; ?>
+                                <?php if (strtolower($booking['status']) === 'for_pickup'): ?>
+                                    <div id="seller-map-<?php echo $booking['id']; ?>" class="seller-location-map" data-lat="<?php echo Validator::escape($booking['seller_lat']); ?>" data-lng="<?php echo Validator::escape($booking['seller_lng']); ?>" style="height: 300px; width: 100%; border-radius: 8px; margin-top: 15px;"></div>
+                                <?php endif; ?>
 
                                 <?php if (in_array(($assignment['current_status'] ?? ''), ['Pending Request', 'Matched'], true) || (($assignment['assignment_status'] ?? '') === 'Matched')): ?>
                                     <div class="d-flex flex-wrap gap-2">
@@ -239,8 +245,34 @@ window.addEventListener('DOMContentLoaded', function () {
     const sellerAddressText = document.getElementById('seller-address-text');
     const junkshopAddressText = document.getElementById('junkshop-address-text');
     const liveDistance = document.getElementById('live-distance');
+    const sellerMaps = new Map();
     let trackingWatchId = null;
     let lastGeocodedJunkshopLocation = null;
+
+    function removeSellerMap(requestId) {
+        const mapElement = document.getElementById('seller-map-' + requestId);
+        const map = sellerMaps.get(String(requestId));
+        if (map) {
+            map.remove();
+            sellerMaps.delete(String(requestId));
+        }
+        if (mapElement) mapElement.remove();
+    }
+
+    function initializeSellerMaps() {
+        document.querySelectorAll('.seller-location-map').forEach(function (container) {
+            const requestId = container.id.replace('seller-map-', '');
+            if (sellerMaps.has(requestId)) return;
+            const sellerLat = Number(container.dataset.lat);
+            const sellerLng = Number(container.dataset.lng);
+            if (!Number.isFinite(sellerLat) || sellerLat < -90 || sellerLat > 90 || !Number.isFinite(sellerLng) || sellerLng < -180 || sellerLng > 180) return;
+            const map = L.map(container).setView([sellerLat, sellerLng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+            L.marker([sellerLat, sellerLng]).addTo(map);
+            sellerMaps.set(requestId, map);
+            window.setTimeout(function () { map.invalidateSize(); }, 0);
+        });
+    }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
         const earthRadiusKm = 6371;
@@ -490,6 +522,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, pickup_collection_fee: modal.querySelector('[name="pickup_collection_fee"]').value, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
             const resultPayload = await result.json();
             if (!resultPayload.success) { showFeedback(resultPayload.message || 'Unable to complete this transaction.', false); return; }
+            removeSellerMap(requestId);
             instance.hide();
             showSuccessAndReload(resultPayload.message);
         });
@@ -521,6 +554,8 @@ window.addEventListener('DOMContentLoaded', function () {
 
     function renderMatchedRequests(requests) {
         if (!assignmentList) return;
+        sellerMaps.forEach(function (map) { map.remove(); });
+        sellerMaps.clear();
         if (!requests.length) {
             assignmentList.innerHTML = '<div class="empty-state" data-empty-assignments><div class="display-6 text-muted"><i class="bi bi-inbox"></i></div><h5 class="mt-3 mb-2 fw-bold">No matched requests yet</h5><p class="text-muted mb-0">New pickup requests will appear here as soon as they are matched to your junkshop.</p></div>';
             return;
@@ -537,8 +572,12 @@ window.addEventListener('DOMContentLoaded', function () {
             const distance = request.distance_km === null || request.distance_km === undefined ? 'Pending' : Number(request.distance_km).toFixed(2) + ' km';
             const pickupDate = formatPickupDate(request.confirmed_pickup_date || request.preferred_pickup_date || '');
             const pickupTime = formatPickupTime(request.confirmed_pickup_time || request.preferred_pickup_time || '');
-            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div><div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
+            const mapMarkup = status.toLowerCase().replace(/ /g, '_') === 'for_pickup'
+                ? '<div id="seller-map-' + requestId + '" class="seller-location-map" data-lat="' + escapeHtml(request.seller_lat) + '" data-lng="' + escapeHtml(request.seller_lng) + '" style="height: 300px; width: 100%; border-radius: 8px; margin-top: 15px;"></div>'
+                : '';
+            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Distance</div><strong>' + escapeHtml(distance) + '</strong></div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
         }).join('');
+        initializeSellerMaps();
     }
 
     async function fetchMatchedRequests() {
@@ -658,6 +697,7 @@ window.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <?php
 $content = ob_get_clean();
 require_once __DIR__ . '/../app/views/user_dashboard_shell.php';
