@@ -355,7 +355,7 @@ class DashboardController
                 sp.barangay AS seller_barangay,
                 COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
                 GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary,
-                GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2), ":", FORMAT(COALESCE(jmp.buying_price, 0), 2)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items,
+                GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2), ":", FORMAT(COALESCE(jmp.buying_price, 0), 2), ":", IF(jmp.material_id IS NULL, 0, 1)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items,
                 COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct,
                 CASE pr.current_status
                     WHEN \'Pending Request\' THEN \'Pending\'

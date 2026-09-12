@@ -90,6 +90,7 @@ if ($method === 'POST') {
         $paymentStatus = trim((string) ($_POST['payment_status'] ?? 'Paid'));
         $paymentReference = trim((string) ($_POST['payment_reference'] ?? ''));
         $pickupCollectionFee = max(0.0, (float) ($_POST['pickup_collection_fee'] ?? 0));
+        $actualPricePerKg = isset($_POST['actual_price_per_kg']) ? max(0.0, (float) $_POST['actual_price_per_kg']) : null;
         $notes = trim((string) ($_POST['material_condition_notes'] ?? ''));
         $conditionLines = [];
         if (is_array($materialSettlements)) {
@@ -104,7 +105,7 @@ if ($method === 'POST') {
         if (!empty($conditionLines)) {
             $notes = implode("\n", $conditionLines);
         }
-        $result = $bookingLifecycleController->completeTransaction($requestId, Auth::userId(), is_array($materialSettlements) ? $materialSettlements : [], $pickupCollectionFee, $paymentMethod, $paymentStatus, $paymentReference, $notes);
+        $result = $bookingLifecycleController->completeTransaction($requestId, Auth::userId(), is_array($materialSettlements) ? $materialSettlements : [], $pickupCollectionFee, $paymentMethod, $paymentStatus, $paymentReference, $notes, $actualPricePerKg);
         $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests(Auth::userId())];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;

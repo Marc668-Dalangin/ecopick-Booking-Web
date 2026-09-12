@@ -177,14 +177,21 @@ class PickupRequestController
             "SELECT pr.id, pr.booking_reference, pr.seller_account_id, a.full_name AS seller_name, a.email AS seller_email,
                     pr.current_status, pr.pickup_address, pr.approximate_distance_km,
                     pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date, pr.confirmed_pickup_time,
-                    DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
-                    TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,
+                      DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
+                      TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,
+                      t.actual_weight_kg AS final_actual_weight,
+                      t.final_recyclable_value,
+                      CASE WHEN t.actual_weight_kg > 0 THEN t.final_recyclable_value / t.actual_weight_kg ELSE NULL END AS actual_price_per_kg,
+                      t.pickup_fee AS final_pickup_fee,
+                      t.ecopick_service_fee AS final_service_fee,
+                      t.final_seller_amount AS final_net_amount,
                     pr.created_at, pr.updated_at, pri.id AS item_id, pri.material_id, rm.material_name, rm.category,
                     rm.unit_of_measure, pri.estimated_weight
              FROM pickup_requests pr
              JOIN accounts a ON a.id = pr.seller_account_id
              JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
              JOIN recyclable_materials rm ON rm.id = pri.material_id
+             LEFT JOIN transactions t ON t.pickup_request_id = pr.id
              WHERE pr.id = :request_id AND pr.seller_account_id = :seller_id
              ORDER BY rm.material_name ASC",
             ['request_id' => (int) $requestId, 'seller_id' => (int) $sellerAccountId]

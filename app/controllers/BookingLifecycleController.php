@@ -133,7 +133,7 @@ class BookingLifecycleController
         return ['success' => true, 'message' => 'Final settlement preview ready.', 'data' => $settlement];
     }
 
-    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, float $pickupCollectionFee, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = ''): array
+    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, float $pickupCollectionFee, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = '', ?float $actualPricePerKg = null): array
     {
         $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'For Pickup');
         if ($pickupRequest === null) {
@@ -149,7 +149,7 @@ class BookingLifecycleController
             return ['success' => false, 'message' => 'No accepted junkshop assignment was found for this request.'];
         }
 
-        $preparedMaterials = $this->prepareMaterialSettlements($pickupRequestId, (int) $assignment['junkshop_id'], $materialSettlements);
+        $preparedMaterials = $this->prepareMaterialSettlements($pickupRequestId, (int) $assignment['junkshop_id'], $materialSettlements, $actualPricePerKg);
         if (!$preparedMaterials['success']) {
             return $preparedMaterials;
         }
@@ -302,7 +302,7 @@ class BookingLifecycleController
         return $row ?: null;
     }
 
-    private function prepareMaterialSettlements(int $pickupRequestId, int $junkshopId, array $submittedMaterials): array
+    private function prepareMaterialSettlements(int $pickupRequestId, int $junkshopId, array $submittedMaterials, ?float $actualPricePerKg = null): array
     {
         $row = $this->db->query(
             'SELECT id AS pickup_request_item_id, material_id FROM pickup_request_items WHERE pickup_request_id = :pickup_request_id ORDER BY id ASC',
@@ -337,14 +337,15 @@ class BookingLifecycleController
                 'SELECT buying_price FROM junkshop_material_prices WHERE junkshop_account_id = :junkshop_id AND material_id = :material_id AND available = 1 LIMIT 1',
                 ['junkshop_id' => $junkshopId, 'material_id' => (int) $item['material_id']]
             )->fetch();
-            if (!$priceRow && $accepted) {
-                return ['success' => false, 'message' => 'A valid buying price is required for every accepted material.'];
-            }
             if (!$accepted || $weight <= 0.0) {
                 $accepted = false;
                 $weight = 0.0;
             }
-            $price = (float) ($priceRow['buying_price'] ?? 0.0);
+            $price = $priceRow
+                ? max(0.0, (float) $priceRow['buying_price'])
+                : (array_key_exists('buying_price_per_kg', $submitted)
+                    ? max(0.0, (float) $submitted['buying_price_per_kg'])
+                    : ($actualPricePerKg !== null ? max(0.0, $actualPricePerKg) : 0.0));
             $prepared[] = [
                 'pickup_request_item_id' => $itemId,
                 'material_id' => (int) $item['material_id'],
