@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     business_name VARCHAR(255) NOT NULL,
     owner_name VARCHAR(255) NOT NULL,
     complete_address VARCHAR(255) NOT NULL,
+    latitude DECIMAL(11,8) NULL,
+    longitude DECIMAL(11,8) NULL,
     operating_schedule VARCHAR(255),
     business_permit_reference VARCHAR(100),
     approval_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',

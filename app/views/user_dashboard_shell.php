@@ -17,6 +17,7 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
     <title><?php echo isset($pageTitle) ? Validator::escape($pageTitle) . ' - EcoPick' : 'EcoPick'; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <?php if ($currentPage === 'profile' && Auth::userRole() === 'junkshop'): ?><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><?php endif; ?>
     <link href="<?php echo APP_URL; ?>/assets/css/style.css" rel="stylesheet">
 </head>
 <body class="user-dashboard-body">

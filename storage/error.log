@@ -1132,3 +1132,55 @@
 [14-Sep-2026 10:31:34 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
 [14-Sep-2026 10:31:35 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
 [14-Sep-2026 10:31:35 UTC] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[14-Sep-2026 14:17:35 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:17:35 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:17:35 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:17:35 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:17:35 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:17:35 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:17:36 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:17:36 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:17:36 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:17:36 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:17:37 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:17:37 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:20:59 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:20:59 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:20:59 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:20:59 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:20:59 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:20:59 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:21:01 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:21:01 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:23:58 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:23:58 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:23:59 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:23:59 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:23:59 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:23:59 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:24:01 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:24:01 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:24:03 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:24:03 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:24:07 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:24:07 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:24:10 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:24:10 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:14 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:14 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:16 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:16 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:18 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:18 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:20 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:20 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:34 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:34 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:35 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:35 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:36 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:36 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:38 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:38 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50
+[14-Sep-2026 14:29:39 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list'
+[14-Sep-2026 14:29:39 UTC] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.latitude' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:50

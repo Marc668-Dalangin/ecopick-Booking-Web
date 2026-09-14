@@ -240,19 +240,24 @@ class DashboardController
 
     public function getJunkshopProfile($accountId)
     {
-        return $this->db->query(
-            "SELECT a.id AS account_id, a.username, a.email, a.full_name AS owner_name, a.mobile_number,
-                    a.account_status, jp.business_name, jp.complete_address, jp.operating_schedule,
-                    jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number,
-                    jp.approval_status, jp.created_at
-             FROM accounts a
-             JOIN junkshop_profiles jp ON jp.account_id = a.id
-             WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
-            ['account_id' => (int) $accountId]
-        )->fetch() ?: null;
+        try {
+            return $this->db->query(
+                "SELECT a.id AS account_id, a.username, a.email, a.full_name AS owner_name, a.mobile_number,
+                        a.account_status, jp.business_name, jp.complete_address, jp.latitude, jp.longitude, jp.operating_schedule,
+                        jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number,
+                        jp.approval_status, jp.created_at
+                 FROM accounts a
+                 JOIN junkshop_profiles jp ON jp.account_id = a.id
+                 WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
+                ['account_id' => (int) $accountId]
+            )->fetch() ?: null;
+        } catch (Throwable $e) {
+            error_log('Junkshop profile read error: ' . $e->getMessage());
+            return null;
+        }
     }
 
-    public function updateJunkshopProfile($accountId, $businessName, $ownerName, $mobileNumber, $completeAddress, $operatingSchedule, $permitReference, $gcashAccountName = '', $gcashAccountNumber = '')
+    public function updateJunkshopProfile($accountId, $businessName, $ownerName, $mobileNumber, $completeAddress, $operatingSchedule, $permitReference, $gcashAccountName = '', $gcashAccountNumber = '', $latitude = null, $longitude = null)
     {
         try {
             $this->db->beginTransaction();
@@ -271,6 +276,7 @@ class DashboardController
             $this->db->query(
                 "UPDATE junkshop_profiles
                  SET business_name = :business_name, owner_name = :profile_owner_name, complete_address = :complete_address,
+                     latitude = :latitude, longitude = :longitude,
                      operating_schedule = :operating_schedule, business_permit_reference = :permit_reference,
                      gcash_account_name = NULLIF(TRIM(:gcash_name), ''), gcash_account_number = NULLIF(TRIM(:gcash_number), ''),
                      updated_at = CURRENT_TIMESTAMP
@@ -279,6 +285,8 @@ class DashboardController
                     'business_name' => $businessName,
                     'profile_owner_name' => $ownerName,
                     'complete_address' => $completeAddress,
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
                     'operating_schedule' => $operatingSchedule,
                     'permit_reference' => $permitReference,
                     'gcash_name' => trim((string) $gcashAccountName),

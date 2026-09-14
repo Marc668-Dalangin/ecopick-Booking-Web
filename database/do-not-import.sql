@@ -1,1 +1,3 @@
-ALTER TABLE pickup_request_items ADD COLUMN `is_removed` TINYINT(1) DEFAULT 0;
+ALTER TABLE junkshop_profiles
+	ADD COLUMN `latitude` DECIMAL(11,8) NULL AFTER `complete_address`,
+	ADD COLUMN `longitude` DECIMAL(11,8) NULL AFTER `latitude`;

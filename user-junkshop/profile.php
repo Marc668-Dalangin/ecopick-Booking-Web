@@ -64,6 +64,10 @@ if ($role === 'seller') {
             $permit = trim((string)($_POST['business_permit_reference'] ?? ''));
             $gcashAccountName = trim((string)($_POST['gcash_account_name'] ?? ''));
             $gcashAccountNumber = preg_replace('/\D+/', '', trim((string)($_POST['gcash_account_number'] ?? '')));
+            $latitudeInput = trim((string)($_POST['latitude'] ?? ''));
+            $longitudeInput = trim((string)($_POST['longitude'] ?? ''));
+            $latitude = $latitudeInput === '' ? null : filter_var($latitudeInput, FILTER_VALIDATE_FLOAT);
+            $longitude = $longitudeInput === '' ? null : filter_var($longitudeInput, FILTER_VALIDATE_FLOAT);
 
             if (!Validator::required($businessName)) $errors[] = 'Business name is required.';
             if (!Validator::required($ownerName)) $errors[] = 'Business owner name is required.';
@@ -73,9 +77,12 @@ if ($role === 'seller') {
             if (!Validator::required($permit)) $errors[] = 'Permit reference is required.';
             if ($gcashAccountName !== '' && strlen($gcashAccountName) > 120) $errors[] = 'GCash account name is too long.';
             if ($gcashAccountNumber !== '' && !preg_match('/^09\d{9}$/', $gcashAccountNumber)) $errors[] = 'GCash account number must be an 11-digit Philippine mobile number.';
+            if ($latitudeInput !== '' && ($latitude === false || $latitude < -90 || $latitude > 90)) $errors[] = 'Latitude must be between -90 and 90.';
+            if ($longitudeInput !== '' && ($longitude === false || $longitude < -180 || $longitude > 180)) $errors[] = 'Longitude must be between -180 and 180.';
+            if (($latitudeInput === '') !== ($longitudeInput === '')) $errors[] = 'Both latitude and longitude are required for a saved location.';
 
             if (empty($errors)) {
-                $result = $controller->updateJunkshopProfile($userId, $businessName, $ownerName, $mobileNumber, $address, $schedule, $permit, $gcashAccountName, $gcashAccountNumber);
+                $result = $controller->updateJunkshopProfile($userId, $businessName, $ownerName, $mobileNumber, $address, $schedule, $permit, $gcashAccountName, $gcashAccountNumber, $latitude, $longitude);
                 if ($result['success']) {
                     $_SESSION['flash_message'] = $result['message'];
                     $_SESSION['flash_type'] = 'success';
@@ -193,6 +200,18 @@ ob_start();
                                 <label class="form-label" for="complete_address">Address</label>
                                 <input type="text" class="form-control" id="complete_address" name="complete_address" value="<?php echo Validator::escape($currentProfile['complete_address'] ?? ''); ?>" required>
                             </div>
+                            <div class="col-12">
+                                <hr>
+                                <h5 class="fw-bold mb-3">Junkshop Location</h5>
+                                <button type="button" id="btn-track-junkshop-location" class="btn btn-primary">Track your junkshop location</button>
+                                <div class="row g-3 mt-1">
+                                    <input type="hidden" id="junkshop_lat" name="latitude" value="<?php echo htmlspecialchars($currentProfile['latitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" id="junkshop_lng" name="longitude" value="<?php echo htmlspecialchars($currentProfile['longitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                    <div class="col-12">
+                                        <div id="junkshop-profile-map" style="height: 250px; width: 100%; border-radius: 8px; margin-top: 10px; overflow: hidden; position: relative; isolation: isolate; z-index: 0;"></div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="col-md-12">
                                 <label class="form-label">Operating Days</label>
                                 <div class="row g-2 mb-2">
@@ -253,6 +272,7 @@ ob_start();
         </div>
     </div>
 </div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     function validateMobileSuffix(input) {
         if (!input) return false;
@@ -395,6 +415,116 @@ ob_start();
         });
 
         buildOperatingSchedule();
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const trackButton = document.getElementById('btn-track-junkshop-location');
+        const latitudeInput = document.getElementById('junkshop_lat');
+        const longitudeInput = document.getElementById('junkshop_lng');
+        const addressInput = document.getElementById('complete_address');
+        const mapElement = document.getElementById('junkshop-profile-map');
+        let junkshopMap = null;
+        let junkshopMarker = null;
+
+        if (!trackButton || !latitudeInput || !longitudeInput || !addressInput || !mapElement) return;
+
+        function setCoordinates(lat, lng) {
+            latitudeInput.value = Number(lat).toFixed(8);
+            longitudeInput.value = Number(lng).toFixed(8);
+        }
+
+        function reverseGeocodeJunkshopLocation(lat, lng) {
+            const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
+            return fetch(url, { headers: { 'Accept': 'application/json' } })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Reverse geocoding failed.');
+                    return response.json();
+                })
+                .then(function(data) {
+                    const address = data.address || {};
+                    const barangay = address.village || address.suburb || address.neighbourhood || address.quarter || '';
+                    const city = address.city || address.town || address.municipality || address.city_district || '';
+                    const province = address.state || address.region || '';
+                    addressInput.value = [barangay, city, province].filter(Boolean).join(', ');
+                });
+        }
+
+        function initializeJunkshopMap(lat, lng) {
+            if (typeof L === 'undefined') return;
+
+            if (!junkshopMap) {
+                junkshopMap = L.map(mapElement).setView([lat, lng], 18);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(junkshopMap);
+            } else {
+                junkshopMap.setView([lat, lng], 18);
+            }
+
+            if (!junkshopMarker) {
+                junkshopMarker = L.marker([lat, lng], { draggable: true }).addTo(junkshopMap);
+                junkshopMarker.on('dragend', function() {
+                    const position = junkshopMarker.getLatLng();
+                    setCoordinates(position.lat, position.lng);
+                    reverseGeocodeJunkshopLocation(position.lat, position.lng).catch(function() {});
+                });
+            } else {
+                junkshopMarker.setLatLng([lat, lng]);
+            }
+            window.requestAnimationFrame(function() {
+                if (junkshopMap) junkshopMap.invalidateSize(true);
+            });
+        }
+
+        function resetTrackButton() {
+            trackButton.disabled = false;
+            trackButton.textContent = 'Track your junkshop location';
+        }
+
+        function handleLocationError(error) {
+            if (!window.isSecureContext) {
+                alert('Geolocation requires a secure HTTPS connection on mobile devices.');
+            } else if (error.code === 1) {
+                alert('Location permission was denied. Please allow location access and try again.');
+            } else if (error.code === 2 || error.code === 3) {
+                alert('Unable to get your location. Please enable GPS and try again.');
+            } else {
+                alert('Unable to get your current location. Please try again.');
+            }
+            resetTrackButton();
+        }
+
+        const savedLatitude = Number.parseFloat(latitudeInput.value);
+        const savedLongitude = Number.parseFloat(longitudeInput.value);
+        if (Number.isFinite(savedLatitude) && Number.isFinite(savedLongitude)) {
+            initializeJunkshopMap(savedLatitude, savedLongitude);
+        }
+
+        trackButton.addEventListener('click', function() {
+            if (typeof L === 'undefined') {
+                alert('The map service is currently unavailable. Please try again later.');
+                return;
+            }
+            if (!window.isSecureContext) {
+                handleLocationError({ code: 0 });
+                return;
+            }
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by this browser.');
+                resetTrackButton();
+                return;
+            }
+            trackButton.disabled = true;
+            trackButton.textContent = 'Locating...';
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                setCoordinates(lat, lng);
+                initializeJunkshopMap(lat, lng);
+                reverseGeocodeJunkshopLocation(lat, lng).catch(function() {}).finally(resetTrackButton);
+            }, handleLocationError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        });
     });
 </script>
 <?php

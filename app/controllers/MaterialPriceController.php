@@ -75,6 +75,8 @@ class MaterialPriceController
                     jp.business_name,
                     jp.partnership_expires_at,
                     jp.complete_address AS location,
+                    jp.latitude,
+                    jp.longitude,
                     jp.operating_schedule,
                     a.full_name AS contact_person,
                     a.mobile_number,
