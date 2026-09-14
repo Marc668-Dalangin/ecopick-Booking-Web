@@ -159,6 +159,13 @@ class BookingLifecycleController
         if (!$preparedMaterials['success']) {
             return $preparedMaterials;
         }
+        $totalActualWeight = array_sum(array_map(
+            static fn (array $material): float => $material['accepted'] ? (float) $material['actual_weight_kg'] : 0.0,
+            $preparedMaterials['materials']
+        ));
+        if ($totalActualWeight < 3) {
+            return ['success' => false, 'message' => 'The total actual weight must be at least 3 kg to complete this transaction.'];
+        }
         if ($paymentMethod !== 'Cash' || !in_array($paymentStatus, ['Unpaid', 'Paid'], true)) {
             return ['success' => false, 'message' => 'A valid payment method and payment status are required.'];
         }

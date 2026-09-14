@@ -42,6 +42,14 @@ class PickupRequestController
             return ['success' => false, 'message' => 'Please correct the highlighted fields.', 'validation_errors' => $errors];
         }
 
+        $totalEstimatedWeight = array_sum(array_map(
+            static fn (array $item): float => (float) $item['estimated_weight'],
+            $normalized['items']
+        ));
+        if ($totalEstimatedWeight < 3) {
+            return ['success' => false, 'message' => 'The total estimated weight must be at least 3 kg to request a pickup.', 'validation_errors' => []];
+        }
+
         try {
             $this->db->beginTransaction();
             $seller = $this->db->query(

@@ -523,7 +523,7 @@ ob_start();
             const row = document.createElement('div');
             row.className = 'row g-2 align-items-end mb-3 material-row';
             row.dataset.index = String(rowIndex++);
-            row.innerHTML = '<div class="col-md-7"><label class="form-label" for="material-' + row.dataset.index + '">Material <span class="text-danger">*</span></label><select class="form-select material-select" id="material-' + row.dataset.index + '" name="material_id[]" required><option value="">Choose material</option>' + materialOptions.map(function (material) { return '<option value="' + material.id + '">' + material.material_name + ' (' + material.unit_of_measure + ')</option>'; }).join('') + '</select></div><div class="col-md-3"><label class="form-label" for="weight-' + row.dataset.index + '">Estimated kg <span class="text-danger">*</span></label><input class="form-control weight-input" id="weight-' + row.dataset.index + '" name="estimated_weight[]" type="number" min="0.01" step="0.01" required placeholder="0.00"></div><div class="col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-material" aria-label="Remove material row"><i class="bi bi-trash"></i></button></div>';
+            row.innerHTML = '<div class="col-md-7"><label class="form-label" for="material-' + row.dataset.index + '">Material <span class="text-danger">*</span></label><select class="form-select material-select" id="material-' + row.dataset.index + '" name="material_id[]" required><option value="">Choose material</option>' + materialOptions.map(function (material) { return '<option value="' + material.id + '">' + material.material_name + ' (' + material.unit_of_measure + ')</option>'; }).join('') + '</select></div><div class="col-md-3"><label class="form-label" for="weight-' + row.dataset.index + '">Estimated kg <span class="text-danger">*</span></label><input class="form-control weight-input" id="weight-' + row.dataset.index + '" name="estimated_weight[]" type="number" min="3" step="0.01" required placeholder="0.00"></div><div class="col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-material" aria-label="Remove material row"><i class="bi bi-trash"></i></button></div>';
             rows.appendChild(row);
             refreshMaterialChoices();
             row.querySelectorAll('.material-select, .weight-input').forEach(function (input) {
@@ -596,6 +596,17 @@ ob_start();
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
                 showStatus('Please correct the highlighted fields before submitting.', false, []);
+                return;
+            }
+
+            const totalEstimatedWeight = Array.from(form.querySelectorAll('.material-row')).reduce(function (total, row) {
+                const material = row.querySelector('.material-select');
+                const weight = row.querySelector('.weight-input');
+                const value = Number(weight?.value);
+                return material?.value && Number.isFinite(value) && value > 0 ? total + value : total;
+            }, 0);
+            if (totalEstimatedWeight < 3) {
+                showStatus('The total estimated weight must be at least 3 kg to request a pickup.', false, []);
                 return;
             }
 
