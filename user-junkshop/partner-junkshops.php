@@ -159,8 +159,8 @@ ob_start();
                     <?php echo CSRF::field(); ?>
                     <input type="hidden" name="action" value="create">
                     <input type="hidden" name="junkshop_id" id="selected-junkshop-id" value="0">
-                    <label class="form-label" for="junkshop-select">Selected Junkshop</label>
-                    <select class="form-select mb-4" id="junkshop-select">
+                    <label class="form-label" for="junkshop_id">Selected Junkshop</label>
+                    <select class="form-select mb-4" id="junkshop_id">
                         <option value="">Choose a junkshop</option>
                         <?php foreach ($rowsByJunkshop as $junkshopRows): ?>
                             <?php $junkshopOption = $junkshopRows[0]; ?>
@@ -204,7 +204,7 @@ ob_start();
                     </div>
 
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4"><label class="form-label" for="pickup_address">Address <span class="text-danger">*</span></label><div class="input-group"><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" readonly placeholder="Use Get Current Location"><button type="button" class="btn btn-primary" id="btn-get-location">Get Current Location</button></div><input type="hidden" id="seller_lat" name="seller_lat"><input type="hidden" id="seller_lng" name="seller_lng"><div id="junkshop-location-info" class="mt-2 text-muted"></div><div id="approx-distance-info" class="fw-bold text-primary mt-1"></div></div>
+                        <div class="col-md-4"><label class="form-label" for="pickup_address">Address <span class="text-danger">*</span></label><div class="input-group"><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" readonly placeholder="Use Get Current Location"><button type="button" class="btn btn-primary" id="btn-get-location">Get Current Location</button></div><input type="hidden" id="seller_lat" name="seller_lat"><input type="hidden" id="seller_lng" name="seller_lng"><div id="junkshop-location-info" class="mt-2 text-muted"></div><div id="approx-distance-container" class="fw-bold text-primary mt-1"></div></div>
                         <div class="col-12"><div id="pickup-map" style="height: 250px; width: 100%; display: none; margin-bottom: 15px; z-index: 1; touch-action: none;"></div></div>
                         <div class="col-md-4"><label class="form-label" for="approximate_distance_km">Approximate distance (km) <span class="text-danger">*</span></label><input type="number" min="0" max="15" step="0.01" class="form-control" id="approximate_distance_km" name="approximate_distance_km" required placeholder="Example: 4.50"></div>
                         <div class="col-md-4"><label class="form-label" for="preferred_pickup_date">Preferred pickup date <span class="text-danger">*</span></label><input type="date" class="form-control" id="preferred_pickup_date" name="preferred_pickup_date" required></div>
@@ -245,7 +245,7 @@ ob_start();
         const rows = document.getElementById('material-rows');
         const status = document.getElementById('pickup-request-form-status');
         const hiddenJunkshopId = document.getElementById('selected-junkshop-id');
-        const junkshopSelect = document.getElementById('junkshop-select');
+        const junkshopSelect = document.getElementById('junkshop_id');
         const modalEl = document.getElementById('sellerPickupRequestModal');
         const pickupModal = bootstrap.Modal.getOrCreateInstance(modalEl);
         const successToast = bootstrap.Toast.getOrCreateInstance(document.getElementById('pickupRequestToast'));
@@ -270,56 +270,60 @@ ob_start();
         const csrfToken = '<?php echo CSRF::token(); ?>';
         const getLocationButton = document.getElementById('btn-get-location');
         const pickupAddress = document.getElementById('pickup_address');
-        const sellerLat = document.getElementById('seller_lat');
-        const sellerLng = document.getElementById('seller_lng');
+        const sellerLatInput = document.getElementById('seller_lat');
+        const sellerLngInput = document.getElementById('seller_lng');
         const pickupMapElement = document.getElementById('pickup-map');
         const junkshopLocationInfo = document.getElementById('junkshop-location-info');
-        const approximateDistanceInfo = document.getElementById('approx-distance-info');
+        const approximateDistanceInfo = document.getElementById('approx-distance-container');
         const approximateDistanceInput = document.getElementById('approximate_distance_km');
         let rowIndex = 0;
         let selectedPrices = {};
 
-        function calculateDistanceKm(latitudeOne, longitudeOne, latitudeTwo, longitudeTwo) {
+        function calculateHaversineDistance(sellerLatitude, sellerLongitude, junkshopLatitude, junkshopLongitude) {
             const R = 6371;
-            const dLat = (latitudeTwo - latitudeOne) * Math.PI / 180;
-            const dLng = (longitudeTwo - longitudeOne) * Math.PI / 180;
+            const dLat = (junkshopLatitude - sellerLatitude) * Math.PI / 180;
+            const dLng = (junkshopLongitude - sellerLongitude) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(latitudeOne * Math.PI / 180) * Math.cos(latitudeTwo * Math.PI / 180)
+                + Math.cos(sellerLatitude * Math.PI / 180) * Math.cos(junkshopLatitude * Math.PI / 180)
                 * Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         }
 
-        function updateApproximateDistance() {
-            const sellerLatitude = parseFloat(document.getElementById('seller_lat').value);
-            const sellerLongitude = parseFloat(document.getElementById('seller_lng').value);
+        function calculateDistance() {
+            const sellerLat = parseFloat(sellerLatInput.value);
+            const sellerLng = parseFloat(sellerLngInput.value);
             const selectedOption = junkshopSelect.options[junkshopSelect.selectedIndex];
-            const junkshopLatitude = selectedOption ? parseFloat(selectedOption.getAttribute('data-lat') || '') : NaN;
-            const junkshopLongitude = selectedOption ? parseFloat(selectedOption.getAttribute('data-lng') || '') : NaN;
+            const junkLat = parseFloat(selectedOption.getAttribute('data-lat'));
+            const junkLng = parseFloat(selectedOption.getAttribute('data-lng'));
 
-            if (Number.isNaN(junkshopLatitude) || Number.isNaN(junkshopLongitude) || junkshopLatitude === 0) {
-                approximateDistanceInfo.innerHTML = '<span class="text-warning">Junkshop hasn\'t updated their profile location yet.</span>';
-                approximateDistanceInput.value = '';
-                return;
-            }
-            if (Number.isNaN(sellerLatitude) || Number.isNaN(sellerLongitude)) {
-                approximateDistanceInfo.innerHTML = '<span class="text-muted">Click "Get Current Location" to calculate distance.</span>';
-                approximateDistanceInput.value = '';
+            if (!isNaN(junkLat) && !isNaN(junkLng) && junkLat !== 0 && junkLng !== 0 && !isNaN(sellerLat) && !isNaN(sellerLng)) {
+                const distance = calculateHaversineDistance(sellerLat, sellerLng, junkLat, junkLng).toFixed(2);
+                approximateDistanceInfo.classList.remove('text-warning');
+                approximateDistanceInfo.textContent = 'Approximate Distance: ' + distance + ' km';
+                approximateDistanceInput.value = distance;
                 return;
             }
 
-            const distanceKm = calculateDistanceKm(sellerLatitude, sellerLongitude, junkshopLatitude, junkshopLongitude);
-            const distance = distanceKm.toFixed(2);
-            approximateDistanceInfo.textContent = 'Approximate Distance: ' + distance + ' km';
-            approximateDistanceInput.value = distance;
+            approximateDistanceInfo.classList.add('text-warning');
+            approximateDistanceInfo.textContent = "Junkshop hasn't updated their profile location yet.";
+            approximateDistanceInput.value = '';
         }
 
         function selectJunkshopLocation(button) {
-            if (junkshopSelect && junkshopSelect.value !== (button.dataset.junkshopId || '')) {
-                junkshopSelect.value = button.dataset.junkshopId || '';
+            if (junkshopSelect) {
+                const selectedJunkshopId = button.dataset.junkshopId || '';
+                const selectedOption = Array.from(junkshopSelect.options).find(function (option) {
+                    return option.value === selectedJunkshopId;
+                });
+                if (selectedOption) {
+                    selectedOption.selected = true;
+                    junkshopLocationInfo.textContent = 'Junkshop location: ' + (selectedOption.getAttribute('data-address') || 'Address unavailable');
+                }
+            } else {
+                junkshopLocationInfo.textContent = 'Junkshop location: ' + (button.dataset.junkshopAddress || 'Address unavailable');
             }
-            junkshopLocationInfo.textContent = 'Junkshop location: ' + (button.dataset.junkshopAddress || 'Address unavailable');
-            updateApproximateDistance();
+            calculateDistance();
         }
 
         function updatePickupAddress(lat, lng) {
@@ -347,9 +351,9 @@ ob_start();
                 pickupMarker = L.marker([lat, lng], { draggable: true }).addTo(pickupMap);
                 pickupMarker.on('dragend', function () {
                     const position = pickupMarker.getLatLng();
-                    sellerLat.value = position.lat;
-                    sellerLng.value = position.lng;
-                    updateApproximateDistance();
+                    sellerLatInput.value = position.lat;
+                    sellerLngInput.value = position.lng;
+                    calculateDistance();
                     updatePickupAddress(position.lat, position.lng).catch(function () {});
                 });
             }
@@ -393,9 +397,9 @@ ob_start();
             navigator.geolocation.getCurrentPosition(function (position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                sellerLat.value = lat;
-                sellerLng.value = lng;
-                updateApproximateDistance();
+                sellerLatInput.value = lat;
+                sellerLngInput.value = lng;
+                calculateDistance();
                 initializePickupMap(lat, lng);
                 updatePickupAddress(lat, lng).catch(function () {}).finally(resetLocationButton);
             }, handleLocationError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
@@ -642,7 +646,7 @@ ob_start();
             rows.innerHTML = '';
             addMaterialRow();
             junkshopLocationInfo.textContent = 'Junkshop location: ' + (selectedOption.getAttribute('data-address') || 'Address unavailable');
-            updateApproximateDistance();
+            calculateDistance();
         });
 
         document.getElementById('add-material-row').addEventListener('click', addMaterialRow);

@@ -205,8 +205,8 @@ ob_start();
                                 <h5 class="fw-bold mb-3">Junkshop Location</h5>
                                 <button type="button" id="btn-track-junkshop-location" class="btn btn-primary">Track your junkshop location</button>
                                 <div class="row g-3 mt-1">
-                                    <input type="hidden" id="junkshop_lat" name="latitude" value="<?php echo htmlspecialchars($currentProfile['latitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                    <input type="hidden" id="junkshop_lng" name="longitude" value="<?php echo htmlspecialchars($currentProfile['longitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" id="latitude" name="latitude" value="<?php echo htmlspecialchars($currentProfile['latitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" id="longitude" name="longitude" value="<?php echo htmlspecialchars($currentProfile['longitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                     <div class="col-12">
                                         <div id="junkshop-profile-map" style="height: 250px; width: 100%; border-radius: 8px; margin-top: 10px; overflow: hidden; position: relative; isolation: isolate; z-index: 0;"></div>
                                     </div>
@@ -419,8 +419,8 @@ ob_start();
 
     document.addEventListener('DOMContentLoaded', function() {
         const trackButton = document.getElementById('btn-track-junkshop-location');
-        const latitudeInput = document.getElementById('junkshop_lat');
-        const longitudeInput = document.getElementById('junkshop_lng');
+        const latitudeInput = document.getElementById('latitude');
+        const longitudeInput = document.getElementById('longitude');
         const addressInput = document.getElementById('complete_address');
         const mapElement = document.getElementById('junkshop-profile-map');
         let junkshopMap = null;
@@ -520,6 +520,8 @@ ob_start();
             navigator.geolocation.getCurrentPosition(function(position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lng;
                 setCoordinates(lat, lng);
                 initializeJunkshopMap(lat, lng);
                 reverseGeocodeJunkshopLocation(lat, lng).catch(function() {}).finally(resetTrackButton);

@@ -71,12 +71,12 @@ class MaterialPriceController
         return array_values(array_filter(
             $this->db->query(
                 "SELECT
-                    jp.account_id AS junkshop_account_id,
+                    a.id AS junkshop_account_id,
                     jp.business_name,
                     jp.partnership_expires_at,
                     jp.complete_address AS location,
-                    jp.latitude,
-                    jp.longitude,
+                    CAST(jp.latitude AS DECIMAL(11,8)) AS latitude,
+                    CAST(jp.longitude AS DECIMAL(11,8)) AS longitude,
                     jp.operating_schedule,
                     a.full_name AS contact_person,
                     a.mobile_number,
@@ -96,8 +96,8 @@ class MaterialPriceController
                           AND active_pr.current_status IN ('Pending Request', 'Accepted', 'Scheduled', 'For Pickup')
                         LIMIT 1
                     ), 0) AS has_active_request
-                FROM junkshop_profiles jp
-                JOIN accounts a ON a.id = jp.account_id
+                FROM accounts a
+                JOIN junkshop_profiles jp ON jp.account_id = a.id
                 LEFT JOIN junkshop_material_prices jmp
                     ON jmp.junkshop_account_id = jp.account_id
                    AND jmp.available = 1
