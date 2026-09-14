@@ -4,7 +4,7 @@
  */
 
 $adminActive = $activePage ?? 'dashboard';
-$adminSettingsActive = in_array($adminActive, ['concerns', 'reports', 'profile', 'partnership-payments'], true);
+$adminSettingsActive = in_array($adminActive, ['concerns', 'reports', 'profile', 'partnership-payments', 'backup-import'], true);
 $adminUserName = Auth::userName();
 $adminUserEmail = Auth::userEmail();
 ?>
@@ -67,6 +67,7 @@ $adminUserEmail = Auth::userEmail();
                             <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
                             <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
                             <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
+                            <a class="nav-link <?php echo $adminActive === 'backup-import' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/backup_import.php"><i class="bi bi-database-gear"></i><span>Database Maintenance</span></a>
                         </div>
                     </div>
                 </div>
@@ -165,6 +166,7 @@ $adminUserEmail = Auth::userEmail();
                                         <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
                                         <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
                                         <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
+                                        <a class="nav-link <?php echo $adminActive === 'backup-import' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/backup_import.php"><i class="bi bi-database-gear"></i><span>Database Maintenance</span></a>
                                     </div>
                                 </div>
                             </div>
