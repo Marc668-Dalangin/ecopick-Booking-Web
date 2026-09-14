@@ -286,8 +286,6 @@ ob_start();
             if (!pickupMap) {
                 pickupMap = L.map('pickup-map').setView([lat, lng], 18);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(pickupMap);
-            } else {
-                pickupMap.setView([lat, lng], 18);
             }
             if (pickupMarker) pickupMarker.setLatLng([lat, lng]);
             else {

@@ -1,5 +1,1 @@
-ALTER TABLE pickup_requests
-	MODIFY COLUMN seller_lat DECIMAL(11,8) NULL,
-	MODIFY COLUMN seller_lng DECIMAL(11,8) NULL,
-	MODIFY COLUMN junkshop_lat DECIMAL(11,8) NULL,
-	MODIFY COLUMN junkshop_lng DECIMAL(11,8) NULL;
+ALTER TABLE pickup_request_items ADD COLUMN `is_removed` TINYINT(1) DEFAULT 0;

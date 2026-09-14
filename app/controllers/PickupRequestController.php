@@ -149,7 +149,7 @@ class PickupRequestController
                 COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
                 GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
-             LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+             LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
              LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
              LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
             LEFT JOIN accounts junkshop ON junkshop.id = pr.junkshop_id
@@ -189,10 +189,10 @@ class PickupRequestController
                     rm.unit_of_measure, pri.estimated_weight
              FROM pickup_requests pr
              JOIN accounts a ON a.id = pr.seller_account_id
-             JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+                    JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
              JOIN recyclable_materials rm ON rm.id = pri.material_id
              LEFT JOIN transactions t ON t.pickup_request_id = pr.id
-             WHERE pr.id = :request_id AND pr.seller_account_id = :seller_id
+             WHERE pr.id = :request_id AND pr.seller_account_id = :seller_id AND pri.is_removed = 0
              ORDER BY rm.material_name ASC",
             ['request_id' => (int) $requestId, 'seller_id' => (int) $sellerAccountId]
         )->fetchAll();
@@ -214,7 +214,7 @@ class PickupRequestController
         if (!empty($itemIds)) {
             $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
             $snapshotRows = $this->db->query(
-                'SELECT pri.id, COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> \'Pending Request\' THEN jmp.buying_price END) AS matched_price_per_kg, COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> \'Pending Request\' THEN ROUND(pri.estimated_weight * jmp.buying_price, 2) END) AS estimated_value, tm.final_material_value AS actual_value, pri.estimated_buying_price_per_kg, pri.estimated_material_value, pri.estimate_snapshot_at FROM pickup_request_items pri JOIN pickup_requests pr ON pr.id = pri.pickup_request_id LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id WHERE pri.id IN (' . $placeholders . ') ORDER BY tm.id DESC',
+                'SELECT pri.id, COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> \'Pending Request\' THEN jmp.buying_price END) AS matched_price_per_kg, COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> \'Pending Request\' THEN ROUND(pri.estimated_weight * jmp.buying_price, 2) END) AS estimated_value, tm.final_material_value AS actual_value, COALESCE(tm.`condition`, pri.material_condition) AS material_condition, pri.estimated_buying_price_per_kg, pri.estimated_material_value, pri.estimate_snapshot_at FROM pickup_request_items pri JOIN pickup_requests pr ON pr.id = pri.pickup_request_id LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id AND tm.accepted = 1 WHERE pri.id IN (' . $placeholders . ') AND pri.is_removed = 0 ORDER BY tm.id DESC',
                 $itemIds
             )->fetchAll();
             foreach ($snapshotRows as $snapshotRow) {
@@ -233,6 +233,7 @@ class PickupRequestController
             }
             $request['items'][] = [
                 'item_id' => (int) $row['item_id'],
+                'material_condition' => $snapshot['material_condition'] ?? null,
                 'material_id' => (int) $row['material_id'],
                 'material_name' => $row['material_name'],
                 'category' => $row['category'],
@@ -390,7 +391,7 @@ class PickupRequestController
                     GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
              JOIN accounts a ON a.id = pr.seller_account_id
-             JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id
+             JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
              JOIN recyclable_materials rm ON rm.id = pri.material_id
              WHERE pr.current_status = 'Pending Request'
              GROUP BY pr.id ORDER BY pr.created_at ASC"

@@ -496,7 +496,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const priceMarkup = isMaterialListed
                 ? '<input type="hidden" class="actual-price-input" name="actual_price_per_kg" id="' + priceInputId + '" data-item-id="' + itemId + '" value="' + priceValue + '">'
                 : '<label class="form-label">Buying Price per kg (₱) (Custom Material)</label><input type="number" step="0.01" min="0" class="form-control actual-price-input" name="actual_price_per_kg" id="' + priceInputId + '" data-item-id="' + itemId + '" required>';
-            return '<div class="row g-2 mb-2 settlement-material-row"><div class="col-md-3"><label class="form-label">' + escapeHtml(parts[1] || 'Material') + '</label><input class="form-control" value="' + escapeHtml(parts[2] || '') + ' kg estimated" readonly></div><div class="col-md-3"><label class="form-label">Actual kg</label><input class="form-control actual-weight-input actual-weight" data-item-id="' + itemId + '" type="number" min="0" step="0.01" required></div><div class="col-md-3">' + priceMarkup + '</div><div class="col-md-3"><label class="form-label">Condition</label><input class="form-control material-condition" type="text" maxlength="120" placeholder="Good, Mixed, Contaminated" required></div></div>';
+            return '<div class="row g-2 mb-2 settlement-material-row align-items-end" data-item-id="' + itemId + '"><div class="col-md-3 material-name"><label class="form-label">' + escapeHtml(parts[1] || 'Material') + '</label><input class="form-control" value="' + escapeHtml(parts[2] || '') + ' kg estimated" readonly></div><div class="col-md-3 material-entry-field"><label class="form-label">Actual kg</label><input class="form-control actual-weight-input actual-weight" data-item-id="' + itemId + '" type="number" min="0" step="0.01" required></div><div class="col-md-3 material-entry-field">' + priceMarkup + '</div><div class="col-md-2 material-entry-field"><label class="form-label">Condition</label><input class="form-control material-condition" type="text" maxlength="120" placeholder="Good, Mixed, Contaminated"></div><div class="col-md-1 d-flex gap-1 mb-1"><button type="button" class="btn btn-sm btn-outline-danger remove-material" title="Remove material"><i class="bi bi-trash"></i><span class="visually-hidden">Remove</span></button><button type="button" class="btn btn-sm btn-outline-secondary undo-material" title="Undo removal" style="display: none;"><i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden">Undo</span></button></div></div>';
         }).join('');
         const modal = document.createElement('div');
         modal.className = 'modal fade';
@@ -507,6 +507,7 @@ window.addEventListener('DOMContentLoaded', function () {
         const formatMoney = value => '₱' + Number(value || 0).toFixed(2);
         const updatePreview = function () {
             const actualRecyclableValue = Array.from(modal.querySelectorAll('.actual-weight-input')).reduce((total, input) => {
+                if (input.disabled) return total;
                 const priceInput = modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]');
                 return total + (Number(input.value || 0) * Number(priceInput?.value || 0));
             }, 0);
@@ -519,10 +520,24 @@ window.addEventListener('DOMContentLoaded', function () {
             modal.querySelector('.live-net-amount').textContent = formatMoney(finalNetAmount);
         };
         modal.querySelectorAll('.actual-price-input, .actual-weight-input, .material-condition, [name="pickup_collection_fee"]').forEach(input => input.addEventListener('input', updatePreview));
+        modal.addEventListener('click', function (event) {
+            const actionButton = event.target.closest('.remove-material, .undo-material');
+            if (!actionButton) return;
+            const row = actionButton.closest('.settlement-material-row');
+            if (!row) return;
+            const isRemoving = actionButton.classList.contains('remove-material');
+            row.classList.toggle('opacity-50', isRemoving);
+            row.querySelector('.material-name')?.classList.toggle('text-decoration-line-through', isRemoving);
+            row.querySelectorAll('input').forEach(input => { input.disabled = isRemoving; });
+            row.querySelectorAll('.material-entry-field').forEach(field => { field.style.display = isRemoving ? 'none' : ''; });
+            row.querySelector('.remove-material').style.display = isRemoving ? 'none' : '';
+            row.querySelector('.undo-material').style.display = isRemoving ? '' : 'none';
+            updatePreview();
+        });
         modal.querySelector('form').addEventListener('submit', async function (event) {
             event.preventDefault();
             if (!event.target.checkValidity()) { event.target.classList.add('was-validated'); return; }
-            const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight-input')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), buying_price_per_kg: Number(modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]')?.value || 0), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
+            const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), buying_price_per_kg: Number(modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]')?.value || 0), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
             const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
             const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, pickup_collection_fee: modal.querySelector('[name="pickup_collection_fee"]').value, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
             const resultPayload = await result.json();

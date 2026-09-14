@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $setFlash('Only POST requests are accepted for database imports.', 'danger');
 }
 
-if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
+if (!CSRF::verify((string) ($_POST['_csrf_token'] ?? ''))) {
     $setFlash('Invalid security token. Please try again.', 'danger');
 }
 
@@ -39,17 +39,28 @@ if ($sqlContent === false || trim($sqlContent) === '') {
 
 $pdo = null;
 $foreignKeysDisabled = false;
-$importMessage = 'Database import failed. The backup could not be applied.';
+$importMessage = 'Database import failed. No complete restore was confirmed.';
 $importType = 'danger';
 try {
     $pdo = Database::getInstance()->getPDO();
+    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0;');
     $foreignKeysDisabled = true;
     $pdo->exec($sqlContent);
-    $importMessage = 'Database import completed successfully.';
+
+    $tableNames = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+    $tableCount = count($tableNames);
+    $rowCount = 0;
+    foreach ($tableNames as $tableName) {
+        $quotedTable = '`' . str_replace('`', '``', (string) $tableName) . '`';
+        $rowCount += (int) $pdo->query('SELECT COUNT(*) FROM ' . $quotedTable)->fetchColumn();
+    }
+
+    $importMessage = sprintf('Database import completed successfully: %d tables and %d rows restored.', $tableCount, $rowCount);
     $importType = 'success';
 } catch (Throwable $exception) {
     error_log('Database import failed: ' . $exception->getMessage());
+    $importMessage = 'Database import failed. No complete restore was confirmed: ' . $exception->getMessage();
 } finally {
     if ($foreignKeysDisabled && $pdo instanceof PDO) {
         try {

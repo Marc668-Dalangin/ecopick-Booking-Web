@@ -75,7 +75,7 @@ class MatchingEngine
     {
         $db = Database::getInstance();
         $requests = $db->query(
-            "SELECT DISTINCT pr.id, pr.approximate_distance_km FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id WHERE pr.current_status = 'Pending Request' AND a.account_status = 'active' ORDER BY pr.created_at ASC"
+            "SELECT DISTINCT pr.id, pr.approximate_distance_km FROM pickup_requests pr JOIN accounts a ON a.id = pr.seller_account_id JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0 WHERE pr.current_status = 'Pending Request' AND a.account_status = 'active' ORDER BY pr.created_at ASC"
         )->fetchAll();
 
         $created = [];

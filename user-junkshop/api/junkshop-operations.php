@@ -108,7 +108,7 @@ if ($method === 'POST') {
         $paymentReference = trim((string) ($_POST['payment_reference'] ?? ''));
         $pickupCollectionFee = max(0.0, (float) ($_POST['pickup_collection_fee'] ?? 0));
         $actualPricePerKg = isset($_POST['actual_price_per_kg']) ? max(0.0, (float) $_POST['actual_price_per_kg']) : null;
-        $notes = trim((string) ($_POST['material_condition_notes'] ?? ''));
+        $notes = trim((string) ($_POST['condition'] ?? $_POST['material_condition'] ?? $_POST['material_condition_notes'] ?? ''));
         $conditionLines = [];
         if (is_array($materialSettlements)) {
             foreach ($materialSettlements as $material) {

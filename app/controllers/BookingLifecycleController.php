@@ -193,16 +193,20 @@ class BookingLifecycleController
             $transactionId = (int) $this->db->getPDO()->lastInsertId();
             foreach ($preparedMaterials['materials'] as $material) {
                 $this->db->query(
-                    'UPDATE pickup_request_items SET actual_weight = :actual_weight, material_condition = :material_condition WHERE id = :pickup_request_item_id AND pickup_request_id = :pickup_request_id',
+                    'UPDATE pickup_request_items SET actual_weight = :actual_weight, material_condition = :material_condition, is_removed = :is_removed WHERE id = :pickup_request_item_id AND pickup_request_id = :pickup_request_id',
                     [
                         'actual_weight' => number_format((float) $material['actual_weight_kg'], 2, '.', ''),
                         'material_condition' => trim((string) ($material['material_condition'] ?? '')),
+                        'is_removed' => $material['accepted'] ? 0 : 1,
                         'pickup_request_item_id' => $material['pickup_request_item_id'],
                         'pickup_request_id' => $pickupRequestId,
                     ]
                 );
+                if (!$material['accepted']) {
+                    continue;
+                }
                 $this->db->query(
-                    'INSERT INTO transaction_materials (transaction_id, pickup_request_item_id, material_id, actual_weight_kg, buying_price_per_kg, final_material_value, accepted) VALUES (:transaction_id, :pickup_request_item_id, :material_id, :actual_weight_kg, :buying_price_per_kg, :final_material_value, :accepted)',
+                    'INSERT INTO transaction_materials (transaction_id, pickup_request_item_id, material_id, actual_weight_kg, buying_price_per_kg, final_material_value, `condition`, accepted) VALUES (:transaction_id, :pickup_request_item_id, :material_id, :actual_weight_kg, :buying_price_per_kg, :final_material_value, :condition, :accepted)',
                     [
                         'transaction_id' => $transactionId,
                         'pickup_request_item_id' => $material['pickup_request_item_id'],
@@ -210,8 +214,21 @@ class BookingLifecycleController
                         'actual_weight_kg' => number_format($material['actual_weight_kg'], 2, '.', ''),
                         'buying_price_per_kg' => number_format($material['buying_price_per_kg'], 2, '.', ''),
                         'final_material_value' => number_format($material['final_material_value'], 2, '.', ''),
+                        'condition' => $material['material_condition'] !== '' ? $material['material_condition'] : null,
                         'accepted' => $material['accepted'] ? 1 : 0,
                     ]
+                );
+            }
+            $submittedItemIds = array_map(
+                static fn (array $material): int => (int) ($material['pickup_request_item_id'] ?? 0),
+                $preparedMaterials['materials']
+            );
+            $omittedItemIds = array_values(array_diff($this->getPickupRequestItemIds($pickupRequestId), $submittedItemIds));
+            if ($omittedItemIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($omittedItemIds), '?'));
+                $this->db->query(
+                    'UPDATE pickup_request_items SET is_removed = 1, actual_weight = 0 WHERE pickup_request_id = ? AND id IN (' . $placeholders . ')',
+                    array_merge([$pickupRequestId], $omittedItemIds)
                 );
             }
 
@@ -318,25 +335,23 @@ class BookingLifecycleController
             return ['success' => false, 'message' => 'Every requested material requires a settlement line.'];
         }
 
+        $requestedItems = [];
+        foreach ($row as $item) {
+            $requestedItems[(int) $item['pickup_request_item_id']] = $item;
+        }
+
         $submittedByItem = [];
         foreach ($submittedMaterials as $material) {
             $itemId = (int) ($material['pickup_request_item_id'] ?? 0);
-            if ($itemId > 0) {
+            if ($itemId > 0 && isset($requestedItems[$itemId])) {
                 $submittedByItem[$itemId] = $material;
             }
         }
 
         $prepared = [];
-        foreach ($row as $item) {
-            $itemId = (int) $item['pickup_request_item_id'];
-            if (!isset($submittedByItem[$itemId])) {
-                return ['success' => false, 'message' => 'Every requested material requires a settlement line.'];
-            }
-            $submitted = $submittedByItem[$itemId];
+        foreach ($submittedByItem as $itemId => $submitted) {
+            $item = $requestedItems[$itemId];
             $materialCondition = trim((string) ($submitted['material_condition'] ?? ''));
-            if ($materialCondition === '') {
-                return ['success' => false, 'message' => 'A material condition is required for every assessed material.'];
-            }
             $accepted = (bool) ($submitted['accepted'] ?? true);
             $weight = max(0.0, (float) ($submitted['actual_weight_kg'] ?? 0.0));
             $priceRow = $this->db->query(
@@ -368,6 +383,16 @@ class BookingLifecycleController
         }
 
         return ['success' => true, 'materials' => $prepared];
+    }
+
+    private function getPickupRequestItemIds(int $pickupRequestId): array
+    {
+        $rows = $this->db->query(
+            'SELECT id FROM pickup_request_items WHERE pickup_request_id = :pickup_request_id',
+            ['pickup_request_id' => $pickupRequestId]
+        )->fetchAll();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
     private function getPickupFeeConfig(): float

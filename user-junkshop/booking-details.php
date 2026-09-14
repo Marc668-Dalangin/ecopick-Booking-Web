@@ -57,6 +57,7 @@ ob_start();
         </div></div>
     </div>
     <div class="col-lg-4"><div class="card border-0 shadow-sm"><div class="card-body p-4">
+        <?php if (strtolower((string) ($request['current_status'] ?? '')) === 'completed'): ?><section class="mb-4"><h5 class="fw-bold mb-3">Completed material conditions</h5><?php foreach ($request['items'] as $item): ?><div class="small mb-1"><?php echo Validator::escape($item['material_name']); ?><br>Condition: <?php echo !empty($item['material_condition']) ? htmlspecialchars($item['material_condition'], ENT_QUOTES, 'UTF-8') : 'N/A'; ?></div><?php endforeach; ?></section><?php endif; ?>
         <h5 class="fw-bold mb-4">Matched junkshop</h5>
         <?php if (!empty($assignment)): ?>
             <div class="bg-light rounded-3 p-3 mb-3">

@@ -6,59 +6,100 @@ if (!Auth::check() || Auth::userRole() !== 'admin') {
     exit('Admin access required.');
 }
 
-$database = Database::getInstance();
-$pdo = $database->getPDO();
+$pdo = Database::getInstance()->getPDO();
+$pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+
 $quoteIdentifier = static function (string $identifier): string {
     return '`' . str_replace('`', '``', $identifier) . '`';
 };
 
-header('Content-Type: application/sql');
-header('Content-Disposition: attachment; filename="backup_' . date('Y-m-d') . '.sql"');
+$formatValue = static function ($value, string $columnType) use ($pdo): string {
+    if ($value === null) {
+        return 'NULL';
+    }
 
-echo "-- EcoPick database backup generated " . gmdate('c') . "\n";
-echo "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+    $numericType = preg_match(
+        '/^(tinyint|smallint|mediumint|int|integer|bigint|decimal|numeric|float|double|real|bit|year)/i',
+        $columnType
+    ) === 1;
+    if ($numericType && is_numeric($value)) {
+        return (string) $value;
+    }
 
-$tableStatement = $pdo->query('SHOW TABLES');
-while (($tableRow = $tableStatement->fetch(PDO::FETCH_NUM)) !== false) {
-    $tableName = (string) ($tableRow[0] ?? '');
+    $quotedValue = $pdo->quote((string) $value);
+    if ($quotedValue === false) {
+        throw new RuntimeException('Unable to quote a database value.');
+    }
+
+    return $quotedValue;
+};
+
+try {
+    $sqlOutput = [
+    '-- EcoPick database backup generated ' . gmdate('c'),
+    'SET FOREIGN_KEY_CHECKS = 0;',
+    'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";',
+    'SET time_zone = "+00:00";',
+    'START TRANSACTION;',
+    '',
+    ];
+
+$tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+foreach ($tables as $tableName) {
+    $tableName = (string) $tableName;
     if ($tableName === '') {
         continue;
     }
 
     $quotedTable = $quoteIdentifier($tableName);
-    $schemaStatement = $pdo->query('SHOW CREATE TABLE ' . $quotedTable);
-    $schemaRow = $schemaStatement->fetch(PDO::FETCH_ASSOC);
-    $createSql = (string) ($schemaRow['Create Table'] ?? $schemaRow['Create View'] ?? '');
+    $createStatement = $pdo->query('SHOW CREATE TABLE ' . $quotedTable);
+    $createRow = $createStatement->fetch(PDO::FETCH_ASSOC);
+    $createSql = (string) ($createRow['Create Table'] ?? $createRow['Create View'] ?? '');
     if ($createSql === '') {
         continue;
     }
 
-    echo "-- Table: {$tableName}\n";
-    echo "DROP TABLE IF EXISTS {$quotedTable};\n";
-    echo rtrim($createSql, "; \t\r\n") . ";\n";
+    $sqlOutput[] = '-- Table: ' . $tableName;
+    $sqlOutput[] = 'DROP TABLE IF EXISTS ' . $quotedTable . ';';
+    $sqlOutput[] = rtrim($createSql, " ;\t\r\n") . ';';
+
+    $columns = [];
+    $columnStatement = $pdo->query('SHOW COLUMNS FROM ' . $quotedTable);
+    foreach ($columnStatement->fetchAll(PDO::FETCH_ASSOC) as $column) {
+        $columns[] = [
+            'name' => (string) ($column['Field'] ?? ''),
+            'type' => (string) ($column['Type'] ?? ''),
+        ];
+    }
 
     $rows = $pdo->query('SELECT * FROM ' . $quotedTable);
-    $columnCount = $rows->columnCount();
     $valueBatch = [];
     while (($row = $rows->fetch(PDO::FETCH_NUM)) !== false) {
         $values = [];
-        foreach ($row as $value) {
-            $values[] = $value === null ? 'NULL' : $pdo->quote((string) $value);
-        }
-        if (count($values) !== $columnCount) {
-            continue;
+        foreach ($columns as $index => $column) {
+            $values[] = $formatValue($row[$index] ?? null, $column['type']);
         }
         $valueBatch[] = '(' . implode(', ', $values) . ')';
-        if (count($valueBatch) >= 100) {
-            echo "INSERT INTO {$quotedTable} VALUES " . implode(",\n", $valueBatch) . ";\n";
+
+        if (count($valueBatch) >= 50) {
+            $sqlOutput[] = 'INSERT INTO ' . $quotedTable . ' VALUES ' . implode(",\n", $valueBatch) . ';';
             $valueBatch = [];
         }
     }
+
     if ($valueBatch !== []) {
-        echo "INSERT INTO {$quotedTable} VALUES " . implode(",\n", $valueBatch) . ";\n";
+        $sqlOutput[] = 'INSERT INTO ' . $quotedTable . ' VALUES ' . implode(",\n", $valueBatch) . ';';
     }
-    echo "\n";
+    $sqlOutput[] = '';
 }
 
-echo "SET FOREIGN_KEY_CHECKS = 1;\n";
-$pdo = null;
+$sqlOutput[] = 'COMMIT;';
+$sqlOutput[] = 'SET FOREIGN_KEY_CHECKS = 1;';
+
+header('Content-Type: application/sql; charset=utf-8');
+header('Content-Disposition: attachment; filename="backup_' . gmdate('Y-m-d_H-i') . '.sql"');
+echo implode("\n", $sqlOutput) . "\n";
+
+} finally {
+    $pdo = null;
+}
