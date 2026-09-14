@@ -39,6 +39,7 @@ if (Auth::userRole() !== 'admin') {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+session_write_close();
 
 $controller = new DashboardController();
 $stats = $controller->getAdminStats();

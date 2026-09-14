@@ -52,6 +52,10 @@ if (empty($payload)) {
 
 $csrfToken = $payload['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    session_write_close();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!CSRF::verify($csrfToken)) {
         http_response_code(403);
@@ -63,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
+    session_write_close();
 
     $accountId = (int)($payload['account_id'] ?? 0);
     $decision = (string)($payload['decision'] ?? '');

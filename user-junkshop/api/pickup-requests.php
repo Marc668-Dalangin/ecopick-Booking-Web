@@ -16,10 +16,14 @@ if (Auth::userRole() !== 'seller') {
     exit;
 }
 
+$sellerId = (int) Auth::userId();
 $controller = new PickupRequestController();
-$sellerId = Auth::userId();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'list');
+
+if ($method !== 'POST') {
+    session_write_close();
+}
 
 if ($method === 'POST') {
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
@@ -27,6 +31,8 @@ if ($method === 'POST') {
         echo json_encode(['success' => false, 'message' => 'Invalid security token. Please try again.', 'validation_errors' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    session_write_close();
 
     if ($action === 'create') {
         $items = [];

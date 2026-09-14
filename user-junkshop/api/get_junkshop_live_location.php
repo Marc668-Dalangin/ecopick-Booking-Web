@@ -8,6 +8,9 @@ if (!Auth::check() || !in_array(Auth::userRole(), ['seller', 'junkshop'], true))
     echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
     exit;
 }
+$role = Auth::userRole();
+$accountId = (int) Auth::userId();
+session_write_close();
 
 $bookingId = filter_input(INPUT_GET, 'booking_id', FILTER_VALIDATE_INT);
 if (!$bookingId) {
@@ -17,7 +20,6 @@ if (!$bookingId) {
 }
 
 try {
-    $role = Auth::userRole();
     $ownership = $role === 'seller' ? 'pr.seller_account_id = :account_id' : 'pr.junkshop_id = :account_id';
     $database = Database::getInstance();
     $pdo = $database->getPDO();
@@ -27,7 +29,7 @@ try {
          WHERE pr.id = :booking_id AND {$ownership}
          LIMIT 1",
     );
-    $stmt->execute(['booking_id' => $bookingId, 'account_id' => (int) Auth::userId()]);
+    $stmt->execute(['booking_id' => $bookingId, 'account_id' => $accountId]);
     $request = $stmt->fetch();
     if (!$request) {
         $stmt = null;

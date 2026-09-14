@@ -8,6 +8,8 @@ if (!Auth::check() || Auth::userRole() !== 'seller') {
     echo json_encode(['success' => false, 'message' => 'Only sellers can view live distance.']);
     exit;
 }
+$sellerId = (int) Auth::userId();
+session_write_close();
 $bookingId = (int) ($_GET['booking_id'] ?? 0);
 if ($bookingId <= 0) {
     http_response_code(422);
@@ -18,7 +20,7 @@ try {
     $db = Database::getInstance();
     $statement = $db->query(
         "SELECT seller_lat, seller_lng, junkshop_lat, junkshop_lng, current_status FROM pickup_requests WHERE id = :booking_id AND seller_account_id = :seller_id LIMIT 1",
-        ['booking_id' => $bookingId, 'seller_id' => Auth::userId()]
+        ['booking_id' => $bookingId, 'seller_id' => $sellerId]
     );
     $booking = $statement->fetch();
     if (!$booking) {

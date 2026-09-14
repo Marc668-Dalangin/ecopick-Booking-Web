@@ -38,11 +38,16 @@ if (Auth::userRole() !== 'junkshop') {
     exit;
 }
 
+$junkshopId = (int) Auth::userId();
 $assignmentController = new JunkshopAssignmentController();
 $bookingLifecycleController = new BookingLifecycleController();
 $dashboardController = new DashboardController();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'list');
+
+if ($method !== 'POST') {
+    session_write_close();
+}
 
 if ($method === 'POST') {
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
@@ -51,18 +56,20 @@ if ($method === 'POST') {
         exit;
     }
 
+    session_write_close();
+
     if ($action === 'accept') {
         $pickupRequestId = (int) ($_POST['pickup_request_id'] ?? $_POST['assignment_id'] ?? 0);
-        $result = $assignmentController->acceptRequest($pickupRequestId, Auth::userId());
-        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests(Auth::userId())];
+        $result = $assignmentController->acceptRequest($pickupRequestId, $junkshopId);
+        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     if ($action === 'decline') {
         $pickupRequestId = (int) ($_POST['pickup_request_id'] ?? $_POST['assignment_id'] ?? 0);
-        $result = $assignmentController->declineRequest($pickupRequestId, Auth::userId());
-        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests(Auth::userId())];
+        $result = $assignmentController->declineRequest($pickupRequestId, $junkshopId);
+        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -71,16 +78,16 @@ if ($method === 'POST') {
         $requestId = (int) ($_POST['pickup_request_id'] ?? 0);
         $date = trim((string) ($_POST['scheduled_date'] ?? ''));
         $time = trim((string) ($_POST['scheduled_time'] ?? ''));
-        $result = $bookingLifecycleController->schedulePickup($requestId, Auth::userId(), $date, $time);
-        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests(Auth::userId())];
+        $result = $bookingLifecycleController->schedulePickup($requestId, $junkshopId, $date, $time);
+        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     if ($action === 'mark-for-pickup') {
         $requestId = (int) ($_POST['pickup_request_id'] ?? 0);
-        $result = $bookingLifecycleController->markForPickup($requestId, Auth::userId());
-        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests(Auth::userId())];
+        $result = $bookingLifecycleController->markForPickup($requestId, $junkshopId);
+        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -88,7 +95,7 @@ if ($method === 'POST') {
     if ($action === 'preview-settlement') {
         $requestId = (int) ($_POST['pickup_request_id'] ?? 0);
         $materialSettlements = json_decode((string) ($_POST['material_settlements'] ?? '[]'), true);
-        $result = $bookingLifecycleController->previewFinalSettlement($requestId, Auth::userId(), is_array($materialSettlements) ? $materialSettlements : []);
+        $result = $bookingLifecycleController->previewFinalSettlement($requestId, $junkshopId, is_array($materialSettlements) ? $materialSettlements : []);
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -115,8 +122,8 @@ if ($method === 'POST') {
         if (!empty($conditionLines)) {
             $notes = implode("\n", $conditionLines);
         }
-        $result = $bookingLifecycleController->completeTransaction($requestId, Auth::userId(), is_array($materialSettlements) ? $materialSettlements : [], $pickupCollectionFee, $paymentMethod, $paymentStatus, $paymentReference, $notes, $actualPricePerKg);
-        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests(Auth::userId())];
+        $result = $bookingLifecycleController->completeTransaction($requestId, $junkshopId, is_array($materialSettlements) ? $materialSettlements : [], $pickupCollectionFee, $paymentMethod, $paymentStatus, $paymentReference, $notes, $actualPricePerKg);
+        $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -126,7 +133,7 @@ if ($method === 'POST') {
     exit;
 }
 
-$requests = $dashboardController->getPendingJunkshopRequests(Auth::userId());
+$requests = $dashboardController->getPendingJunkshopRequests($junkshopId);
 echo json_encode([
     'success' => true,
     'message' => 'Matched requests loaded.',

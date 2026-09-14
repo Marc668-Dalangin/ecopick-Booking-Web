@@ -150,13 +150,11 @@ window.addEventListener('DOMContentLoaded', function () {
             })
             .then(payload => {
                 if (payload?.success) updateSellerLiveText(payload);
+            })
+            .catch(function () {})
+            .finally(function () {
                 if (document.getElementById('seller-live-tracking')) {
                     liveLocationTimeout = window.setTimeout(pollJunkshopLiveLocation, 10000);
-                }
-            })
-            .catch(function () {
-                if (document.getElementById('seller-live-tracking')) {
-                    liveLocationTimeout = window.setTimeout(pollJunkshopLiveLocation, 30000);
                 }
             });
     }

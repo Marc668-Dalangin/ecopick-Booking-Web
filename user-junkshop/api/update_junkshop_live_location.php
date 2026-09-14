@@ -8,12 +8,14 @@ if (!Auth::check() || Auth::userRole() !== 'junkshop') {
     echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
     exit;
 }
+$junkshopId = (int) Auth::userId();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !CSRF::verify()) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Invalid request.']);
     exit;
 }
+session_write_close();
 
 $bookingId = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
 $lat = trim((string) ($_POST['lat'] ?? ''));
@@ -35,7 +37,7 @@ try {
          SET junkshop_lat = :lat, junkshop_lng = :lng
          WHERE id = :booking_id AND junkshop_id = :junkshop_id AND current_status <> 'Completed'",
     );
-    $stmt->execute(['lat' => $lat, 'lng' => $lng, 'booking_id' => $bookingId, 'junkshop_id' => (int) Auth::userId()]);
+    $stmt->execute(['lat' => $lat, 'lng' => $lng, 'booking_id' => $bookingId, 'junkshop_id' => $junkshopId]);
     $updated = $stmt->rowCount();
     echo json_encode(['success' => $updated > 0]);
 } catch (Throwable $exception) {

@@ -240,48 +240,30 @@ window.addEventListener('DOMContentLoaded', function () {
     const successModalElement = document.getElementById('matchedRequestSuccessModal');
     const successModal = bootstrap.Modal.getOrCreateInstance(successModalElement);
     const successMessage = successModalElement.querySelector('[data-success-message]');
-    const liveLocationWatches = new Set();
     const trackingContainer = document.getElementById('live-tracking-container');
     const sellerAddressText = document.getElementById('seller-address-text');
     const junkshopAddressText = document.getElementById('junkshop-address-text');
     const liveDistance = document.getElementById('live-distance');
     const sellerMaps = new Map();
-    const liveLocationUpdates = new Map();
-    let trackingWatchId = null;
+    let trackingIntervalId = null;
+    let trackingRequestId = null;
+    let locationUpdateInProgress = false;
     let lastGeocodedJunkshopLocation = null;
 
-    function queueLiveLocationUpdate(requestId, lat, lng) {
-        const key = String(requestId);
-        const state = liveLocationUpdates.get(key) || { lastSentAt: 0, timer: null, pending: null };
-        state.pending = { lat: lat, lng: lng };
-        if (state.timer !== null) return;
+    function updateLiveLocation(requestId, lat, lng, sellerLat, sellerLng) {
+        const distance = calculateDistance(sellerLat, sellerLng, lat, lng);
+        reverseGeocodeJunkshopLocation(lat, lng);
+        if (liveDistance) liveDistance.textContent = distance.toFixed(2) + ' km';
 
-        const send = function () {
-            state.timer = null;
-            if (!state.pending) return;
-            const location = state.pending;
-            state.pending = null;
-            const elapsed = Date.now() - state.lastSentAt;
-            if (elapsed < 10000) {
-                state.timer = window.setTimeout(send, 10000 - elapsed);
-                return;
-            }
-
-            state.lastSentAt = Date.now();
-            const data = new FormData();
-            data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
-            data.append('booking_id', key);
-            data.append('lat', String(location.lat));
-            data.append('lng', String(location.lng));
-            fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' })
-                .catch(function () {})
-                .finally(function () {
-                    if (state.pending) state.timer = window.setTimeout(send, 10000);
-                });
-        };
-
-        send();
-        liveLocationUpdates.set(key, state);
+        const data = new FormData();
+        data.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+        data.append('booking_id', String(requestId));
+        data.append('lat', String(lat));
+        data.append('lng', String(lng));
+        locationUpdateInProgress = true;
+        fetch('<?php echo APP_URL; ?>/user-junkshop/api/update_junkshop_live_location.php', { method: 'POST', body: data, credentials: 'same-origin' })
+            .catch(function () {})
+            .finally(function () { locationUpdateInProgress = false; });
     }
 
     function removeSellerMap(requestId) {
@@ -362,23 +344,25 @@ window.addEventListener('DOMContentLoaded', function () {
         trackingContainer.style.display = 'block';
         sellerAddressText.textContent = 'Fetching...';
         reverseGeocodeSellerLocation(sellerLat, sellerLng);
-        liveLocationWatches.add(requestId);
-        if (trackingWatchId !== null) navigator.geolocation.clearWatch(trackingWatchId);
+        trackingRequestId = requestId;
+        if (trackingIntervalId !== null) window.clearInterval(trackingIntervalId);
         if (!navigator.geolocation) {
             junkshopAddressText.textContent = 'Geolocation unavailable';
             return;
         }
-        trackingWatchId = navigator.geolocation.watchPosition(function (position) {
-            const junkshopLat = parseFloat(position.coords.latitude);
-            const junkshopLng = parseFloat(position.coords.longitude);
-            if (!Number.isFinite(junkshopLat) || !Number.isFinite(junkshopLng)) return;
-            reverseGeocodeJunkshopLocation(junkshopLat, junkshopLng);
-            liveDistance.textContent = calculateDistance(sellerLat, sellerLng, junkshopLat, junkshopLng).toFixed(2) + ' km';
-
-            queueLiveLocationUpdate(requestId, junkshopLat, junkshopLng);
-        }, function () {
-            junkshopAddressText.textContent = 'Unable to access current location';
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
+        const updateCurrentLocation = function () {
+            if (locationUpdateInProgress) return;
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const junkshopLat = parseFloat(position.coords.latitude);
+                const junkshopLng = parseFloat(position.coords.longitude);
+                if (!Number.isFinite(junkshopLat) || !Number.isFinite(junkshopLng)) return;
+                updateLiveLocation(requestId, junkshopLat, junkshopLng, sellerLat, sellerLng);
+            }, function () {
+                if (trackingRequestId === requestId && junkshopAddressText) junkshopAddressText.textContent = 'Unable to access current location';
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
+        };
+        updateCurrentLocation();
+        trackingIntervalId = window.setInterval(updateCurrentLocation, 10000);
     }
 
     function showFeedback(message, isSuccess) {
@@ -400,13 +384,9 @@ window.addEventListener('DOMContentLoaded', function () {
         window.setTimeout(function () { window.location.reload(); }, 900);
     }
 
-    function startLiveLocationWatch(requestId) {
-        if (!navigator.geolocation || liveLocationWatches.has(requestId)) return;
-        liveLocationWatches.add(requestId);
-        const watchId = navigator.geolocation.watchPosition(function (position) {
-            queueLiveLocationUpdate(requestId, position.coords.latitude, position.coords.longitude);
-        }, function () {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
-        window.setTimeout(function () { navigator.geolocation.clearWatch(watchId); liveLocationWatches.delete(requestId); }, 300000);
+    function startLiveLocationWatch(requestId, sellerLat, sellerLng) {
+        if (trackingRequestId === requestId || !Number.isFinite(Number(sellerLat)) || !Number.isFinite(Number(sellerLng))) return;
+        showLiveTracking({ seller_lat: sellerLat, seller_lng: sellerLng }, requestId);
     }
 
     <?php if ($activeTrackingAssignment !== null): ?>
@@ -616,7 +596,9 @@ window.addEventListener('DOMContentLoaded', function () {
             if (!response.ok || !payload.success) throw new Error(payload.message || 'Unable to refresh matched requests.');
             const requests = payload.data?.requests || [];
             renderMatchedRequests(requests);
-            requests.forEach(function (request) { if (request.current_status === 'For Pickup') startLiveLocationWatch(getPickupRequestId(request)); });
+            requests.forEach(function (request) {
+                if (request.current_status === 'For Pickup') startLiveLocationWatch(getPickupRequestId(request), request.seller_lat, request.seller_lng);
+            });
         } catch (error) {
             showFeedback(error.message || 'Unable to refresh matched requests.', false);
         }

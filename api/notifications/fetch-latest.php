@@ -15,13 +15,15 @@ if (!Auth::check()) {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+$userId = (int) Auth::userId();
+session_write_close();
 
 $controller = new NotificationController();
 echo json_encode([
     'success' => true,
     'data' => [
-        'unread_count' => $controller->unreadCount(Auth::userId()),
-        'notifications' => $controller->latestUnreadForUser(Auth::userId()),
+        'unread_count' => $controller->unreadCount($userId),
+        'notifications' => $controller->latestUnreadForUser($userId),
     ],
     'timestamp' => time(),
 ], JSON_UNESCAPED_UNICODE);
