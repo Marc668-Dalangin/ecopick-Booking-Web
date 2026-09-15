@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS accounts (
     full_name VARCHAR(255) NOT NULL,
     mobile_number VARCHAR(20),
     account_status ENUM('active', 'inactive', 'pending', 'rejected') DEFAULT 'active',
+    otp_code VARCHAR(6) NULL DEFAULT NULL,
+    otp_expires_at DATETIME NULL DEFAULT NULL,
+    is_email_verified TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(id),
@@ -29,6 +32,10 @@ CREATE TABLE IF NOT EXISTS accounts (
     INDEX idx_account_role (account_role),
     INDEX idx_account_role_status (account_role, account_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS otp_code VARCHAR(6) NULL DEFAULT NULL;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS otp_expires_at DATETIME NULL DEFAULT NULL;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_email_verified TINYINT(1) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS rejected_emails (
     email VARCHAR(255) PRIMARY KEY,

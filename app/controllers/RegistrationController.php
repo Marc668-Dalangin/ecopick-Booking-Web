@@ -16,6 +16,7 @@ class RegistrationController
 
     public function registerSeller($data)
     {
+        $data['email'] = strtolower(trim((string) ($data['email'] ?? '')));
         $firstName = mb_strtoupper(trim((string)($data['first_name'] ?? '')), 'UTF-8');
         $lastName = mb_strtoupper(trim((string)($data['last_name'] ?? '')), 'UTF-8');
         $data['first_name'] = $firstName;
@@ -35,41 +36,36 @@ class RegistrationController
                 return ['success' => false, 'errors' => ['Username already registered']];
             }
 
-            $this->db->beginTransaction();
             $existing = $this->db->query(
                 'SELECT id FROM accounts WHERE email = :email OR username = :username LIMIT 1',
                 ['email' => $data['email'], 'username' => trim((string) ($data['username'] ?? ''))]
             )->fetch();
             if ($existing) {
-                $this->db->rollBack();
                 return ['success' => false, 'errors' => ['Email or username already registered']];
             }
 
-            $this->db->query(
-                "INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
-                 VALUES ((SELECT id FROM roles WHERE name = 'seller'), 'seller', :email, :username, :password_hash, :full_name, :mobile_number, 'active')",
-                [
-                    'email' => $data['email'],
-                    'username' => trim((string) ($data['username'] ?? '')),
-                    'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
-                    'full_name' => $data['full_name'],
-                    'mobile_number' => $data['mobile_number'],
-                ]
-            );
-            $accountId = (int) $this->db->getPDO()->lastInsertId();
-            $this->db->query(
-                'INSERT INTO seller_profiles (account_id, address, barangay) VALUES (:account_id, :address, :barangay)',
-                ['account_id' => $accountId, 'address' => $data['address'], 'barangay' => $data['barangay']]
-            );
-            $this->db->commit();
-
-            if ($accountId > 0) {
-                return ['success' => true, 'message' => 'Registration successful. Please login.'];
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otpExpiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+            if (!MailerService::sendRegistrationOtp($data['email'], $data['full_name'], $otp)) {
+                return ['success' => false, 'otp_send_failed' => true, 'errors' => ['Failed to send OTP. Please check your email address.']];
             }
 
-            return ['success' => false, 'errors' => ['Registration failed']];
+            Session::set('pending_registration', [
+                'type' => 'seller',
+                'email' => $data['email'],
+                'username' => trim((string) $data['username']),
+                'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+                'full_name' => $data['full_name'],
+                'mobile_number' => $data['mobile_number'],
+                'address' => trim((string) $data['address']),
+                'barangay' => trim((string) $data['barangay']),
+                'otp_code' => $otp,
+                'otp_expires_at' => $otpExpiresAt,
+                'otp_expires_timestamp' => strtotime($otpExpiresAt),
+            ]);
+
+            return ['success' => true, 'otp_required' => true, 'email' => $data['email']];
         } catch (Throwable $e) {
-            $this->db->rollBack();
             error_log('Registration error: ' . $e->getMessage());
             return ['success' => false, 'errors' => [$e->getMessage()]];
         }
@@ -77,6 +73,7 @@ class RegistrationController
 
     public function registerJunkshop($data)
     {
+        $data['email'] = strtolower(trim((string) ($data['email'] ?? '')));
         $data['business_name'] = mb_strtoupper(trim((string)($data['business_name'] ?? '')), 'UTF-8');
         $data['owner_name'] = mb_strtoupper(trim((string)($data['owner_name'] ?? '')), 'UTF-8');
         $suffix = trim((string)($data['mobile_number'] ?? ''));
@@ -93,53 +90,39 @@ class RegistrationController
                 return ['success' => false, 'errors' => ['Username already registered']];
             }
 
-            $this->db->beginTransaction();
             $existing = $this->db->query(
                 'SELECT id FROM accounts WHERE email = :email OR username = :username LIMIT 1',
                 ['email' => $data['email'], 'username' => trim((string) ($data['username'] ?? ''))]
             )->fetch();
             if ($existing) {
-                $this->db->rollBack();
                 return ['success' => false, 'errors' => ['Email or username already registered']];
             }
 
-            $this->db->query(
-                "INSERT INTO accounts (role_id, account_role, email, username, password_hash, full_name, mobile_number, account_status)
-                 VALUES ((SELECT id FROM roles WHERE name = 'junkshop'), 'junkshop', :email, :username, :password_hash, :full_name, :mobile_number, 'active')",
-                [
-                    'email' => $data['email'],
-                    'username' => trim((string) ($data['username'] ?? '')),
-                    'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
-                    'full_name' => $data['owner_name'],
-                    'mobile_number' => $data['mobile_number'],
-                ]
-            );
-            $accountId = (int) $this->db->getPDO()->lastInsertId();
-            $this->db->query(
-                "INSERT INTO junkshop_profiles (account_id, business_name, owner_name, complete_address, operating_schedule, business_permit_reference, approval_status)
-                 VALUES (:account_id, :business_name, :owner_name, :complete_address, :operating_schedule, :permit_reference, 'pending')",
-                [
-                    'account_id' => $accountId,
-                    'business_name' => $data['business_name'],
-                    'owner_name' => $data['owner_name'],
-                    'complete_address' => $data['complete_address'],
-                    'operating_schedule' => $data['operating_schedule'],
-                    'permit_reference' => $data['business_permit_reference'],
-                ]
-            );
-            $this->db->query(
-                'DELETE FROM rejected_emails WHERE email = :email',
-                ['email' => $data['email']]
-            );
-            $this->db->commit();
-
-            if ($accountId > 0) {
-                return ['success' => true, 'message' => 'Registration successful. Please login.'];
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otpExpiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+            if (!MailerService::sendRegistrationOtp($data['email'], $data['owner_name'], $otp)) {
+                return ['success' => false, 'otp_send_failed' => true, 'errors' => ['Failed to send OTP. Please check your email address.']];
             }
 
-            return ['success' => false, 'errors' => ['Registration failed']];
+            Session::set('pending_registration', [
+                'type' => 'junkshop',
+                'email' => $data['email'],
+                'username' => trim((string) $data['username']),
+                'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+                'full_name' => $data['owner_name'],
+                'mobile_number' => $data['mobile_number'],
+                'business_name' => $data['business_name'],
+                'owner_name' => $data['owner_name'],
+                'complete_address' => trim((string) $data['complete_address']),
+                'operating_schedule' => $data['operating_schedule'],
+                'business_permit_reference' => trim((string) $data['business_permit_reference']),
+                'otp_code' => $otp,
+                'otp_expires_at' => $otpExpiresAt,
+                'otp_expires_timestamp' => strtotime($otpExpiresAt),
+            ]);
+
+            return ['success' => true, 'otp_required' => true, 'email' => $data['email']];
         } catch (Throwable $e) {
-            $this->db->rollBack();
             error_log('Registration error: ' . $e->getMessage());
             return ['success' => false, 'errors' => [$e->getMessage()]];
         }

@@ -27,7 +27,7 @@ class LoginController
         try {
             $user = $this->db->query(
                 "SELECT a.id, a.role_id, COALESCE(a.account_role, r.name) AS account_role,
-                        a.email, a.username, a.password_hash, a.full_name, a.account_status,
+                        a.email, a.username, a.password_hash, a.full_name, a.account_status, a.is_email_verified,
                         r.name AS role_name,
                         jp.partnership_expires_at,
                             CASE WHEN r.name = 'junkshop'
@@ -78,7 +78,10 @@ class LoginController
                 return ['success' => false, 'error' => 'This account has been rejected'];
             }
             if (in_array($accountStatus, ['inactive', 'suspended'], true) && !$hasExpiredPartnership) {
-                return ['success' => false, 'error' => 'This account is inactive'];
+                return ['success' => false, 'error' => ((int) ($user['is_email_verified'] ?? 0) !== 1 ? 'Please verify your email address before logging in.' : 'This account is inactive')];
+            }
+            if (in_array($user['role_name'], ['seller', 'junkshop'], true) && (int) ($user['is_email_verified'] ?? 0) !== 1) {
+                return ['success' => false, 'error' => 'Please verify your email address before logging in.'];
             }
 
             // Check junkshop approval status

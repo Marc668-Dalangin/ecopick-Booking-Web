@@ -11,6 +11,8 @@ Auth::redirectIfAuthenticated();
 
 $errors = [];
 $success = false;
+$otpRequired = false;
+$otpEmail = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
@@ -33,8 +35,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $controller = new RegistrationController();
         $result = $controller->registerSeller($data);
 
+        if (!empty($result['otp_send_failed'])) {
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['success' => false, 'message' => 'Failed to send OTP. Please check your email address.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         if ($result['success']) {
-            $success = true;
+            $otpRequired = !empty($result['otp_required']);
+            $otpEmail = (string) ($result['email'] ?? $data['email']);
+            $success = !$otpRequired;
         } else {
             $errors = $result['errors'];
         }
@@ -80,7 +95,8 @@ $pageTitle = 'Register as Seller';
                             </div>
                         <?php endif; ?>
 
-                        <form method="POST" action="" novalidate>
+                        <div id="registrationMessage" class="alert d-none" role="alert"></div>
+                        <form id="registrationForm" method="POST" action="" novalidate>
                             <!-- CSRF Token -->
                             <?php echo CSRF::field(); ?>
 
@@ -253,7 +269,7 @@ $pageTitle = 'Register as Seller';
                             </div>
 
                             <!-- Submit Button -->
-                            <button type="submit" class="btn btn-primary w-100 mb-3">
+                            <button type="submit" class="btn btn-primary w-100 mb-3" id="registrationSubmitButton">
                                 <i class="bi bi-person-plus"></i> Create Account
                             </button>
                         </form>
@@ -281,9 +297,64 @@ $pageTitle = 'Register as Seller';
     </div>
 </div>
 
+<div id="loadingOverlay" class="loading-overlay d-none" role="status" aria-live="polite" aria-hidden="true">
+    <div class="text-center bg-white rounded-3 shadow p-4">
+        <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+        <div>Sending verification code to your email... Please wait.</div>
+    </div>
+</div>
+
+<div class="modal fade" id="otpVerifyModal" tabindex="-1" aria-labelledby="otpVerifyModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="otpVerifyModalLabel">Verify your email</h5>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" id="btn-cancel-otp">Exit / Change Email</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Enter the 6-digit code sent to <strong><?php echo Validator::escape($otpEmail); ?></strong>.</p>
+                <div id="otpMessage" class="alert d-none" role="alert"></div>
+                <form id="otpVerifyForm" novalidate>
+                    <?php echo CSRF::field(); ?>
+                    <input type="hidden" name="email" value="<?php echo Validator::escape($otpEmail); ?>">
+                    <label for="otp_code" class="form-label">Verification code</label>
+                    <input type="text" class="form-control form-control-lg text-center" id="otp_code" name="otp_code" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" required>
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Verify email</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="verificationSuccessModal" tabindex="-1" aria-labelledby="verificationSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="verificationSuccessModalLabel">Email verified</h5>
+            </div>
+            <div class="modal-body">
+                <div id="verificationSuccessMessage" class="alert alert-success mb-0"></div>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-primary" href="login.php">Go to Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .uppercase-input {
         text-transform: uppercase;
+    }
+
+    .loading-overlay {
+        align-items: center;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        inset: 0;
+        justify-content: center;
+        position: fixed;
+        z-index: 2000;
     }
 </style>
 
@@ -305,6 +376,92 @@ $pageTitle = 'Register as Seller';
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const registrationForm = document.getElementById('registrationForm');
+        const registrationButton = document.getElementById('registrationSubmitButton');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const registrationMessage = document.getElementById('registrationMessage');
+        const otpModal = document.getElementById('otpVerifyModal');
+        const otpForm = document.getElementById('otpVerifyForm');
+        const modal = otpModal ? new bootstrap.Modal(otpModal) : null;
+        const verificationSuccessModal = document.getElementById('verificationSuccessModal');
+        const verificationSuccessMessage = document.getElementById('verificationSuccessMessage');
+        const successModal = verificationSuccessModal ? new bootstrap.Modal(verificationSuccessModal) : null;
+        const otpEmail = otpForm?.elements.email;
+
+        function showRegistrationError(message) {
+            registrationMessage.className = 'alert alert-danger';
+            registrationMessage.textContent = message;
+        }
+
+        function setRegistrationEnabled(enabled) {
+            registrationForm?.querySelectorAll('input, select, textarea, button').forEach((element) => {
+                element.disabled = !enabled;
+            });
+        }
+
+        registrationForm?.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            if (!registrationForm.checkValidity()) {
+                registrationForm.classList.add('was-validated');
+                return;
+            }
+            registrationButton.disabled = true;
+            loadingOverlay.classList.remove('d-none');
+            loadingOverlay.setAttribute('aria-hidden', 'false');
+            registrationMessage.className = 'alert d-none';
+            try {
+                const response = await fetch(registrationForm.action || window.location.href, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new FormData(registrationForm)
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    showRegistrationError(result.message || (result.errors || ['Registration failed.']).join(' '));
+                    return;
+                }
+                otpEmail.value = result.email;
+                modal.show();
+            } catch (error) {
+                showRegistrationError('Unable to submit registration. Please try again.');
+            } finally {
+                loadingOverlay.classList.add('d-none');
+                loadingOverlay.setAttribute('aria-hidden', 'true');
+                registrationButton.disabled = false;
+            }
+        });
+
+        if (otpModal && otpForm) {
+            if (<?php echo $otpRequired ? 'true' : 'false'; ?>) {
+                modal.show();
+            }
+            otpForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const message = document.getElementById('otpMessage');
+                const code = otpForm.elements.otp_code.value.trim();
+                if (!/^\d{6}$/.test(code)) {
+                    message.className = 'alert alert-danger';
+                    message.textContent = 'Enter the 6-digit OTP code.';
+                    return;
+                }
+                const response = await fetch('verify_otp.php', { method: 'POST', headers: { 'Accept': 'application/json' }, body: new FormData(otpForm) });
+                const result = await response.json();
+                message.className = result.success ? 'alert alert-success' : 'alert alert-danger';
+                message.textContent = result.message;
+                if (result.success) {
+                    modal.hide();
+                    verificationSuccessMessage.textContent = result.message;
+                    successModal.show();
+                }
+            });
+        }
+        document.getElementById('btn-cancel-otp')?.addEventListener('click', async function() {
+            const cancelData = new FormData(otpForm);
+            cancelData.set('action', 'cancel');
+            await fetch('verify_otp.php', { method: 'POST', headers: { 'Accept': 'application/json' }, body: cancelData });
+            setRegistrationEnabled(true);
+            registrationButton.disabled = false;
+        });
         const usernameInput = document.getElementById('username');
         if (usernameInput) {
             usernameInput.addEventListener('input', function() {

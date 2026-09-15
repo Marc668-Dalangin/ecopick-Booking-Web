@@ -7,6 +7,54 @@
  */
 class MailerService
 {
+    public static function sendRegistrationOtp(string $recipientEmail, string $recipientName, string $otp): bool
+    {
+        $recipientEmail = strtolower(trim($recipientEmail));
+        if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{6}$/', $otp)) {
+            return false;
+        }
+
+        $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+        if (!is_file($autoload)) {
+            error_log('Registration OTP email error: Composer autoloader not found.');
+            return false;
+        }
+
+        require_once $autoload;
+
+        try {
+            $config = self::config();
+            if ($config['smtp_host'] === '' || $config['smtp_username'] === '' || $config['smtp_password'] === '') {
+                error_log('Registration OTP email error: SMTP configuration is incomplete.');
+                return false;
+            }
+
+            $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mailer->isSMTP();
+            $mailer->Host = $config['smtp_host'];
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $config['smtp_username'];
+            $mailer->Password = $config['smtp_password'];
+            $mailer->SMTPSecure = strtolower($config['smtp_encryption']) === 'ssl'
+                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mailer->Port = (int) $config['smtp_port'];
+            $mailer->setFrom($config['smtp_username'], $config['from_name']);
+            $mailer->addAddress($recipientEmail, trim($recipientName) !== '' ? trim($recipientName) : 'EcoPick member');
+            $mailer->isHTML(true);
+            $mailer->Subject = 'EcoPick Email Verification Code';
+            $mailer->Body = '<p>Hello ' . htmlspecialchars($recipientName ?: 'EcoPick member', ENT_QUOTES, 'UTF-8') . ',</p>'
+                . '<p>Your EcoPick verification code is:</p>'
+                . '<p style="font-size:28px;font-weight:700;letter-spacing:6px">' . $otp . '</p>'
+                . '<p>This code expires in 10 minutes. If you did not create an account, you can ignore this email.</p>';
+            $mailer->AltBody = "Your EcoPick verification code is {$otp}. This code expires in 10 minutes.";
+            return $mailer->send();
+        } catch (Throwable $exception) {
+            error_log('Registration OTP email error: ' . $exception->getMessage());
+            return false;
+        }
+    }
+
     public static function sendBookingStatus(string $recipientEmail, string $recipientName, int $pickupRequestId, string $status): bool
     {
         $recipientEmail = trim($recipientEmail);
@@ -53,10 +101,10 @@ class MailerService
             'from_address' => self::headerValue($env['MAIL_FROM_ADDRESS'] ?? getenv('MAIL_FROM_ADDRESS') ?: 'no-reply@localhost', 'no-reply@localhost'),
             'from_name' => self::headerValue($env['MAIL_FROM_NAME'] ?? getenv('MAIL_FROM_NAME') ?: 'EcoPick', 'EcoPick'),
             'subject_prefix' => self::headerValue($env['MAIL_SUBJECT_PREFIX'] ?? getenv('MAIL_SUBJECT_PREFIX') ?: '[EcoPick]', '[EcoPick]'),
-            'smtp_host' => $env['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: '',
+            'smtp_host' => $env['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com',
             'smtp_port' => $env['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: '587',
-            'smtp_username' => $env['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: '',
-            'smtp_password' => $env['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD') ?: '',
+            'smtp_username' => $env['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: 'ecopicklipacity@gmail.com',
+            'smtp_password' => $env['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD') ?: 'zemkqmunllofeicq',
             'smtp_encryption' => $env['SMTP_ENCRYPTION'] ?? getenv('SMTP_ENCRYPTION') ?: 'tls',
         ];
     }
