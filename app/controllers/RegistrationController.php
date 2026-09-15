@@ -76,7 +76,7 @@ class RegistrationController
         $data['email'] = strtolower(trim((string) ($data['email'] ?? '')));
         $data['business_name'] = mb_strtoupper(trim((string)($data['business_name'] ?? '')), 'UTF-8');
         $data['owner_name'] = mb_strtoupper(trim((string)($data['owner_name'] ?? '')), 'UTF-8');
-        $suffix = trim((string)($data['mobile_number'] ?? ''));
+        $suffix = preg_replace('/\D+/', '', trim((string)($data['mobile_number'] ?? '')));
         $data['mobile_number_input'] = $suffix;
         $data['mobile_number'] = Validator::normalizeMobileNumber($suffix);
 

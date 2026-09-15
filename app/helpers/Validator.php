@@ -59,7 +59,6 @@ class Validator
             return $digits;
         }
 
-        $digits = preg_replace('/^09/', '', $digits, 1);
         if (preg_match('/^\d{9}$/', $digits) === 1) {
             return '09' . $digits;
         }

@@ -257,24 +257,21 @@ $pageTitle = 'Register Your Junkshop';
 
                             <!-- Mobile Number -->
                             <div class="mb-3">
-                                <label for="mobile_number" class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                                <label for="mobile_number" class="form-label">Mobile Number</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light">09</span>
+                                    <span class="input-group-text fw-bold">+63 9</span>
                                     <input
-                                        type="tel"
+                                        type="text"
                                         class="form-control"
                                         id="mobile_number"
                                         name="mobile_number"
                                         value="<?php echo isset($_POST['mobile_number']) ? Validator::escape($_POST['mobile_number']) : ''; ?>"
+                                        maxlength="9"
+                                        placeholder="091234567"
+                                        pattern="[0-9]{9}"
                                         required
-                                        inputmode="numeric"
-                                        maxlength="11"
-                                        pattern="[0-9]*"
-                                        placeholder="123456789"
-                                        aria-describedby="mobile_number_help"
                                     >
                                 </div>
-                                <div id="mobile_number_help" class="form-text">Enter the remaining 9 digits only. The 09 prefix is fixed.</div>
                             </div>
 
                             <hr>
