@@ -25,6 +25,11 @@ if (Auth::userRole() !== 'junkshop') {
     exit;
 }
 
+if (!empty($_SESSION['is_expired'])) {
+    echo json_encode(['success' => true, 'count' => 0], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $count = Database::getInstance()->query(
     'SELECT COUNT(*) FROM pickup_requests WHERE junkshop_id = :junkshop_id AND current_status = :status',
     [

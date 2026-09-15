@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . APP_URL . '/user-junkshop/dashboard.php');
             }
             exit;
+        } elseif (!empty($result['expired'])) {
+            header('Location: ' . APP_URL . '/user-junkshop/renewal-expired.php');
+            exit;
         } else {
             $error = $result['error'];
             $showPendingMessage = isset($result['pending']) && $result['pending'];

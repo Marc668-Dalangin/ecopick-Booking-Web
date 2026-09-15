@@ -320,7 +320,7 @@ ob_start();
             const junkLat = parseFloat(selectedOption.getAttribute('data-lat'));
             const junkLng = parseFloat(selectedOption.getAttribute('data-lng'));
 
-            if (!isNaN(junkLat) && !isNaN(junkLng) && junkLat !== 0 && junkLng !== 0 && !isNaN(sellerLat) && !isNaN(sellerLng)) {
+            if (!isNaN(sellerLat) && !isNaN(sellerLng) && Number.isFinite(junkLat) && Number.isFinite(junkLng) && junkLat !== 0 && junkLng !== 0) {
                 distanceInKm = Number(calculateHaversineDistance(sellerLat, sellerLng, junkLat, junkLng).toFixed(2));
                 approximateDistanceInfo.classList.remove('text-warning');
                 approximateDistanceInfo.textContent = 'Approximate Distance: ' + distanceInKm.toFixed(2) + ' km';
@@ -330,7 +330,9 @@ ob_start();
             }
 
             approximateDistanceInfo.classList.add('text-warning');
-            approximateDistanceInfo.textContent = "Junkshop hasn't updated their profile location yet.";
+            approximateDistanceInfo.textContent = Number.isFinite(junkLat) && Number.isFinite(junkLng) && junkLat !== 0 && junkLng !== 0
+                ? 'Set your pickup location to calculate distance.'
+                : "Junkshop hasn't saved a profile location yet.";
             approximateDistanceInput.value = '';
             distanceInKm = 0;
             updateEstimateSummary();

@@ -64,6 +64,17 @@ try {
     }
 
     if ($action === 'approve') {
+        $defaultDays = (int) $database->query(
+            "SELECT config_value FROM fee_configurations WHERE config_key = 'default_junkshop_expiry_days' LIMIT 1"
+        )->fetchColumn();
+        if (!in_array($defaultDays, [21, 30], true)) {
+            $defaultDays = 30;
+        }
+        $expiryDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))
+            ->modify('+' . $defaultDays . ' days')
+            ->setTime(23, 59, 59)
+            ->format('Y-m-d H:i:s');
+
         $accountStatement = $database->query(
             "UPDATE accounts
              SET account_status = 'active', updated_at = CURRENT_TIMESTAMP
@@ -73,9 +84,10 @@ try {
 
         $database->query(
             "UPDATE junkshop_profiles
-             SET approval_status = 'approved', updated_at = CURRENT_TIMESTAMP
+             SET approval_status = 'approved', partnership_expires_at = :expiry_date,
+                 renewal_status = 'Current', updated_at = CURRENT_TIMESTAMP
              WHERE account_id = :id",
-            ['id' => $accountId]
+            ['id' => $accountId, 'expiry_date' => $expiryDate]
         );
         $message = 'Junkshop application approved.';
     } else {

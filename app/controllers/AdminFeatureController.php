@@ -25,6 +25,52 @@ class AdminFeatureController
         )->fetchAll();
     }
 
+    public function getDefaultJunkshopExpiryDays(): int
+    {
+        $value = $this->db->query(
+            "SELECT config_value FROM fee_configurations WHERE config_key = 'default_junkshop_expiry_days' LIMIT 1"
+        )->fetchColumn();
+        $days = (int) $value;
+        return in_array($days, [21, 30], true) ? $days : 30;
+    }
+
+    public function updateDefaultJunkshopExpiryDays(int $days): array
+    {
+        $this->requireAdmin();
+        if (!in_array($days, [21, 30], true)) {
+            return ['success' => false, 'message' => 'Select a valid default expiration period.'];
+        }
+
+        try {
+            $this->db->query(
+                "INSERT INTO fee_configurations (config_key, config_value, description)
+                 VALUES ('default_junkshop_expiry_days', :days, 'Default partnership expiration period for newly approved junkshops.')
+                 ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_at = CURRENT_TIMESTAMP",
+                ['days' => $days]
+            );
+            return ['success' => true, 'message' => 'Default expiration period updated.'];
+        } catch (Throwable $exception) {
+            error_log('Default junkshop expiry update error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => 'Unable to update the default expiration period.'];
+        }
+    }
+
+    public function listApprovedJunkshops(): array
+    {
+        $this->requireAdmin();
+        return $this->db->query(
+            "SELECT a.id AS account_id, a.account_status, jp.business_name,
+                    jp.partnership_expires_at, jp.renewal_status,
+                    CASE WHEN jp.partnership_expires_at IS NOT NULL
+                            AND jp.partnership_expires_at <= CURRENT_TIMESTAMP
+                         THEN 'Expired' ELSE a.account_status END AS display_status
+             FROM accounts a
+             JOIN junkshop_profiles jp ON jp.account_id = a.id
+             WHERE jp.approval_status = 'approved'
+             ORDER BY jp.business_name ASC"
+        )->fetchAll();
+    }
+
     public function listCommissionPayments(): array
     {
         $this->requireAdmin();
@@ -99,7 +145,7 @@ class AdminFeatureController
             );
             if ($status === 'Confirmed') {
                 $this->db->query(
-                    'UPDATE junkshop_profiles SET partnership_expires_at = DATE_ADD(CASE WHEN partnership_expires_at IS NULL OR partnership_expires_at < CURRENT_DATE THEN CURRENT_DATE ELSE partnership_expires_at END, INTERVAL 365 DAY), renewal_status = \'Current\' WHERE account_id = :account_id',
+                    'UPDATE junkshop_profiles SET partnership_expires_at = DATE_ADD(CASE WHEN partnership_expires_at IS NULL OR partnership_expires_at <= CURRENT_TIMESTAMP THEN CURRENT_TIMESTAMP ELSE partnership_expires_at END, INTERVAL 365 DAY), renewal_status = \'Current\' WHERE account_id = :account_id',
                     ['account_id' => (int) $payment['junkshop_account_id']]
                 );
                 $profile = $this->db->query(
@@ -123,28 +169,48 @@ class AdminFeatureController
         }
     }
 
-    public function setExpiry(int $junkshopAccountId, string $expiryDate): array
+    public function setExpiry(int $junkshopAccountId, string $expiryDate, string $expiryTime = '', bool $enableExpiryTime = false): array
     {
         $this->requireAdmin();
         if ($junkshopAccountId < 1) return ['success' => false, 'message' => 'Junkshop account not found.'];
-        $date = DateTime::createFromFormat('Y-m-d', trim($expiryDate));
-        if (!$date || $date->format('Y-m-d') !== trim($expiryDate)) {
-            return ['success' => false, 'message' => 'Enter a valid expiry date.'];
+        $expiryDate = trim($expiryDate);
+        $expiryTime = $enableExpiryTime ? trim($expiryTime) : '';
+        if ($expiryTime === '') {
+            $expiryTime = '23:59:59';
+        } elseif (preg_match('/^\d{2}:\d{2}$/', $expiryTime) === 1) {
+            $expiryTime .= ':00';
         }
+
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $expiryDate . ' ' . $expiryTime);
+        $dateErrors = DateTimeImmutable::getLastErrors();
+        if (!$date || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $date->format('Y-m-d H:i:s') !== $expiryDate . ' ' . $expiryTime) {
+            return ['success' => false, 'message' => 'Enter a valid expiry date and time.'];
+        }
+        $expiryDateTime = $date->format('Y-m-d H:i:s');
         try {
+            $this->db->beginTransaction();
             $statement = $this->db->query(
-                'UPDATE junkshop_profiles SET partnership_expires_at = :expiry_date, renewal_status = CASE WHEN :expiry_date_status < CURRENT_DATE THEN \'Expired\' WHEN :expiry_date_due <= DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY) THEN \'Due\' ELSE \'Current\' END WHERE account_id = :account_id',
-                ['expiry_date' => $date->format('Y-m-d'), 'expiry_date_status' => $date->format('Y-m-d'), 'expiry_date_due' => $date->format('Y-m-d'), 'account_id' => $junkshopAccountId]
+                'UPDATE junkshop_profiles SET partnership_expires_at = :expiry_date, renewal_status = CASE WHEN :expiry_date_status <= CURRENT_TIMESTAMP THEN \'Expired\' WHEN :expiry_date_due <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) THEN \'Due\' ELSE \'Current\' END WHERE account_id = :account_id AND approval_status = \'approved\'',
+                ['expiry_date' => $expiryDateTime, 'expiry_date_status' => $expiryDateTime, 'expiry_date_due' => $expiryDateTime, 'account_id' => $junkshopAccountId]
+            );
+            $this->db->query(
+                "UPDATE accounts SET account_status = 'active', updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :account_id AND EXISTS (SELECT 1 FROM junkshop_profiles WHERE account_id = :profile_account_id AND approval_status = 'approved')",
+                ['account_id' => $junkshopAccountId, 'profile_account_id' => $junkshopAccountId]
             );
             $saved = $this->db->query('SELECT partnership_expires_at FROM junkshop_profiles WHERE account_id = :account_id', ['account_id' => $junkshopAccountId])->fetchColumn();
-            if ($statement->rowCount() !== 1 && $saved !== $date->format('Y-m-d')) {
+            if ($statement->rowCount() !== 1 && $saved !== $expiryDateTime) {
+                $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop expiry was not updated.'];
             }
-            if ($saved !== $date->format('Y-m-d')) {
+            if ($saved !== $expiryDateTime) {
+                $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop expiry was not persisted.'];
             }
+            $this->db->commit();
             return ['success' => true, 'message' => 'Partnership expiry updated.'];
         } catch (Throwable $exception) {
+            $this->db->rollBack();
             error_log('Partnership expiry update error: ' . $exception->getMessage());
             return ['success' => false, 'message' => 'Unable to update partnership expiry.'];
         }

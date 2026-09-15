@@ -40,7 +40,7 @@ try {
          WHERE jmp.junkshop_account_id = :junkshop_id
            AND jmp.available = 1
            AND jp.approval_status = 'approved'
-           AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
+           AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)
          ORDER BY rm.category ASC, rm.material_name ASC",
         ['junkshop_id' => $junkshopId]
     )->fetchAll();

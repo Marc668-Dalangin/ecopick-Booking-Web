@@ -350,7 +350,7 @@ class PickupRequestController
             $totalWeight += (float) $item['estimated_weight'];
 
             $priceRow = $this->db->query(
-                'SELECT AVG(jmp.buying_price) AS average_buying_price FROM junkshop_material_prices jmp JOIN junkshop_profiles jp ON jp.account_id = jmp.junkshop_account_id WHERE jmp.material_id = :material_id AND jmp.available = 1 AND jp.approval_status = :approval_status',
+                'SELECT AVG(jmp.buying_price) AS average_buying_price FROM junkshop_material_prices jmp JOIN junkshop_profiles jp ON jp.account_id = jmp.junkshop_account_id WHERE jmp.material_id = :material_id AND jmp.available = 1 AND jp.approval_status = :approval_status AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)',
                 [
                     'material_id' => $item['material_id'],
                     'approval_status' => 'approved',
@@ -426,12 +426,14 @@ class PickupRequestController
     public function listAdminPendingRequests()
     {
         return $this->db->query(
-            "SELECT pr.id, pr.booking_reference, pr.current_status, a.full_name AS seller_name, a.email AS seller_email,
+                "SELECT pr.id, pr.booking_reference, pr.current_status, a.full_name AS seller_name, a.email AS seller_email,
+                    jp.business_name AS junkshop_name,
                     pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time,
                     pr.photo_path, pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
                     GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
              JOIN accounts a ON a.id = pr.seller_account_id
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
              JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
              JOIN recyclable_materials rm ON rm.id = pri.material_id
              WHERE pr.current_status = 'Pending Request'

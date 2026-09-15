@@ -26,6 +26,16 @@ if (Auth::userRole() !== 'junkshop') {
     exit;
 }
 
+if (!empty($_SESSION['is_expired'])) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Materials and prices are locked until your subscription is renewed.',
+        'data' => ['materials' => [], 'prices' => []],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $controller = new MaterialPriceController();
 $accountId = Auth::userId();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

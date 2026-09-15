@@ -15,6 +15,7 @@ if (Auth::userRole() === 'admin') {
 $controller = new DashboardController();
 $role = Auth::userRole();
 $userId = Auth::userId();
+$isExpiredJunkshop = $role === 'junkshop' && !empty($_SESSION['is_expired']);
 $errors = [];
 $successMessage = '';
 
@@ -53,7 +54,9 @@ if ($role === 'seller') {
 } else {
     $currentProfile = $controller->getJunkshopProfile($userId);
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
+        if ($isExpiredJunkshop) {
+            $errors[] = 'Profile editing is locked because your partnership subscription has expired.';
+        } elseif (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
             $errors[] = 'Invalid security token. Please try again.';
         } else {
             $businessName = trim((string)($_POST['business_name'] ?? ''));
@@ -77,8 +80,8 @@ if ($role === 'seller') {
             if (!Validator::required($permit)) $errors[] = 'Permit reference is required.';
             if ($gcashAccountName !== '' && strlen($gcashAccountName) > 120) $errors[] = 'GCash account name is too long.';
             if ($gcashAccountNumber !== '' && !preg_match('/^09\d{9}$/', $gcashAccountNumber)) $errors[] = 'GCash account number must be an 11-digit Philippine mobile number.';
-            if ($latitudeInput !== '' && ($latitude === false || $latitude < -90 || $latitude > 90)) $errors[] = 'Latitude must be between -90 and 90.';
-            if ($longitudeInput !== '' && ($longitude === false || $longitude < -180 || $longitude > 180)) $errors[] = 'Longitude must be between -180 and 180.';
+            if ($latitudeInput !== '' && ($latitude === false || !is_finite((float) $latitude) || $latitude < -90 || $latitude > 90)) $errors[] = 'Latitude must be between -90 and 90.';
+            if ($longitudeInput !== '' && ($longitude === false || !is_finite((float) $longitude) || $longitude < -180 || $longitude > 180)) $errors[] = 'Longitude must be between -180 and 180.';
             if (($latitudeInput === '') !== ($longitudeInput === '')) $errors[] = 'Both latitude and longitude are required for a saved location.';
 
             if (empty($errors)) {
@@ -124,6 +127,10 @@ ob_start();
             <div class="card-body p-4">
                 <h4 class="fw-bold mb-4"><i class="bi bi-pencil-square"></i> Edit Profile</h4>
 
+                <?php if ($isExpiredJunkshop): ?>
+                    <div class="alert alert-warning" role="alert">Your profile is read-only while your partnership subscription is expired.</div>
+                <?php endif; ?>
+
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger">
                         <ul class="mb-0">
@@ -136,6 +143,7 @@ ob_start();
 
                 <form method="POST" action="" novalidate>
                     <?php echo CSRF::field(); ?>
+                    <fieldset <?php echo $isExpiredJunkshop ? 'disabled' : ''; ?>>
 
                     <?php if ($role === 'seller'): ?>
                         <?php
@@ -267,6 +275,7 @@ ob_start();
                         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Changes</button>
                         <a href="<?php echo APP_URL; ?>/user-junkshop/dashboard.php" class="btn btn-outline-secondary">Cancel</a>
                     </div>
+                    </fieldset>
                 </form>
             </div>
         </div>

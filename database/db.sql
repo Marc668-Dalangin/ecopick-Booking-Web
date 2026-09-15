@@ -412,7 +412,8 @@ INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES
     ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
     ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
-    ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.')
+    ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.'),
+    ('default_junkshop_expiry_days', 30.00, 'Default partnership expiration period for newly approved junkshops.')
 ON DUPLICATE KEY UPDATE
     config_value = VALUES(config_value),
     description = VALUES(description),
@@ -664,6 +665,9 @@ ALTER TABLE junkshop_profiles
     ADD COLUMN IF NOT EXISTS partnership_expires_at DATE NULL AFTER approval_status,
     ADD COLUMN IF NOT EXISTS renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current' AFTER partnership_expires_at;
 
+ALTER TABLE junkshop_profiles
+    MODIFY COLUMN partnership_expires_at DATETIME NULL DEFAULT NULL;
+
 CREATE TABLE IF NOT EXISTS concerns (
     id INT PRIMARY KEY AUTO_INCREMENT,
     reporter_account_id INT NOT NULL,
@@ -744,7 +748,7 @@ CREATE TABLE IF NOT EXISTS concern_status_history (
 UPDATE junkshop_profiles
 SET renewal_status = CASE
     WHEN partnership_expires_at IS NULL THEN 'Current'
-    WHEN partnership_expires_at < CURRENT_DATE THEN 'Expired'
-    WHEN partnership_expires_at <= DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY) THEN 'Due'
+    WHEN partnership_expires_at <= CURRENT_TIMESTAMP THEN 'Expired'
+    WHEN partnership_expires_at <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) THEN 'Due'
     ELSE 'Current'
 END;

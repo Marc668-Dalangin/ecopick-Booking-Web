@@ -54,7 +54,7 @@ class Session
     /**
      * Login user - set session and regenerate ID
      */
-    public static function login($userId, $roleId, $roleName, $email, $fullName)
+    public static function login($userId, $roleId, $roleName, $email, $fullName, $isExpired = false)
     {
         // Regenerate session ID for security
         session_regenerate_id(true);
@@ -64,6 +64,7 @@ class Session
         $_SESSION[SESSION_ROLE_NAME] = $roleName;
         $_SESSION[SESSION_EMAIL] = $email;
         $_SESSION[SESSION_FULL_NAME] = $fullName;
+        $_SESSION['is_expired'] = (bool) $isExpired;
         $_SESSION['login_time'] = time();
     }
 

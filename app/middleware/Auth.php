@@ -22,7 +22,17 @@ class Auth
 
         try {
             $account = Database::getInstance()->query(
-                'SELECT account_status FROM accounts WHERE id = :account_id LIMIT 1',
+                'SELECT a.account_status, COALESCE(a.account_role, r.name) AS account_role,
+                        jp.partnership_expires_at,
+                        CASE WHEN COALESCE(a.account_role, r.name) = \'junkshop\'
+                                  AND jp.partnership_expires_at IS NOT NULL
+                                  AND jp.partnership_expires_at <> \'0000-00-00 00:00:00\'
+                                  AND jp.partnership_expires_at <= CURRENT_TIMESTAMP
+                             THEN 1 ELSE 0 END AS is_expired
+                 FROM accounts a
+                 JOIN roles r ON r.id = a.role_id
+                 LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id
+                 WHERE a.id = :account_id LIMIT 1',
                 ['account_id' => Session::get(SESSION_USER_ID)]
             )->fetch();
         } catch (Throwable $exception) {
@@ -31,7 +41,12 @@ class Auth
             return false;
         }
 
-        if (!$account || $account['account_status'] !== 'active') {
+        $isExpiredJunkshop = $account
+            && $account['account_role'] === 'junkshop'
+            && (int) ($account['is_expired'] ?? 0) === 1;
+        Session::set('is_expired', $isExpiredJunkshop);
+
+        if (!$account || ($account['account_status'] !== 'active' && !$isExpiredJunkshop)) {
             self::logout();
             return false;
         }
@@ -101,10 +116,10 @@ class Auth
     /**
      * Login user
      */
-    public static function login($userId, $roleId, $roleName, $email, $fullName)
+    public static function login($userId, $roleId, $roleName, $email, $fullName, $isExpired = false)
     {
         Session::start();
-        Session::login($userId, $roleId, $roleName, $email, $fullName);
+        Session::login($userId, $roleId, $roleName, $email, $fullName, $isExpired);
     }
 
     /**

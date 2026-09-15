@@ -12,6 +12,23 @@ if (Auth::userRole() !== 'junkshop') {
     exit;
 }
 
+if (!empty($_SESSION['is_expired'])) {
+    $pageTitle = 'Materials and Prices';
+    $currentPage = 'materials-prices';
+    $userDisplayName = Auth::userName();
+    ob_start();
+    ?>
+    <div class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5 text-center">
+        <i class="bi bi-lock-fill display-5 text-warning"></i>
+        <h2 class="fw-bold mt-3">Materials &amp; Prices Locked</h2>
+        <p class="text-muted mb-0">These features are locked because your partnership subscription has expired. Pay the renewal fee to reactivate them.</p>
+    </div></div>
+    <?php
+    $content = ob_get_clean();
+    require_once __DIR__ . '/../app/views/user_dashboard_shell.php';
+    exit;
+}
+
 $controller = new MaterialPriceController();
 $accountId = Auth::userId();
 $approvalStatus = $controller->getJunkshopApprovalStatus($accountId);

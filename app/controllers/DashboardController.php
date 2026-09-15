@@ -176,9 +176,20 @@ class DashboardController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop account not found'];
             }
+            $expiryDate = null;
+            if ($status === 'approved') {
+                $defaultDays = (int) $this->db->query(
+                    "SELECT config_value FROM fee_configurations WHERE config_key = 'default_junkshop_expiry_days' LIMIT 1"
+                )->fetchColumn();
+                $defaultDays = in_array($defaultDays, [21, 30], true) ? $defaultDays : 30;
+                $expiryDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))
+                    ->modify('+' . $defaultDays . ' days')
+                    ->setTime(23, 59, 59)
+                    ->format('Y-m-d H:i:s');
+            }
             $this->db->query(
-                'UPDATE junkshop_profiles SET approval_status = :status, updated_at = CURRENT_TIMESTAMP WHERE account_id = :account_id',
-                ['status' => $status, 'account_id' => (int) $accountId]
+                'UPDATE junkshop_profiles SET approval_status = :status, partnership_expires_at = COALESCE(:expiry_date, partnership_expires_at), renewal_status = CASE WHEN :status_for_expiry = \'approved\' THEN \'Current\' ELSE renewal_status END, updated_at = CURRENT_TIMESTAMP WHERE account_id = :account_id',
+                ['status' => $status, 'expiry_date' => $expiryDate, 'status_for_expiry' => $status, 'account_id' => (int) $accountId]
             );
             $this->db->query(
                 "UPDATE accounts SET account_status = 'active', updated_at = CURRENT_TIMESTAMP
@@ -276,7 +287,7 @@ class DashboardController
             $this->db->query(
                 "UPDATE junkshop_profiles
                  SET business_name = :business_name, owner_name = :profile_owner_name, complete_address = :complete_address,
-                     latitude = COALESCE(:latitude, latitude), longitude = COALESCE(:longitude, longitude),
+                     latitude = :latitude, longitude = :longitude,
                      operating_schedule = :operating_schedule, business_permit_reference = :permit_reference,
                      gcash_account_name = NULLIF(TRIM(:gcash_name), ''), gcash_account_number = NULLIF(TRIM(:gcash_number), ''),
                      updated_at = CURRENT_TIMESTAMP
@@ -285,8 +296,8 @@ class DashboardController
                     'business_name' => $businessName,
                     'profile_owner_name' => $ownerName,
                     'complete_address' => $completeAddress,
-                    'latitude' => $latitude,
-                    'longitude' => $longitude,
+                    'latitude' => $latitude === null ? null : (float) $latitude,
+                    'longitude' => $longitude === null ? null : (float) $longitude,
                     'operating_schedule' => $operatingSchedule,
                     'permit_reference' => $permitReference,
                     'gcash_name' => trim((string) $gcashAccountName),

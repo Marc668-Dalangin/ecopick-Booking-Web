@@ -8,6 +8,7 @@ $userDisplayName = $userDisplayName ?? Auth::userName();
 $userRole = Auth::userRole();
 $currentPage = $currentPage ?? 'dashboard';
 $notificationCount = (int) (new NotificationController())->unreadCount(Auth::userId());
+$isExpiredJunkshop = $userRole === 'junkshop' && (bool) ($_SESSION['is_expired'] ?? false);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -77,6 +78,9 @@ $notificationCount = (int) (new NotificationController())->unreadCount(Auth::use
         </aside>
 
         <div class="user-main col-12 col-lg-10">
+            <?php if ($isExpiredJunkshop): ?>
+                <div class="alert alert-warning text-center m-0 rounded-0 fw-bold sticky-top"><i class="fas fa-exclamation-triangle me-2"></i> Your partnership subscription has expired. Please pay the renewal fee to reactivate your account features.</div>
+            <?php endif; ?>
             <header class="user-topbar">
                 <div class="d-flex align-items-center gap-3">
                     <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#userSidebarMobile" aria-label="Open navigation">

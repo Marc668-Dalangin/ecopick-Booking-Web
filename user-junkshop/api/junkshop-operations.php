@@ -38,6 +38,16 @@ if (Auth::userRole() !== 'junkshop') {
     exit;
 }
 
+if (!empty($_SESSION['is_expired'])) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Matched requests are locked until your subscription is renewed.',
+        'data' => ['requests' => []],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $junkshopId = (int) Auth::userId();
 $assignmentController = new JunkshopAssignmentController();
 $bookingLifecycleController = new BookingLifecycleController();

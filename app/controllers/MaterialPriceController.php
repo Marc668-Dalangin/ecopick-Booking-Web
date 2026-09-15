@@ -110,7 +110,7 @@ class MaterialPriceController
                    AND pj.seller_id = :preferred_seller_id
                 WHERE a.account_status = 'active'
                   AND jp.approval_status = 'approved'
-                  AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
+                  AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)
                 ORDER BY is_preferred DESC, jp.business_name ASC, rm.category ASC, rm.material_name ASC",
                 [
                     'seller_account_id' => (int) $sellerAccountId,
@@ -119,7 +119,7 @@ class MaterialPriceController
             )->fetchAll(),
             static function (array $junkshop): bool {
                 $expiry = trim((string) ($junkshop['partnership_expires_at'] ?? ''));
-                return $expiry === '' || $expiry >= date('Y-m-d');
+                return $expiry === '' || ($expiry !== '0000-00-00 00:00:00' && strtotime($expiry) > time());
             }
         ));
     }
@@ -138,7 +138,7 @@ class MaterialPriceController
                  WHERE jp.account_id = :junkshop_id
                    AND a.account_status = 'active'
                    AND jp.approval_status = 'approved'
-                   AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at >= CURRENT_DATE)
+                   AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)
                  LIMIT 1",
                 ['junkshop_id' => $junkshopAccountId]
             )->fetch();
