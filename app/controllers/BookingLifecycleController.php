@@ -139,7 +139,7 @@ class BookingLifecycleController
         return ['success' => true, 'message' => 'Final settlement preview ready.', 'data' => $settlement];
     }
 
-    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, float $pickupCollectionFee, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = '', ?float $actualPricePerKg = null): array
+    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = '', ?float $actualPricePerKg = null): array
     {
         $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'For Pickup');
         if ($pickupRequest === null) {
@@ -170,7 +170,8 @@ class BookingLifecycleController
             return ['success' => false, 'message' => 'A valid payment method and payment status are required.'];
         }
 
-        $settlement = FeeCalculator::calculateMaterialSettlement($preparedMaterials['materials'], $pickupCollectionFee);
+        $storedPickupFee = max(0.0, (float) ($pickupRequest['pickup_fee'] ?? 0.0));
+        $settlement = FeeCalculator::calculateMaterialSettlement($preparedMaterials['materials'], $storedPickupFee);
 
         try {
             $this->db->beginTransaction();
@@ -183,7 +184,7 @@ class BookingLifecycleController
                     'actual_weight_kg' => number_format((float) $settlement['actual_weight_kg'], 2, '.', ''),
                     'material_condition_notes' => $materialConditionNotes !== '' ? trim($materialConditionNotes) : null,
                     'final_recyclable_value' => number_format((float) $settlement['final_recyclable_value'], 2, '.', ''),
-                    'pickup_fee' => number_format((float) $settlement['pickup_fee'], 2, '.', ''),
+                    'pickup_fee' => number_format($storedPickupFee, 2, '.', ''),
                     'ecopick_service_fee' => number_format((float) $settlement['ecopick_service_fee'], 2, '.', ''),
                     'final_seller_amount' => number_format((float) $settlement['final_seller_amount'], 2, '.', ''),
                     'transaction_commission' => number_format((float) $settlement['transaction_commission'], 2, '.', ''),
@@ -245,7 +246,7 @@ class BookingLifecycleController
                     [
                         'status' => 'Completed',
                         'final_recyclable_value' => number_format((float) $settlement['final_recyclable_value'], 2, '.', ''),
-                        'pickup_collection_fee' => number_format((float) $settlement['pickup_fee'], 2, '.', ''),
+                        'pickup_collection_fee' => number_format($storedPickupFee, 2, '.', ''),
                         'ecopick_service_fee' => number_format((float) $settlement['ecopick_service_fee'], 2, '.', ''),
                         'final_amount_paid' => number_format((float) $settlement['final_seller_amount'], 2, '.', ''),
                         'payment_method' => $paymentMethod,
@@ -307,7 +308,7 @@ class BookingLifecycleController
     private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array
     {
         $row = $this->db->query(
-            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
+            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.pickup_fee, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,

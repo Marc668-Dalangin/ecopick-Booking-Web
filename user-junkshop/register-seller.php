@@ -89,11 +89,13 @@ $pageTitle = 'Register as Seller';
                                     <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
                                     <input
                                         type="text"
-                                        class="form-control"
+                                        class="form-control uppercase-input"
                                         id="first_name"
                                         name="first_name"
                                         value="<?php echo isset($_POST['first_name']) ? Validator::escape($_POST['first_name']) : ''; ?>"
                                         required
+                                        pattern="[A-Za-z\s]+"
+                                        title="Letters and spaces only"
                                         placeholder="Juan"
                                     >
                                 </div>
@@ -101,11 +103,13 @@ $pageTitle = 'Register as Seller';
                                     <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
                                     <input
                                         type="text"
-                                        class="form-control"
+                                        class="form-control uppercase-input"
                                         id="last_name"
                                         name="last_name"
                                         value="<?php echo isset($_POST['last_name']) ? Validator::escape($_POST['last_name']) : ''; ?>"
                                         required
+                                        pattern="[A-Za-z\s]+"
+                                        title="Letters and spaces only"
                                         placeholder="Dela Cruz"
                                     >
                                 </div>
@@ -277,6 +281,12 @@ $pageTitle = 'Register as Seller';
     </div>
 </div>
 
+<style>
+    .uppercase-input {
+        text-transform: uppercase;
+    }
+</style>
+
 <script>
     function validateUsername(input) {
         if (!input) return false;
@@ -304,6 +314,15 @@ $pageTitle = 'Register as Seller';
                 validateUsername(this);
             });
         }
+
+        ['first_name', 'last_name'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+                });
+            }
+        });
 
         const mobileInput = document.getElementById('mobile_number');
         if (mobileInput) {

@@ -75,6 +75,7 @@ class MaterialPriceController
                     jp.business_name,
                     jp.partnership_expires_at,
                     jp.complete_address AS location,
+                    jp.complete_address AS address,
                     CAST(jp.latitude AS DECIMAL(11,8)) AS latitude,
                     CAST(jp.longitude AS DECIMAL(11,8)) AS longitude,
                     jp.operating_schedule,

@@ -70,11 +70,20 @@ window.addEventListener('DOMContentLoaded', function () {
     const modal = modalElement ? new bootstrap.Modal(modalElement) : null;
     let pendingId = null;
     let lastPayload = null;
+    const liveDistancePollers = new Map();
     function setupLiveDistancePolling() {
+        liveDistancePollers.forEach(function (timerId, bookingId) {
+            if (!document.querySelector('.live-distance[data-booking-id="' + bookingId + '"]')) {
+                window.clearInterval(timerId);
+                liveDistancePollers.delete(bookingId);
+            }
+        });
         document.querySelectorAll('.live-distance').forEach(function (node) {
+            const bookingId = String(node.dataset.bookingId);
+            if (liveDistancePollers.has(bookingId)) return;
             const poll = function () { fetch('<?php echo APP_URL; ?>/user-junkshop/api/get_live_distance.php?booking_id=' + encodeURIComponent(node.dataset.bookingId), { credentials: 'same-origin' }).then(response => response.json()).then(payload => { if (payload.distance_km !== null && payload.distance_km !== undefined) node.textContent = 'Junkshop is currently ' + Number(payload.distance_km).toFixed(2) + ' km away'; }).catch(function () {}); };
             poll();
-            window.setInterval(poll, 5000);
+            liveDistancePollers.set(bookingId, window.setInterval(poll, 10000));
         });
     }
 

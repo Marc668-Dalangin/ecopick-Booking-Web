@@ -419,6 +419,11 @@ ob_start();
 
     document.addEventListener('DOMContentLoaded', function() {
         const trackButton = document.getElementById('btn-track-junkshop-location');
+        const highPrecisionGeoOptions = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
         const latitudeInput = document.getElementById('latitude');
         const longitudeInput = document.getElementById('longitude');
         const addressInput = document.getElementById('complete_address');
@@ -495,10 +500,18 @@ ob_start();
             resetTrackButton();
         }
 
-        const savedLatitude = Number.parseFloat(latitudeInput.value);
-        const savedLongitude = Number.parseFloat(longitudeInput.value);
-        if (Number.isFinite(savedLatitude) && Number.isFinite(savedLongitude)) {
-            initializeJunkshopMap(savedLatitude, savedLongitude);
+        function initializeSavedLocation() {
+            const savedLatitude = Number.parseFloat(latitudeInput.value);
+            const savedLongitude = Number.parseFloat(longitudeInput.value);
+            if (Number.isFinite(savedLatitude) && Number.isFinite(savedLongitude)) {
+                initializeJunkshopMap(savedLatitude, savedLongitude);
+                return true;
+            }
+            return false;
+        }
+
+        if (!initializeSavedLocation()) {
+            window.addEventListener('load', initializeSavedLocation, { once: true });
         }
 
         trackButton.addEventListener('click', function() {
@@ -525,7 +538,7 @@ ob_start();
                 setCoordinates(lat, lng);
                 initializeJunkshopMap(lat, lng);
                 reverseGeocodeJunkshopLocation(lat, lng).catch(function() {}).finally(resetTrackButton);
-            }, handleLocationError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+            }, handleLocationError, highPrecisionGeoOptions);
         });
     });
 </script>

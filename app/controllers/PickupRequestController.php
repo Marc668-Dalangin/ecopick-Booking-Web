@@ -83,14 +83,44 @@ class PickupRequestController
                 }
             }
 
+            $junkshopLocation = $this->db->query(
+                'SELECT latitude, longitude FROM junkshop_profiles WHERE account_id = :junkshop_id LIMIT 1',
+                ['junkshop_id' => (int) $normalized['junkshop_id']]
+            )->fetch();
+            if (!$junkshopLocation || !is_numeric($junkshopLocation['latitude']) || !is_numeric($junkshopLocation['longitude'])) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'The selected junkshop has not configured a pickup location yet.', 'validation_errors' => []];
+            }
+
+            $calculatedDistance = $this->calculateDistanceInKm(
+                (float) $normalized['seller_lat'],
+                (float) $normalized['seller_lng'],
+                (float) $junkshopLocation['latitude'],
+                (float) $junkshopLocation['longitude']
+            );
+            $perKmRate = $this->getPerKmRate();
+            $wholeKm = (int) floor($calculatedDistance);
+            $pickupFee = $wholeKm * $perKmRate;
+            $materialTotal = 0.0;
+            foreach ($normalized['items'] as $item) {
+                $price = $this->db->query(
+                    'SELECT buying_price FROM junkshop_material_prices WHERE junkshop_account_id = :junkshop_id AND material_id = :material_id AND available = 1 LIMIT 1',
+                    ['junkshop_id' => (int) $normalized['junkshop_id'], 'material_id' => (int) $item['material_id']]
+                )->fetchColumn();
+                $materialTotal += (float) ($price ?: 0) * (float) $item['estimated_weight'];
+            }
+            $serviceFeePct = (float) (FeeCalculator::getConfigs()['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
+            $serviceFee = round($materialTotal * ($serviceFeePct / 100), 2);
+            $totalEstimatedAmount = round($materialTotal - $pickupFee - $serviceFee, 2);
+
             $this->db->query(
                 "INSERT INTO pickup_requests
                     (booking_reference, seller_account_id, junkshop_id, current_status, pickup_address,
                      preferred_pickup_date, preferred_pickup_time, photo_path, notes,
-                     approximate_distance_km, seller_lat, seller_lng)
+                     approximate_distance_km, calculated_distance, pickup_fee, total_estimated_amount, seller_lat, seller_lng)
                  VALUES ('', :seller_id, :junkshop_id, 'Pending Request', :pickup_address,
                          :pickup_date, :pickup_time, :photo_path, :notes,
-                         :distance_km, :seller_lat, :seller_lng)",
+                         :distance_km, :calculated_distance, :pickup_fee, :total_estimated_amount, :seller_lat, :seller_lng)",
                 [
                     'seller_id' => (int) $sellerAccountId,
                     'junkshop_id' => (int) $normalized['junkshop_id'],
@@ -100,6 +130,9 @@ class PickupRequestController
                     'photo_path' => $photoPath,
                     'notes' => $normalized['notes'] !== '' ? $normalized['notes'] : null,
                     'distance_km' => $normalized['approximate_distance_km'],
+                    'calculated_distance' => number_format($calculatedDistance, 2, '.', ''),
+                    'pickup_fee' => number_format($pickupFee, 2, '.', ''),
+                    'total_estimated_amount' => number_format($totalEstimatedAmount, 2, '.', ''),
                     'seller_lat' => $normalized['seller_lat'],
                     'seller_lng' => $normalized['seller_lng'],
                 ]
@@ -470,6 +503,33 @@ class PickupRequestController
             'preferred_pickup_time' => trim((string) ($data['preferred_pickup_time'] ?? '')),
             'notes' => trim((string) ($data['notes'] ?? '')),
         ];
+    }
+
+    private function calculateDistanceInKm(float $sellerLatitude, float $sellerLongitude, float $junkshopLatitude, float $junkshopLongitude): float
+    {
+        $earthRadius = 6371.0;
+        $latitudeDifference = deg2rad($junkshopLatitude - $sellerLatitude);
+        $longitudeDifference = deg2rad($junkshopLongitude - $sellerLongitude);
+        $a = sin($latitudeDifference / 2) ** 2
+            + cos(deg2rad($sellerLatitude)) * cos(deg2rad($junkshopLatitude)) * sin($longitudeDifference / 2) ** 2;
+        return round($earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a)), 2);
+    }
+
+    private function getPerKmRate(): float
+    {
+        $perKmRate = FeeCalculator::DEFAULT_PICKUP_FEE;
+        try {
+            $configuredRate = $this->db->query(
+                "SELECT config_value FROM fee_configurations WHERE config_key = 'default_pickup_fee' LIMIT 1"
+            )->fetchColumn();
+            if (is_numeric($configuredRate)) {
+                $perKmRate = (float) $configuredRate;
+            }
+        } catch (PDOException $exception) {
+            error_log('Pickup fee lookup failed: ' . $exception->getMessage());
+        }
+
+        return max(0.0, $perKmRate);
     }
 
     private function storePhoto($file)

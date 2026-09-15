@@ -276,7 +276,7 @@ class DashboardController
             $this->db->query(
                 "UPDATE junkshop_profiles
                  SET business_name = :business_name, owner_name = :profile_owner_name, complete_address = :complete_address,
-                     latitude = :latitude, longitude = :longitude,
+                     latitude = COALESCE(:latitude, latitude), longitude = COALESCE(:longitude, longitude),
                      operating_schedule = :operating_schedule, business_permit_reference = :permit_reference,
                      gcash_account_name = NULLIF(TRIM(:gcash_name), ''), gcash_account_number = NULLIF(TRIM(:gcash_number), ''),
                      updated_at = CURRENT_TIMESTAMP
@@ -350,6 +350,7 @@ class DashboardController
                 pr.confirmed_pickup_date,
                 pr.confirmed_pickup_time,
                 pr.approximate_distance_km AS distance_km,
+                pr.pickup_fee,
                 pr.created_at,
                                 pr.updated_at,
                      (SELECT DATE_FORMAT(MAX(bsh.changed_at), \'%b %d, %Y at %h:%i %p\')

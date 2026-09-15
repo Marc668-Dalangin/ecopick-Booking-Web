@@ -122,7 +122,7 @@ $pageTitle = 'Register Your Junkshop';
                                 <label for="business_name" class="form-label">Business Name <span class="text-danger">*</span></label>
                                 <input 
                                     type="text" 
-                                    class="form-control" 
+                                    class="form-control uppercase-input"
                                     id="business_name" 
                                     name="business_name"
                                     value="<?php echo isset($_POST['business_name']) ? Validator::escape($_POST['business_name']) : ''; ?>"
@@ -136,7 +136,7 @@ $pageTitle = 'Register Your Junkshop';
                                 <label for="owner_name" class="form-label">Owner/Authorized Contact Person <span class="text-danger">*</span></label>
                                 <input 
                                     type="text" 
-                                    class="form-control" 
+                                    class="form-control uppercase-input"
                                     id="owner_name" 
                                     name="owner_name"
                                     value="<?php echo isset($_POST['owner_name']) ? Validator::escape($_POST['owner_name']) : ''; ?>"
@@ -252,7 +252,7 @@ $pageTitle = 'Register Your Junkshop';
                                         value="<?php echo isset($_POST['mobile_number']) ? Validator::escape($_POST['mobile_number']) : ''; ?>"
                                         required
                                         inputmode="numeric"
-                                        maxlength="9"
+                                        maxlength="11"
                                         pattern="[0-9]*"
                                         placeholder="123456789"
                                         aria-describedby="mobile_number_help"
@@ -370,6 +370,12 @@ $pageTitle = 'Register Your Junkshop';
     </div>
 </div>
 
+<style>
+    .uppercase-input {
+        text-transform: uppercase;
+    }
+</style>
+
 <script>
     function validateUsername(input) {
         if (!input) return false;
@@ -420,9 +426,19 @@ $pageTitle = 'Register Your Junkshop';
             });
         }
 
+        ['business_name', 'owner_name'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase();
+                });
+            }
+        });
+
         const mobileInput = document.getElementById('mobile_number');
         if (mobileInput) {
             mobileInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
                 validateMobileSuffix(this);
             });
             mobileInput.addEventListener('blur', function() {

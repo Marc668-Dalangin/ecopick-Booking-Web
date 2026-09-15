@@ -6,7 +6,7 @@
 class FeeCalculator
 {
     public const DEFAULT_SERVICE_FEE_PCT = 0.05;
-    public const DEFAULT_PICKUP_FEE = 0.00;
+    public const DEFAULT_PICKUP_FEE = 10.00;
     public const DEFAULT_JUNKSHOP_COMMISSION_PCT = 0.025;
 
     /**
@@ -16,11 +16,16 @@ class FeeCalculator
      */
     public static function getConfigs(): array
     {
-        $db = Database::getInstance();
-        $stmt = $db->query('SELECT config_key, config_value FROM fee_configurations');
-        $rows = $stmt->fetchAll();
-
         $configs = [];
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->query('SELECT config_key, config_value FROM fee_configurations');
+            $rows = $stmt->fetchAll();
+        } catch (PDOException $exception) {
+            error_log('Fee configuration lookup failed: ' . $exception->getMessage());
+            return $configs;
+        }
+
         foreach ($rows as $row) {
             $key = (string) ($row['config_key'] ?? '');
             $value = (float) ($row['config_value'] ?? 0.0);

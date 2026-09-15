@@ -25,6 +25,7 @@ if ($method !== 'POST') {
     session_write_close();
 }
 
+try {
 if ($method === 'POST') {
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
         http_response_code(400);
@@ -92,3 +93,12 @@ if ($action === 'details') {
 
 $requests = $controller->listSellerRequests($sellerId);
 echo json_encode(['success' => true, 'message' => 'Pickup requests loaded.', 'data' => ['requests' => $requests], 'validation_errors' => [], 'timestamp' => time()], JSON_UNESCAPED_UNICODE);
+} catch (PDOException $exception) {
+    error_log('Pickup request database error: ' . $exception->getMessage());
+    http_response_code(503);
+    echo json_encode(['success' => false, 'message' => 'The pickup request service is temporarily unavailable. Please try again later.', 'validation_errors' => [], 'data' => ['requests' => []]], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $exception) {
+    error_log('Pickup request handler error: ' . $exception->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Unable to process the pickup request right now.', 'validation_errors' => [], 'data' => ['requests' => []]], JSON_UNESCAPED_UNICODE);
+}

@@ -50,9 +50,10 @@ ob_start();
 
         <div id="live-tracking-container" style="display: <?php echo $activeTrackingAssignment !== null ? 'block' : 'none'; ?>;" data-booking-id="<?php echo (int) ($activeTrackingAssignment['pickup_request_id'] ?? 0); ?>">
             <div class="tracking-info">
-                <p><strong>Seller Location:</strong> <span id="seller-address-text"></span></p>
-                <p><strong>Your Current Location:</strong> <span id="junkshop-address-text">Fetching...</span></p>
-                <p><strong>Exact Distance:</strong> <span id="live-distance">Calculating...</span></p>
+                <p><strong class="text-danger">Seller location:</strong> <span id="seller-address-text"></span></p>
+                <p><strong class="text-danger">Your Current Location:</strong> <span id="junkshop-address-text">Fetching...</span></p>
+                <p><strong class="text-danger">Exact distance:</strong> <span id="live-distance">Calculating...</span></p>
+                <div id="location-error-note" class="alert alert-warning d-none mt-2" role="alert"></div>
             </div>
         </div>
 
@@ -244,11 +245,28 @@ window.addEventListener('DOMContentLoaded', function () {
     const sellerAddressText = document.getElementById('seller-address-text');
     const junkshopAddressText = document.getElementById('junkshop-address-text');
     const liveDistance = document.getElementById('live-distance');
+    const locationErrorNote = document.getElementById('location-error-note');
+    const locationErrorMessage = '<strong>Location Access Required:</strong> Please ensure your device GPS is turned ON in settings and location permissions are ALLOWED for this website in your browser settings. Once enabled, reload the page to view your location and exact distance.';
     const sellerMaps = new Map();
+    const highPrecisionGeoOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    };
     let trackingIntervalId = null;
     let trackingRequestId = null;
     let locationUpdateInProgress = false;
     let lastGeocodedJunkshopLocation = null;
+
+    function showLocationError() {
+        if (!locationErrorNote) return;
+        locationErrorNote.innerHTML = locationErrorMessage;
+        locationErrorNote.classList.remove('d-none');
+    }
+
+    function hideLocationError() {
+        locationErrorNote?.classList.add('d-none');
+    }
 
     function updateLiveLocation(requestId, lat, lng, sellerLat, sellerLng) {
         const distance = calculateDistance(sellerLat, sellerLng, lat, lng);
@@ -347,6 +365,7 @@ window.addEventListener('DOMContentLoaded', function () {
         trackingRequestId = requestId;
         if (trackingIntervalId !== null) window.clearInterval(trackingIntervalId);
         if (!navigator.geolocation) {
+            showLocationError();
             junkshopAddressText.textContent = 'Geolocation unavailable';
             return;
         }
@@ -356,12 +375,17 @@ window.addEventListener('DOMContentLoaded', function () {
                 const junkshopLat = parseFloat(position.coords.latitude);
                 const junkshopLng = parseFloat(position.coords.longitude);
                 if (!Number.isFinite(junkshopLat) || !Number.isFinite(junkshopLng)) return;
+                hideLocationError();
                 updateLiveLocation(requestId, junkshopLat, junkshopLng, sellerLat, sellerLng);
             }, function () {
+                showLocationError();
                 if (trackingRequestId === requestId && junkshopAddressText) junkshopAddressText.textContent = 'Unable to access current location';
-            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
+            }, highPrecisionGeoOptions);
         };
-        updateCurrentLocation();
+        function initAutoLocation() {
+            updateCurrentLocation();
+        }
+        initAutoLocation();
         trackingIntervalId = window.setInterval(updateCurrentLocation, 10000);
     }
 
@@ -500,7 +524,7 @@ window.addEventListener('DOMContentLoaded', function () {
         }).join('');
         const modal = document.createElement('div');
         modal.className = 'modal fade';
-        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form id="completion-form"><div class="modal-header"><h5 class="modal-title">Complete Transaction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="small text-muted mb-3">Enter the actual weight and condition received for each material.</div>' + rows + '<div class="row g-3 mt-2"><div class="col-md-4"><label class="form-label">Pickup collection fee</label><input class="form-control" name="pickup_collection_fee" type="number" min="0" step="0.01" value="0" required></div><div class="col-md-4"><label class="form-label">Payment method</label><select class="form-select" name="payment_method" required><option value="Cash">Cash</option></select></div><div class="col-md-4"><label class="form-label">Payment status</label><select class="form-select" name="payment_status" required><option value="Unpaid">Unpaid</option><option value="Paid">Paid</option></select></div></div><div class="d-flex flex-column gap-2 mt-3 small"><div class="d-flex justify-content-between align-items-center gap-3"><span>Actual recyclable value</span><strong class="live-final-value">₱0.00</strong></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Pickup / Collection fee</span><span class="text-danger live-pickup-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Ecopick service fee</span><span class="text-danger live-service-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3 border-top pt-2 mt-1"><strong>Final net amount</strong><strong class="live-net-amount">₱0.00</strong></div></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Complete Transaction</button></div></form></div></div>';
+        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form id="completion-form"><div class="modal-header"><h5 class="modal-title">Complete Transaction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="small text-muted mb-3">Enter the actual weight and condition received for each material.</div>' + rows + '<div class="row g-3 mt-2"><div class="col-md-4"><label class="form-label">Pickup collection fee</label><div class="form-control-plaintext fw-bold">₱' + Number(request.pickup_fee || 0).toFixed(2) + ' <small class="text-muted">(Auto-calculated from Pickup Request)</small></div></div><div class="col-md-4"><label class="form-label">Payment method</label><select class="form-select" name="payment_method" required><option value="Cash">Cash</option></select></div><div class="col-md-4"><label class="form-label">Payment status</label><select class="form-select" name="payment_status" required><option value="Unpaid">Unpaid</option><option value="Paid">Paid</option></select></div></div><div class="d-flex flex-column gap-2 mt-3 small"><div class="d-flex justify-content-between align-items-center gap-3"><span>Actual recyclable value</span><strong class="live-final-value">₱0.00</strong></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Pickup / Collection fee</span><span class="text-danger live-pickup-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Ecopick service fee</span><span class="text-danger live-service-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3 border-top pt-2 mt-1"><strong>Final net amount</strong><strong class="live-net-amount">₱0.00</strong></div></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Complete Transaction</button></div></form></div></div>';
         document.body.appendChild(modal);
         const instance = bootstrap.Modal.getOrCreateInstance(modal);
         instance.show();
@@ -511,7 +535,7 @@ window.addEventListener('DOMContentLoaded', function () {
                 const priceInput = modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]');
                 return total + (Number(input.value || 0) * Number(priceInput?.value || 0));
             }, 0);
-            const pickupFee = Number(modal.querySelector('[name="pickup_collection_fee"]').value || 0);
+            const pickupFee = Number(request.pickup_fee || 0);
             const actualServiceFee = actualRecyclableValue * (Number(request.service_fee_pct || 5) / 100);
             const finalNetAmount = actualRecyclableValue - pickupFee - actualServiceFee;
             modal.querySelector('.live-final-value').textContent = formatMoney(actualRecyclableValue);
@@ -519,7 +543,7 @@ window.addEventListener('DOMContentLoaded', function () {
             modal.querySelector('.live-service-fee').textContent = '- ' + formatMoney(actualServiceFee);
             modal.querySelector('.live-net-amount').textContent = formatMoney(finalNetAmount);
         };
-        modal.querySelectorAll('.actual-price-input, .actual-weight-input, .material-condition, [name="pickup_collection_fee"]').forEach(input => input.addEventListener('input', updatePreview));
+        modal.querySelectorAll('.actual-price-input, .actual-weight-input, .material-condition').forEach(input => input.addEventListener('input', updatePreview));
         modal.addEventListener('click', function (event) {
             const actionButton = event.target.closest('.remove-material, .undo-material');
             if (!actionButton) return;
@@ -544,7 +568,7 @@ window.addEventListener('DOMContentLoaded', function () {
             }
             const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), buying_price_per_kg: Number(modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]')?.value || 0), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
             const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
-            const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, pickup_collection_fee: modal.querySelector('[name="pickup_collection_fee"]').value, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
+            const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
             const resultPayload = await result.json();
             if (!resultPayload.success) { showFeedback(resultPayload.message || 'Unable to complete this transaction.', false); return; }
             removeSellerMap(requestId);

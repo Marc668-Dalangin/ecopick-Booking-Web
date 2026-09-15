@@ -18,7 +18,7 @@ $controller = new MaterialPriceController();
 $junkshops = $controller->listApprovedJunkshopsWithPrices(Auth::userId());
 $materials = $controller->listActiveMaterials();
 $feeConfigs = FeeCalculator::getConfigs();
-$defaultPickupFee = (float)($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
+$perKmRate = (float)($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
 $serviceFeePct = (float)($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
 
 $pageTitle = 'Partner Junkshops and Buying Prices';
@@ -131,7 +131,7 @@ ob_start();
                                             <i class="bi bi-clock-history"></i> Request Pending
                                         </button>
                                     <?php else: ?>
-                                        <button type="button" class="btn btn-primary request-pickup-btn" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-junkshop-lat="<?php echo htmlspecialchars((string)($junkshop['latitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-lng="<?php echo htmlspecialchars((string)($junkshop['longitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-address="<?php echo htmlspecialchars((string)($junkshop['location'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                                        <button type="button" class="btn btn-primary request-pickup-btn" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-junkshop-lat="<?php echo htmlspecialchars((string)($junkshop['latitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-lng="<?php echo htmlspecialchars((string)($junkshop['longitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-address="<?php echo htmlspecialchars((string)($junkshop['address'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                                             <i class="bi bi-plus-circle"></i> Request Pickup
                                         </button>
                                     <?php endif; ?>
@@ -164,9 +164,10 @@ ob_start();
                         <option value="">Choose a junkshop</option>
                         <?php foreach ($rowsByJunkshop as $junkshopRows): ?>
                             <?php $junkshopOption = $junkshopRows[0]; ?>
-                            <option value="<?php echo (int)($junkshopOption['junkshop_account_id'] ?? 0); ?>" data-lat="<?php echo htmlspecialchars((string)($junkshopOption['latitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-lng="<?php echo htmlspecialchars((string)($junkshopOption['longitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-address="<?php echo htmlspecialchars((string)($junkshopOption['location'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($junkshopOption['business_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></option>
+                            <option value="<?php echo (int)($junkshopOption['junkshop_account_id'] ?? 0); ?>" data-lat="<?php echo htmlspecialchars((string)($junkshopOption['latitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-lng="<?php echo htmlspecialchars((string)($junkshopOption['longitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-address="<?php echo htmlspecialchars((string)($junkshopOption['address'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($junkshopOption['business_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <small id="pickup-fee-note" class="text-muted d-block mt-1">Note: Pickup fee rate is ₱<?php echo number_format($perKmRate, 2); ?> per km based on active system configuration.</small>
 
                     <div class="mb-4">
                         <h6 class="fw-bold mb-2">Materials</h6>
@@ -184,27 +185,27 @@ ob_start();
                             </div>
                             <div class="d-flex flex-column gap-2">
                                 <div class="d-flex justify-content-between align-items-center gap-3">
-                                    <span>Estimated recyclable value</span>
-                                    <span class="fw-semibold" id="calc-estimated-recyclable-value">₱0.00</span>
+                                    <span>Material Total</span>
+                                    <span class="fw-semibold" id="calc-material-total">₱0.00</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                     <span>Pickup / Collection fee</span>
                                     <span class="text-danger" id="calc-pickup-fee">- ₱0.00</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center gap-3">
-                                    <span>Ecopick service fee</span>
+                                    <span>EcoPick service fee</span>
                                     <span class="text-danger" id="calc-service-fee">- ₱0.00</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center gap-3 border-top pt-2 mt-1">
-                                    <strong>Estimated net amount to receive</strong>
-                                    <strong id="calc-estimated-net-amount">₱0.00</strong>
+                                    <strong>Estimated Total Payout</strong>
+                                    <strong id="calc-estimated-total">₱0.00</strong>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4"><label class="form-label" for="pickup_address">Address <span class="text-danger">*</span></label><div class="input-group"><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" readonly placeholder="Use Get Current Location"><button type="button" class="btn btn-primary" id="btn-get-location">Get Current Location</button></div><input type="hidden" id="seller_lat" name="seller_lat"><input type="hidden" id="seller_lng" name="seller_lng"><div id="junkshop-location-info" class="mt-2 text-muted"></div><div id="approx-distance-container" class="fw-bold text-primary mt-1"></div></div>
+                        <div class="col-md-4"><label class="form-label" for="pickup_address">Address <span class="text-danger">*</span></label><div class="input-group"><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" readonly placeholder="Use Get Current Location"><button type="button" class="btn btn-primary" id="btn-get-location">Get Current Location</button></div><input type="hidden" id="seller_lat" name="seller_lat"><input type="hidden" id="seller_lng" name="seller_lng"><div id="location-error-note" class="alert alert-warning d-none mt-2" role="alert"></div><div id="junkshop-location-info" class="mt-2 text-muted"></div><div id="approx-distance-container" class="fw-bold text-primary mt-1"></div></div>
                         <div class="col-12"><div id="pickup-map" style="height: 250px; width: 100%; display: none; margin-bottom: 15px; z-index: 1; touch-action: none;"></div></div>
                         <div class="col-md-4"><label class="form-label" for="approximate_distance_km">Approximate distance (km) <span class="text-danger">*</span></label><input type="number" min="0" max="15" step="0.01" class="form-control" id="approximate_distance_km" name="approximate_distance_km" required placeholder="Example: 4.50"></div>
                         <div class="col-md-4"><label class="form-label" for="preferred_pickup_date">Preferred pickup date <span class="text-danger">*</span></label><input type="date" class="form-control" id="preferred_pickup_date" name="preferred_pickup_date" required></div>
@@ -238,6 +239,11 @@ ob_start();
     let pickupMarker = null;
 
     document.addEventListener('DOMContentLoaded', function () {
+        const highPrecisionGeoOptions = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
         const nameFilter = document.getElementById('filter-junkshop-name');
         const materialFilter = document.getElementById('filter-material');
         const cards = Array.from(document.querySelectorAll('.seller-junkshop-card'));
@@ -262,8 +268,8 @@ ob_start();
             }
             echo json_encode($pricesByJunkshop, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         ?>;
-        const defaultPickupFee = <?php echo json_encode($defaultPickupFee); ?>;
-        const serviceFeePct = <?php echo json_encode($serviceFeePct); ?>;
+        const perKmRate = Number(<?php echo json_encode($perKmRate); ?>);
+        const serviceFeePct = Number(<?php echo json_encode($serviceFeePct); ?>);
         const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
         const preferredApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/toggle_preferred_junkshop.php';
         const materialsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_junkshop_materials.php';
@@ -276,8 +282,21 @@ ob_start();
         const junkshopLocationInfo = document.getElementById('junkshop-location-info');
         const approximateDistanceInfo = document.getElementById('approx-distance-container');
         const approximateDistanceInput = document.getElementById('approximate_distance_km');
+        const locationErrorNote = document.getElementById('location-error-note');
+        const locationErrorMessage = '<strong>Location Access Required:</strong> Please ensure your device GPS is turned ON in settings and location permissions are ALLOWED for this website in your browser settings. Once enabled, reload the page to view your location and exact distance.';
         let rowIndex = 0;
         let selectedPrices = {};
+        let distanceInKm = 0;
+
+        function showLocationError() {
+            if (!locationErrorNote) return;
+            locationErrorNote.innerHTML = locationErrorMessage;
+            locationErrorNote.classList.remove('d-none');
+        }
+
+        function hideLocationError() {
+            locationErrorNote?.classList.add('d-none');
+        }
 
         function calculateHaversineDistance(sellerLatitude, sellerLongitude, junkshopLatitude, junkshopLongitude) {
             const R = 6371;
@@ -298,16 +317,19 @@ ob_start();
             const junkLng = parseFloat(selectedOption.getAttribute('data-lng'));
 
             if (!isNaN(junkLat) && !isNaN(junkLng) && junkLat !== 0 && junkLng !== 0 && !isNaN(sellerLat) && !isNaN(sellerLng)) {
-                const distance = calculateHaversineDistance(sellerLat, sellerLng, junkLat, junkLng).toFixed(2);
+                distanceInKm = Number(calculateHaversineDistance(sellerLat, sellerLng, junkLat, junkLng).toFixed(2));
                 approximateDistanceInfo.classList.remove('text-warning');
-                approximateDistanceInfo.textContent = 'Approximate Distance: ' + distance + ' km';
-                approximateDistanceInput.value = distance;
+                approximateDistanceInfo.textContent = 'Approximate Distance: ' + distanceInKm.toFixed(2) + ' km';
+                approximateDistanceInput.value = distanceInKm.toFixed(2);
+                updateEstimateSummary();
                 return;
             }
 
             approximateDistanceInfo.classList.add('text-warning');
             approximateDistanceInfo.textContent = "Junkshop hasn't updated their profile location yet.";
             approximateDistanceInput.value = '';
+            distanceInKm = 0;
+            updateEstimateSummary();
         }
 
         function selectJunkshopLocation(button) {
@@ -370,40 +392,39 @@ ob_start();
         }
 
         function handleLocationError(error) {
-            if (!window.isSecureContext) {
-                alert('Geolocation requires a secure HTTPS connection on mobile devices.');
-            } else if (error.code === 1) {
-                alert('Location permission was denied. Please allow location access and try again.');
-            } else if (error.code === 2 || error.code === 3) {
-                alert('Unable to get your location. Please enable GPS and try again.');
-            } else {
-                alert('Unable to get your current location. Please try again.');
-            }
+            showLocationError();
             resetLocationButton();
         }
 
-        getLocationButton?.addEventListener('click', function () {
-            if (!window.isSecureContext) {
-                handleLocationError({ code: 0 });
-                return;
-            }
+        function updateCurrentLocation() {
             if (!navigator.geolocation) {
-                alert('Geolocation is not supported by this browser.');
+                showLocationError();
                 resetLocationButton();
                 return;
             }
-            getLocationButton.disabled = true;
-            getLocationButton.textContent = 'Locating...';
             navigator.geolocation.getCurrentPosition(function (position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 sellerLatInput.value = lat;
                 sellerLngInput.value = lng;
+                hideLocationError();
                 calculateDistance();
                 initializePickupMap(lat, lng);
                 updatePickupAddress(lat, lng).catch(function () {}).finally(resetLocationButton);
-            }, handleLocationError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+            }, handleLocationError, highPrecisionGeoOptions);
+        }
+
+        function initAutoLocation() {
+            updateCurrentLocation();
+        }
+
+        getLocationButton?.addEventListener('click', function () {
+            getLocationButton.disabled = true;
+            getLocationButton.textContent = 'Locating...';
+            updateCurrentLocation();
         });
+
+        initAutoLocation();
 
         function sortPreferredCards() {
             const list = document.getElementById('seller-price-list');
@@ -551,7 +572,7 @@ ob_start();
         }
 
         function updateEstimateSummary() {
-            let recyclableValue = 0;
+            let materialTotal = 0;
             document.querySelectorAll('.material-row').forEach(function (row) {
                 const select = row.querySelector('.material-select');
                 const weightInput = row.querySelector('.weight-input');
@@ -559,15 +580,17 @@ ob_start();
                 const materialId = Number(select.value || 0);
                 const weight = Number(weightInput.value || 0);
                 const price = materialId && selectedPrices[materialId] ? Number(selectedPrices[materialId]) : 0;
-                recyclableValue += weight * price;
+                materialTotal += weight * price;
             });
 
-            const serviceFee = recyclableValue * (Number(serviceFeePct || 0) / 100);
-            const netAmount = recyclableValue - Number(defaultPickupFee || 0) - serviceFee;
-            document.getElementById('calc-estimated-recyclable-value').textContent = formatMoney(recyclableValue);
-            document.getElementById('calc-pickup-fee').textContent = '- ' + formatMoney(Number(defaultPickupFee || 0));
+            const wholeKm = Math.floor(distanceInKm);
+            const pickupFee = wholeKm * perKmRate;
+            const serviceFee = materialTotal * (serviceFeePct / 100);
+            const estimatedTotal = materialTotal - pickupFee - serviceFee;
+            document.getElementById('calc-material-total').textContent = formatMoney(materialTotal);
+            document.getElementById('calc-pickup-fee').textContent = '- ' + formatMoney(pickupFee);
             document.getElementById('calc-service-fee').textContent = '- ' + formatMoney(serviceFee);
-            document.getElementById('calc-estimated-net-amount').textContent = formatMoney(netAmount);
+            document.getElementById('calc-estimated-total').textContent = formatMoney(estimatedTotal);
         }
 
         function markJunkshopRequestPending(junkshopId) {

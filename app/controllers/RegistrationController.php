@@ -16,8 +16,10 @@ class RegistrationController
 
     public function registerSeller($data)
     {
-        $firstName = trim((string)($data['first_name'] ?? ''));
-        $lastName = trim((string)($data['last_name'] ?? ''));
+        $firstName = mb_strtoupper(trim((string)($data['first_name'] ?? '')), 'UTF-8');
+        $lastName = mb_strtoupper(trim((string)($data['last_name'] ?? '')), 'UTF-8');
+        $data['first_name'] = $firstName;
+        $data['last_name'] = $lastName;
         $suffix = preg_replace('/\D+/', '', trim((string)($data['mobile_number'] ?? '')));
         $data['mobile_number_input'] = $suffix;
         $data['full_name'] = trim($firstName . ' ' . $lastName);
@@ -75,7 +77,9 @@ class RegistrationController
 
     public function registerJunkshop($data)
     {
-        $suffix = preg_replace('/\D+/', '', trim((string)($data['mobile_number'] ?? '')));
+        $data['business_name'] = mb_strtoupper(trim((string)($data['business_name'] ?? '')), 'UTF-8');
+        $data['owner_name'] = mb_strtoupper(trim((string)($data['owner_name'] ?? '')), 'UTF-8');
+        $suffix = trim((string)($data['mobile_number'] ?? ''));
         $data['mobile_number_input'] = $suffix;
         $data['mobile_number'] = Validator::normalizeMobileNumber($suffix);
 
@@ -158,10 +162,14 @@ class RegistrationController
 
         if (!Validator::required($firstName)) {
             $errors[] = 'First name is required';
+        } elseif (preg_match('/^[a-zA-Z\s]+$/', $firstName) !== 1) {
+            $errors[] = 'First name may contain letters and spaces only';
         }
 
         if (!Validator::required($lastName)) {
             $errors[] = 'Last name is required';
+        } elseif (preg_match('/^[a-zA-Z\s]+$/', $lastName) !== 1) {
+            $errors[] = 'Last name may contain letters and spaces only';
         }
 
         if (!Validator::required($data['full_name'] ?? '')) {
@@ -241,6 +249,8 @@ class RegistrationController
 
         if (!Validator::required($data['mobile_number_input'] ?? '')) {
             $errors[] = 'Mobile number is required';
+        } elseif (!ctype_digit((string) $data['mobile_number_input'])) {
+            $errors[] = 'Mobile number must contain digits only';
         } elseif (!Validator::mobileSuffix($data['mobile_number_input'])) {
             $errors[] = 'Mobile number must contain exactly 9 digits after 09';
         } elseif (!Validator::mobileNumber($data['mobile_number'])) {
