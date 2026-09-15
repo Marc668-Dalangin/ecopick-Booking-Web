@@ -90,11 +90,13 @@ ob_start();
                         </thead>
                         <tbody>
                             <?php foreach ($feeConfigs as $config): ?>
-                                <tr>
-                                    <td class="fw-semibold"><?php echo Validator::escape($feeLabels[(string)($config['config_key'] ?? '')] ?? (string)($config['config_key'] ?? '')); ?></td>
-                                    <td><?php echo (string)($config['config_key'] ?? '') === 'default_pickup_fee' ? '₱' : ''; ?><?php echo number_format((float)($config['config_value'] ?? 0), 2); ?><?php echo (string)($config['config_key'] ?? '') === 'ecopick_service_fee_pct' || (string)($config['config_key'] ?? '') === 'junkshop_commission_pct' ? '%' : ''; ?></td>
-                                    <td class="small text-muted"><?php echo Validator::escape(date('M d, Y', strtotime($config['updated_at'] ?? date('Y-m-d')))); ?></td>
-                                </tr>
+                                <?php if ((string)($config['config_key'] ?? '') !== 'default_junkshop_expiry_days'): ?>
+                                    <tr>
+                                        <td class="fw-semibold"><?php echo Validator::escape($feeLabels[(string)($config['config_key'] ?? '')] ?? (string)($config['config_key'] ?? '')); ?></td>
+                                        <td><?php echo (string)($config['config_key'] ?? '') === 'default_pickup_fee' ? '₱' : ''; ?><?php echo number_format((float)($config['config_value'] ?? 0), 2); ?><?php echo (string)($config['config_key'] ?? '') === 'ecopick_service_fee_pct' || (string)($config['config_key'] ?? '') === 'junkshop_commission_pct' ? '%' : ''; ?></td>
+                                        <td class="small text-muted"><?php echo Validator::escape(date('M d, Y', strtotime($config['updated_at'] ?? date('Y-m-d')))); ?></td>
+                                    </tr>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>

@@ -54,7 +54,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <p class="small mb-0 footer-copy">
-                        &copy; 2026 EcoPick. All rights reserved. Local development only.
+                        &copy; 2026 EcoPick. All rights reserved.
                     </p>
                 </div>
             </div>
