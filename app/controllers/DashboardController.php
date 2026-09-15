@@ -255,7 +255,7 @@ class DashboardController
             return $this->db->query(
                 "SELECT a.id AS account_id, a.username, a.email, a.full_name AS owner_name, a.mobile_number,
                         a.account_status, jp.business_name, jp.complete_address, jp.latitude, jp.longitude, jp.operating_schedule,
-                        jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number,
+                        jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number, jp.is_available,
                         jp.approval_status, jp.created_at
                  FROM accounts a
                  JOIN junkshop_profiles jp ON jp.account_id = a.id
@@ -311,6 +311,34 @@ class DashboardController
             $this->db->rollBack();
             error_log('Junkshop profile update error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update profile'];
+        }
+    }
+
+    public function updateJunkshopAvailability(int $accountId, bool $isAvailable): array
+    {
+        try {
+            $statement = $this->db->query(
+                "UPDATE junkshop_profiles jp
+                 JOIN accounts a ON a.id = jp.account_id
+                 SET jp.is_available = :is_available, jp.updated_at = CURRENT_TIMESTAMP
+                 WHERE jp.account_id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
+                ['is_available' => $isAvailable ? 1 : 0, 'account_id' => $accountId]
+            );
+            $saved = $this->db->query(
+                "SELECT jp.is_available
+                 FROM junkshop_profiles jp
+                 JOIN accounts a ON a.id = jp.account_id
+                 WHERE jp.account_id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')
+                 LIMIT 1",
+                ['account_id' => $accountId]
+            )->fetchColumn();
+            if ($saved === false) {
+                return ['success' => false, 'message' => 'Junkshop account not found.'];
+            }
+            return ['success' => true, 'message' => $isAvailable ? 'Your junkshop is now available.' : 'Your junkshop is now unavailable.', 'is_available' => $isAvailable];
+        } catch (Throwable $exception) {
+            error_log('Junkshop availability update error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => 'Unable to update shop availability.'];
         }
     }
 

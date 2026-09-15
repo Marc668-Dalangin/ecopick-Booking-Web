@@ -85,7 +85,8 @@ ob_start();
                                         <h5 class="fw-bold mb-1"><?php echo Validator::escape($junkshop['business_name'] ?? ''); ?></h5>
                                         <div class="small text-muted"><?php echo Validator::escape($junkshop['location'] ?? ''); ?></div>
                                     </div>
-                                    <span class="badge bg-success-subtle text-success">Approved</span>
+                                    <?php $isAvailable = (int) ($junkshop['is_available'] ?? 1) === 1; ?>
+                                    <span class="badge <?php echo $isAvailable ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'; ?>"><?php echo $isAvailable ? 'Available' : 'Unavailable'; ?></span>
                                 </div>
 
                                 <div class="mb-3 small text-muted">
@@ -129,6 +130,10 @@ ob_start();
                                     <?php if (!empty($junkshop['has_active_request'])): ?>
                                         <button type="button" class="btn btn-secondary disabled" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" disabled>
                                             <i class="bi bi-clock-history"></i> Request Pending
+                                        </button>
+                                    <?php elseif (!$isAvailable): ?>
+                                        <button type="button" class="btn btn-secondary disabled" disabled>
+                                            <i class="bi bi-pause-circle"></i> Unavailable
                                         </button>
                                     <?php else: ?>
                                         <button type="button" class="btn btn-primary request-pickup-btn" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-junkshop-lat="<?php echo htmlspecialchars((string)($junkshop['latitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-lng="<?php echo htmlspecialchars((string)($junkshop['longitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-address="<?php echo htmlspecialchars((string)($junkshop['address'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">

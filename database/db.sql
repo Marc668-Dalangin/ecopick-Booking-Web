@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     longitude DECIMAL(11,8) NULL,
     operating_schedule VARCHAR(255),
     business_permit_reference VARCHAR(100),
+    is_available TINYINT(1) NOT NULL DEFAULT 1,
     approval_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -633,6 +634,7 @@ ALTER TABLE pickup_request_items
 
 ALTER TABLE junkshop_profiles
     ADD COLUMN IF NOT EXISTS partnership_expires_at DATE NULL AFTER approval_status,
+    ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1 AFTER business_permit_reference,
     ADD COLUMN IF NOT EXISTS renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current' AFTER partnership_expires_at;
 
 ALTER TABLE junkshop_profiles

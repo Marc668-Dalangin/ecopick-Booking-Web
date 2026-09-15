@@ -188,6 +188,22 @@ ob_start();
                             $junkshopMobile = substr($junkshopMobile, 2);
                         }
                         ?>
+                        <div class="card mb-3 border-0 shadow-sm">
+                            <div class="card-body d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Shop Operational Status</h6>
+                                    <small class="text-muted" id="availability-status-text">
+                                        <?php echo ((int) ($currentProfile['is_available'] ?? 1) === 1) ? 'Status: Available (Accepting pickup requests)' : 'Status: Unavailable (Not accepting pickup requests)'; ?>
+                                    </small>
+                                </div>
+                                <div class="form-check form-switch form-switch-lg">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="toggleAvailability" <?php echo ((int) ($currentProfile['is_available'] ?? 1) === 1) ? 'checked' : ''; ?> <?php echo $isExpiredJunkshop ? 'disabled' : ''; ?>>
+                                    <label class="form-check-label fw-bold ms-2" for="toggleAvailability" id="toggleLabel">
+                                        <?php echo ((int) ($currentProfile['is_available'] ?? 1) === 1) ? 'Available' : 'Unavailable'; ?>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="business_name">Business Name</label>
@@ -550,6 +566,37 @@ ob_start();
             }, handleLocationError, highPrecisionGeoOptions);
         });
     });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('toggleAvailability');
+    const statusText = document.getElementById('availability-status-text');
+    const label = document.getElementById('toggleLabel');
+    const csrfToken = document.querySelector('input[name="_csrf_token"]')?.value || '';
+    if (!toggle) return;
+
+    toggle.addEventListener('change', async function () {
+        const requestedValue = toggle.checked;
+        toggle.disabled = true;
+        try {
+            const response = await fetch('<?php echo APP_URL; ?>/user-junkshop/api/toggle-availability.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                body: new URLSearchParams({_csrf_token: csrfToken, is_available: requestedValue ? '1' : '0'})
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Unable to update availability.');
+            toggle.checked = Boolean(result.is_available);
+            label.textContent = toggle.checked ? 'Available' : 'Unavailable';
+            statusText.textContent = toggle.checked ? 'Status: Available (Accepting pickup requests)' : 'Status: Unavailable (Not accepting pickup requests)';
+        } catch (error) {
+            toggle.checked = !requestedValue;
+            window.alert(error.message);
+        } finally {
+            toggle.disabled = false;
+        }
+    });
+});
 </script>
 <?php
 $content = ob_get_clean();

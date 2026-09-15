@@ -25,7 +25,7 @@ class MatchingEngine
         }
 
         $junkshop = $db->query(
-            'SELECT jp.account_id AS junkshop_id, jp.business_name FROM junkshop_profiles jp JOIN accounts a ON a.id = jp.account_id WHERE jp.account_id = :junkshop_id AND jp.approval_status = :approval_status AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP) AND a.account_status = :account_status AND a.role_id = (SELECT id FROM roles WHERE name = \'junkshop\') LIMIT 1',
+            'SELECT jp.account_id AS junkshop_id, jp.business_name FROM junkshop_profiles jp JOIN accounts a ON a.id = jp.account_id WHERE jp.account_id = :junkshop_id AND jp.approval_status = :approval_status AND jp.is_available = 1 AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP) AND a.account_status = :account_status AND a.role_id = (SELECT id FROM roles WHERE name = \'junkshop\') LIMIT 1',
             ['junkshop_id' => $junkshopId, 'approval_status' => 'approved', 'account_status' => 'active']
         )->fetch();
         if (!$junkshop || (float) ($request['approximate_distance_km'] ?? 0) > self::MAX_MATCH_RADIUS_KM) {

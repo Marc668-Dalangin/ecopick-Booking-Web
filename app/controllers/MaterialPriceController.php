@@ -73,6 +73,7 @@ class MaterialPriceController
                 "SELECT
                     a.id AS junkshop_account_id,
                     jp.business_name,
+                    jp.is_available,
                     jp.partnership_expires_at,
                     jp.complete_address AS location,
                     jp.complete_address AS address,
@@ -138,6 +139,7 @@ class MaterialPriceController
                  WHERE jp.account_id = :junkshop_id
                    AND a.account_status = 'active'
                    AND jp.approval_status = 'approved'
+                   AND jp.is_available = 1
                    AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)
                  LIMIT 1",
                 ['junkshop_id' => $junkshopAccountId]

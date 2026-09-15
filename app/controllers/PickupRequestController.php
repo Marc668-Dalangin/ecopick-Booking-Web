@@ -72,6 +72,22 @@ class PickupRequestController
                 return ['success' => false, 'message' => 'You already have an active pickup request with this junkshop.', 'validation_errors' => []];
             }
 
+            $junkshop = $this->db->query(
+                "SELECT jp.is_available
+                 FROM junkshop_profiles jp
+                 JOIN accounts a ON a.id = jp.account_id
+                 WHERE jp.account_id = :junkshop_id
+                   AND a.account_status = 'active'
+                   AND jp.approval_status = 'approved'
+                   AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)
+                 LIMIT 1",
+                ['junkshop_id' => (int) $normalized['junkshop_id']]
+            )->fetch();
+            if (!$junkshop || (int) $junkshop['is_available'] !== 1) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'This junkshop is currently unavailable for pickup requests.', 'validation_errors' => []];
+            }
+
             foreach ($normalized['items'] as $item) {
                 $material = $this->db->query(
                     'SELECT id FROM recyclable_materials WHERE id = :material_id AND is_active = 1 LIMIT 1',
