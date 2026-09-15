@@ -122,29 +122,6 @@ WHERE a.account_role IS NULL OR a.account_role <> r.name;
 ALTER TABLE accounts
     MODIFY account_role ENUM('admin', 'seller', 'junkshop') NOT NULL DEFAULT 'seller';
 
-CREATE OR REPLACE VIEW vw_accounts_overview AS
-SELECT
-    a.id AS account_id,
-    a.full_name,
-    a.email,
-    COALESCE(a.account_role, r.name) AS account_role,
-    a.account_status,
-    CASE
-        WHEN r.name = 'seller' THEN 'seller_profile'
-        WHEN r.name = 'junkshop' THEN 'junkshop_profile'
-        ELSE NULL
-    END AS profile_type,
-    CASE
-        WHEN r.name = 'seller' THEN CONCAT(COALESCE(sp.address, ''), IF(sp.barangay IS NOT NULL AND sp.barangay <> '', CONCAT(', ', sp.barangay), ''))
-        WHEN r.name = 'junkshop' THEN jp.business_name
-        ELSE NULL
-    END AS profile_summary,
-    a.created_at
-FROM accounts a
-JOIN roles r ON r.id = a.role_id
-LEFT JOIN seller_profiles sp ON sp.account_id = a.id
-LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id;
-
 INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, account_status)
 VALUES ((SELECT id FROM roles WHERE name = 'admin'), 'admin', 'ecopicklipacity@gmail.com', '$2y$10$2f9fpGIE/3t/Vmu0KBvn1OBozvRWajPHBx6UMYEfq67WZS1QzCpyu', 'EcoPick Administrator', 'active')
 ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), account_status = VALUES(account_status), account_role = VALUES(account_role);
@@ -204,23 +181,6 @@ ALTER TABLE accounts
 
 
 DROP VIEW IF EXISTS vw_accounts_overview;
-CREATE VIEW vw_accounts_overview AS
-SELECT
-    a.id AS account_id,
-    a.full_name,
-    a.email,
-    COALESCE(a.account_role, r.name) AS account_role,
-    a.account_status,
-    CASE
-        WHEN r.name = 'seller' THEN sp.address
-        WHEN r.name = 'junkshop' THEN jp.business_name
-        ELSE NULL
-    END AS profile_summary,
-    a.created_at
-FROM accounts a
-JOIN roles r ON r.id = a.role_id
-LEFT JOIN seller_profiles sp ON sp.account_id = a.id
-LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id;
 
 -- EcoPick Migration 004: Materials and Buying Prices
 -- Safe to import into an existing ecopickdb database.
