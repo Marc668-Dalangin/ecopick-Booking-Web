@@ -3,7 +3,7 @@ require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/controllers/DashboardController.php';
 
 if (!Auth::check()) {
-    header('Location: ' . APP_URL . '/admin/login.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/login.php');
     exit;
 }
 
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['flash_type'] = $result['success'] ? 'success' : 'danger';
     }
 
-    header('Location: ' . APP_URL . '/admin/junkshop-approvals.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/junkshop-approvals.php');
     exit;
 }
 
@@ -215,7 +215,7 @@ ob_start();
                         };
 
                         try {
-                            const response = await fetch('<?php echo APP_URL; ?>/admin/api/process_junkshop_approval.php', {
+                            const response = await fetch('<?php echo APP_URL; ?>/admin-private-dnstl/api/process_junkshop_approval.php', {
                                 method: 'POST',
                                 credentials: 'same-origin',
                                 headers: {
@@ -295,7 +295,7 @@ ob_start();
         if (window.EcoPickLiveUpdates && window.EcoPickLiveUpdates.startPolling) {
             window.EcoPickLiveUpdates.startPolling({
                 key: 'admin-junkshop-approvals',
-                url: '<?php echo APP_URL; ?>/admin/api/junkshop-approvals.php',
+                url: '<?php echo APP_URL; ?>/admin-private-dnstl/api/junkshop-approvals.php',
                 interval: 5000,
                 onSuccess: function (payload) {
                     if (payload && payload.session_expired && payload.redirect) {

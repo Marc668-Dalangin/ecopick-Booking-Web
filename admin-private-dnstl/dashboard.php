@@ -109,7 +109,7 @@ ob_start();
                     <h4 class="mb-0 fw-bold"><i class="bi bi-speedometer2"></i> Platform Overview</h4>
                     <span class="badge bg-success-subtle text-success">Live Data</span>
                 </div>
-                <p class="text-muted mb-4">The dashboard foundation is active and pulling counts from the database using stored procedures.</p>
+                <p class="text-muted mb-4">The dashboard foundation is active and pulling counts directly from the database.</p>
                 <div class="row g-3">
                     <div class="col-sm-6">
                         <div class="dashboard-card--feature">

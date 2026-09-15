@@ -3,7 +3,7 @@ require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/controllers/MaterialPriceController.php';
 
 if (!Auth::check()) {
-    header('Location: ' . APP_URL . '/admin/login.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/login.php');
     exit;
 }
 

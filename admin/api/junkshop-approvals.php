@@ -10,7 +10,7 @@ if (!Auth::check()) {
         'success' => false,
         'message' => 'Session expired. Please log in again.',
         'session_expired' => true,
-        'redirect' => APP_URL . '/admin/login.php',
+        'redirect' => APP_URL . '/admin-private-dnstl/login.php',
         'data' => [
             'stats' => [
                 'total_sellers' => 0,

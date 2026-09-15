@@ -4,7 +4,7 @@ require_once __DIR__ . '/../app/controllers/DashboardController.php';
 require_once __DIR__ . '/../app/services/PlatformAnalytics.php';
 
 if (!Auth::check()) {
-    header('Location: ' . APP_URL . '/admin/login.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/login.php');
     exit;
 }
 
@@ -109,14 +109,14 @@ ob_start();
                     <h4 class="mb-0 fw-bold"><i class="bi bi-speedometer2"></i> Platform Overview</h4>
                     <span class="badge bg-success-subtle text-success">Live Data</span>
                 </div>
-                <p class="text-muted mb-4">The dashboard foundation is active and pulling counts from the database using stored procedures.</p>
+                <p class="text-muted mb-4">The dashboard foundation is active and pulling counts directly from the database.</p>
                 <div class="row g-3">
                     <div class="col-sm-6">
                         <div class="dashboard-card--feature">
                             <div class="icon-wrap mb-3"><i class="bi bi-building-check"></i></div>
                             <h6 class="fw-bold mb-1">Junkshop Approvals</h6>
                             <p class="text-muted small mb-2">Review pending partnerships and approve or reject them.</p>
-                            <a href="<?php echo APP_URL; ?>/admin/junkshop-approvals.php" class="btn btn-sm btn-primary">Open Approvals</a>
+                            <a href="<?php echo APP_URL; ?>/admin-private-dnstl/junkshop-approvals.php" class="btn btn-sm btn-primary">Open Approvals</a>
                         </div>
                     </div>
                     <div class="col-sm-6">
@@ -124,7 +124,7 @@ ob_start();
                             <div class="icon-wrap mb-3"><i class="bi bi-people"></i></div>
                             <h6 class="fw-bold mb-1">Seller Directory</h6>
                             <p class="text-muted small mb-2">View registered sellers and their account details.</p>
-                            <a href="<?php echo APP_URL; ?>/admin/sellers.php" class="btn btn-sm btn-primary">View Sellers</a>
+                            <a href="<?php echo APP_URL; ?>/admin-private-dnstl/sellers.php" class="btn btn-sm btn-primary">View Sellers</a>
                         </div>
                     </div>
                     <div class="col-sm-6">
@@ -132,7 +132,7 @@ ob_start();
                             <div class="icon-wrap mb-3"><i class="bi bi-shop-window"></i></div>
                             <h6 class="fw-bold mb-1">Approved Junkshops</h6>
                             <p class="text-muted small mb-2">See the active partner junkshops approved by the admin.</p>
-                            <a href="<?php echo APP_URL; ?>/admin/approved-junkshops.php" class="btn btn-sm btn-primary">View Partners</a>
+                            <a href="<?php echo APP_URL; ?>/admin-private-dnstl/approved-junkshops.php" class="btn btn-sm btn-primary">View Partners</a>
                         </div>
                     </div>
                     <div class="col-sm-6">
@@ -140,7 +140,7 @@ ob_start();
                             <div class="icon-wrap mb-3"><i class="bi bi-cash-coin"></i></div>
                             <h6 class="fw-bold mb-1">Fee Configuration</h6>
                             <p class="text-muted small mb-2">Tune platform fee settings and commissions for pickup operations.</p>
-                            <a href="<?php echo APP_URL; ?>/admin/fee-config.php" class="btn btn-sm btn-primary">Open Fees</a>
+                            <a href="<?php echo APP_URL; ?>/admin-private-dnstl/fee-config.php" class="btn btn-sm btn-primary">Open Fees</a>
                         </div>
                     </div>
                 </div>
@@ -168,7 +168,7 @@ ob_start();
                     </div>
                     <div class="list-group-item px-0 py-3 border-0">
                         <div class="d-grid gap-2">
-                            <a href="<?php echo APP_URL; ?>/admin/profile.php" class="btn btn-outline-primary"><i class="bi bi-person-circle"></i> View Profile</a>
+                            <a href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php" class="btn btn-outline-primary"><i class="bi bi-person-circle"></i> View Profile</a>
                             <a href="<?php echo APP_URL; ?>/user-junkshop/logout.php" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
                         </div>
                     </div>
@@ -208,7 +208,7 @@ ob_start();
         if (window.EcoPickLiveUpdates && window.EcoPickLiveUpdates.startPolling) {
             window.EcoPickLiveUpdates.startPolling({
                 key: 'admin-dashboard',
-                url: '<?php echo APP_URL; ?>/admin/api/dashboard.php',
+                url: '<?php echo APP_URL; ?>/admin-private-dnstl/api/dashboard.php',
                 interval: 3000,
                 onSuccess: function (payload) {
                     if (payload && payload.session_expired && payload.redirect) {

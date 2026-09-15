@@ -3,7 +3,7 @@ require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/controllers/DashboardController.php';
 
 if (!Auth::check()) {
-    header('Location: ' . APP_URL . '/admin/login.php');
+    header('Location: ' . APP_URL . '/admin-private-dnstl/login.php');
     exit;
 }
 
@@ -97,7 +97,7 @@ ob_start();
 window.addEventListener('DOMContentLoaded', function () {
     const table = document.querySelector('[data-account-row]')?.closest('table');
     const csrfToken = document.querySelector('input[name="_csrf_token"]')?.value || '';
-    const apiUrl = '<?php echo APP_URL; ?>/admin/api/account-actions.php';
+    const apiUrl = '<?php echo APP_URL; ?>/admin-private-dnstl/api/account-actions.php';
     const confirmation = window.ecopick.setupActionConfirmation({ modalId: 'confirmAccountDeleteModal' });
 
     if (!table) return;

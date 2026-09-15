@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/controllers/AdminFeatureController.php';
-if (!Auth::check()) { header('Location: ' . APP_URL . '/admin/login.php'); exit; }
+if (!Auth::check()) { header('Location: ' . APP_URL . '/admin-private-dnstl/login.php'); exit; }
 if (Auth::userRole() !== 'admin') { header('Location: ' . APP_URL . '/user-junkshop/dashboard.php'); exit; }
 $controller = new AdminFeatureController(); $feedback = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
