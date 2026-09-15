@@ -224,6 +224,8 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="submitPickupConfirmModal" tabindex="-1" aria-labelledby="submitPickupConfirmModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="submitPickupConfirmModalLabel">Confirm Pickup Request</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>Are you sure you want to send this request?</p><dl class="row mb-0 small"><dt class="col-6">Junkshop</dt><dd class="col-6 text-end" id="confirm-pickup-junkshop">-</dd><dt class="col-6">Measured distance</dt><dd class="col-6 text-end" id="confirm-pickup-distance">-</dd><dt class="col-6">Pickup fee</dt><dd class="col-6 text-end" id="confirm-pickup-fee">-</dd><dt class="col-6">Service fee</dt><dd class="col-6 text-end" id="confirm-pickup-service-fee">-</dd><dt class="col-6 fw-bold">Net estimated payout</dt><dd class="col-6 text-end fw-bold" id="confirm-pickup-net">-</dd></dl></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Edit Request</button><button type="button" class="btn btn-primary" id="btn-confirm-submit-pickup">Yes, Submit Request</button></div></div></div></div>
+
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="pickupRequestToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
@@ -254,6 +256,8 @@ ob_start();
         const junkshopSelect = document.getElementById('junkshop_id');
         const modalEl = document.getElementById('sellerPickupRequestModal');
         const pickupModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const submitConfirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('submitPickupConfirmModal'));
+        let pickupSubmissionConfirmed = false;
         const successToast = bootstrap.Toast.getOrCreateInstance(document.getElementById('pickupRequestToast'));
         const materialOptions = <?php echo json_encode($materials, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         const pricesByJunkshop = <?php
@@ -640,7 +644,7 @@ ob_start();
                     sortPreferredCards();
                     applySellerFilters();
                 } catch (error) {
-                    window.alert(error.message || 'Unable to update preferred junkshop.');
+                    showStatus(error.message || 'Unable to update preferred junkshop.', false, []);
                 } finally {
                     button.disabled = false;
                 }
@@ -712,9 +716,17 @@ ob_start();
                 return;
             }
 
-            if (!window.confirm('Are you sure you want to submit this pickup request to this junkshop?')) {
+            if (!pickupSubmissionConfirmed) {
+                const selectedOption = junkshopSelect.options[junkshopSelect.selectedIndex];
+                document.getElementById('confirm-pickup-junkshop').textContent = selectedOption?.textContent || '-';
+                document.getElementById('confirm-pickup-distance').textContent = (document.getElementById('approximate_distance_km').value || '-') + ' km';
+                document.getElementById('confirm-pickup-fee').textContent = document.getElementById('calc-pickup-fee').textContent;
+                document.getElementById('confirm-pickup-service-fee').textContent = document.getElementById('calc-service-fee').textContent;
+                document.getElementById('confirm-pickup-net').textContent = document.getElementById('calc-estimated-total').textContent;
+                submitConfirmModal.show();
                 return;
             }
+            pickupSubmissionConfirmed = false;
 
             try {
                 const submittedJunkshopId = hiddenJunkshopId.value;
@@ -740,6 +752,12 @@ ob_start();
             } catch (error) {
                 showStatus('Unable to submit the pickup request right now.', false, []);
             }
+        });
+
+        document.getElementById('btn-confirm-submit-pickup').addEventListener('click', function () {
+            pickupSubmissionConfirmed = true;
+            submitConfirmModal.hide();
+            form.requestSubmit();
         });
 
         const dateField = document.getElementById('preferred_pickup_date');

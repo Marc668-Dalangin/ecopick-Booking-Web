@@ -14,7 +14,7 @@ $currentPage = 'current-bookings';
 $userDisplayName = Auth::userName();
 $assignment = $controller->getSellerRequestAssignmentSummary($requestId, Auth::userId());
 $statusOrder = ['Pending Request', 'Matched', 'Accepted', 'Scheduled', 'For Pickup', 'Completed'];
-$cancellableStatuses = ['Pending Request'];
+$cancellableStatuses = ['Matched', 'Accepted'];
 $canCancel = in_array($request['current_status'], $cancellableStatuses, true);
 $currentStatusIndex = array_search($request['current_status'], $statusOrder, true);
 $currentStatusIndex = $currentStatusIndex === false ? 0 : $currentStatusIndex;
@@ -27,7 +27,7 @@ ob_start();
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4"><div><p class="eyebrow mb-1">Booking tracking</p><h2 class="fw-bold mb-1"><?php echo Validator::escape($request['booking_reference']); ?></h2><p class="text-muted mb-0">Submitted <?php echo Validator::escape(date('M d, Y g:i A', strtotime($request['created_at']))); ?></p></div><span id="booking-current-status" class="status-badge <?php echo str_contains((string)$request['current_status'], 'Cancelled') ? 'rejected' : 'pending'; ?>"><?php echo Validator::escape($request['current_status']); ?></span></div>
             <div class="alert alert-info" role="note"><i class="bi bi-info-circle me-2"></i>EcoPick is facilitating this request. Registered junkshops handle collection, weighing, assessment, and purchase in later steps.</div>
-            <?php if ($canCancel): ?><div class="d-flex justify-content-end mb-4"><button type="button" class="btn btn-sm btn-outline-danger" id="detail-cancel-request"><i class="bi bi-x-circle"></i> Cancel booking</button></div><?php endif; ?>
+            <div id="cancellation-control" class="mb-4"><?php if ($canCancel): ?><div class="d-flex justify-content-end"><button type="button" class="btn btn-sm btn-outline-danger" id="detail-cancel-request" onclick="openCancelBookingModal(<?php echo (int) $requestId; ?>)"><i class="bi bi-x-circle"></i> Cancel booking</button></div><?php endif; ?></div><div id="booking-cancellation-feedback" class="alert d-none mt-2" role="alert"></div>
 
             <div class="mb-4">
                 <h5 class="fw-bold mb-3">Progress</h5>
@@ -69,9 +69,10 @@ ob_start();
             <div class="alert alert-secondary mb-0">No matched junkshop is assigned for this request yet.</div>
         <?php endif; ?>
 
-        <h5 class="fw-bold mb-4">Status timeline</h5><ol class="status-timeline list-unstyled mb-0"><?php foreach ($request['status_history'] as $history): ?><li class="status-timeline-item"><span class="status-timeline-dot"></span><div><strong><?php echo Validator::escape($history['new_status'] ?? ''); ?></strong><div class="small text-muted"><?php echo Validator::escape(date('M d, Y g:i A', strtotime($history['changed_at'] ?? 'now'))); ?> · <?php echo Validator::escape($history['responsible_party'] ?? 'System'); ?></div><?php if (($history['new_status'] ?? '') === 'Accepted'): ?><small class="text-danger d-block mt-1" data-cancellation-warning>Cancellation is not allowed!</small><?php elseif (($history['new_status'] ?? '') === 'Scheduled' && $confirmedPickupDate !== '' && $confirmedPickupTime !== ''): ?><div class="text-muted small mt-1">Scheduled for: <?php echo Validator::escape($confirmedPickupDate); ?> at <?php echo Validator::escape($confirmedPickupTime); ?></div><?php endif; ?></div></li><?php endforeach; ?></ol>
+        <h5 class="fw-bold mb-4">Status timeline</h5><ol class="status-timeline list-unstyled mb-0"><?php foreach ($request['status_history'] as $history): ?><li class="status-timeline-item"><span class="status-timeline-dot"></span><div><strong><?php echo Validator::escape($history['new_status'] ?? ''); ?></strong><div class="small text-muted"><?php echo Validator::escape(date('M d, Y g:i A', strtotime($history['changed_at'] ?? 'now'))); ?> · <?php echo Validator::escape($history['responsible_party'] ?? 'System'); ?></div><?php if (($history['new_status'] ?? '') === 'Scheduled' && $confirmedPickupDate !== '' && $confirmedPickupTime !== ''): ?><div class="text-muted small mt-1">Scheduled for: <?php echo Validator::escape($confirmedPickupDate); ?> at <?php echo Validator::escape($confirmedPickupTime); ?></div><?php endif; ?></div></li><?php endforeach; ?></ol>
     </div></div></div>
 </div>
+<div class="modal fade" id="cancelBookingConfirmModal" tabindex="-1" aria-labelledby="cancelBookingConfirmModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="cancelBookingConfirmModalLabel">Confirm Cancellation</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-0">Are you sure you want to cancel this pickup booking? This action cannot be undone.</p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Booking</button><button type="button" class="btn btn-danger" id="btn-confirm-cancel">Yes, Cancel Booking</button></div></div></div></div>
 <script>
 window.addEventListener('DOMContentLoaded', function () {
     let activeBookingInterval = null;
@@ -193,6 +194,55 @@ window.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function updateCancellationControl(currentStatus) {
+        const control = document.getElementById('cancellation-control');
+        if (!control) return;
+        if (['Matched', 'Accepted'].includes(currentStatus)) {
+            if (!document.getElementById('detail-cancel-request')) {
+                control.innerHTML = '<div class="d-flex justify-content-end"><button type="button" class="btn btn-sm btn-outline-danger" id="detail-cancel-request" onclick="openCancelBookingModal(' + requestId + ')"><i class="bi bi-x-circle"></i> Cancel booking</button></div>';
+            }
+            return;
+        }
+        control.innerHTML = '';
+    }
+
+    const cancelModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('cancelBookingConfirmModal'));
+    let pendingCancellationId = null;
+    window.openCancelBookingModal = function (bookingId) {
+        pendingCancellationId = Number(bookingId);
+        cancelModal.show();
+    };
+    async function cancelBooking(bookingId) {
+        const data = new FormData();
+        data.append('_csrf_token', '<?php echo CSRF::token(); ?>');
+        data.append('booking_id', String(bookingId));
+        try {
+            const response = await fetch('<?php echo APP_URL; ?>/user-junkshop/cancel_booking.php', { method: 'POST', body: data, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const payload = await response.json();
+            if (!response.ok || payload.success !== true) throw new Error(payload.message || 'The booking could not be cancelled.');
+            const status = document.getElementById('booking-current-status');
+            if (status) {
+                status.textContent = 'Cancelled';
+                status.classList.add('rejected');
+                status.classList.remove('pending');
+            }
+            updateCancellationControl('Cancelled');
+            const openModal = document.querySelector('.modal.show');
+            if (openModal && window.bootstrap?.Modal) window.bootstrap.Modal.getInstance(openModal)?.hide();
+            const feedback = document.getElementById('booking-cancellation-feedback');
+            feedback.textContent = payload.message || 'Booking cancelled successfully.';
+            feedback.className = 'alert alert-success mt-2';
+            cancelModal.hide();
+        } catch (error) {
+            const feedback = document.getElementById('booking-cancellation-feedback');
+            feedback.textContent = error.message || 'Unable to cancel the booking right now.';
+            feedback.className = 'alert alert-danger mt-2';
+        }
+    };
+    document.getElementById('btn-confirm-cancel').addEventListener('click', function () {
+        if (pendingCancellationId) cancelBooking(pendingCancellationId);
+    });
+
     function updateTimeline(history, request) {
         const timeline = document.querySelector('.status-timeline');
         if (!timeline || !Array.isArray(history)) return;
@@ -209,15 +259,6 @@ window.addEventListener('DOMContentLoaded', function () {
             const metadata = item.querySelector('.small.text-muted');
             if (text) text.textContent = status;
             if (metadata) metadata.textContent = formatDateTime(entry.changed_at) + ' · ' + String(entry.responsible_party || 'System');
-            let warning = item.querySelector('[data-cancellation-warning]');
-            if (status === 'Accepted' && !warning) {
-                warning = document.createElement('small');
-                warning.className = 'text-danger d-block mt-1';
-                warning.dataset.cancellationWarning = 'true';
-                warning.textContent = 'Cancellation is not allowed!';
-                item.querySelector('div').appendChild(warning);
-            }
-            if (status !== 'Accepted' && warning) warning.remove();
             if (status === 'Scheduled') {
                 let schedule = item.querySelector('#timeline-schedule-text, .mt-1');
                 if (!schedule) {
@@ -254,6 +295,7 @@ window.addEventListener('DOMContentLoaded', function () {
             status.classList.toggle('pending', request.current_status !== 'Cancelled');
         }
         updateProgress(request.current_status);
+        updateCancellationControl(request.current_status);
         updateTimeline(request.status_history, request);
         updateItemPrices(request.items);
         if (request.current_status === 'Completed') stopLiveLocationPolling();
@@ -303,23 +345,6 @@ window.addEventListener('DOMContentLoaded', function () {
 
 });
 </script>
-<?php if ($canCancel): ?>
-<script>
-window.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('detail-cancel-request')?.addEventListener('click', async function () {
-        if (!window.confirm('Cancel this booking? This action cannot be undone.')) return;
-        const data = new FormData();
-        data.append('_csrf_token', '<?php echo CSRF::token(); ?>');
-        data.append('action', 'cancel');
-        data.append('request_id', '<?php echo (int) $requestId; ?>');
-        const response = await fetch('<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php', { method: 'POST', body: data, credentials: 'same-origin' });
-        const payload = await response.json();
-        if (payload.success) window.location.reload();
-        else window.alert(payload.message || 'The booking could not be cancelled.');
-    });
-});
-</script>
-<?php endif; ?>
 <?php
 $content = ob_get_clean();
 require_once __DIR__ . '/../app/views/user_dashboard_shell.php';

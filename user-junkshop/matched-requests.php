@@ -528,6 +528,16 @@ window.addEventListener('DOMContentLoaded', function () {
         document.body.appendChild(modal);
         const instance = bootstrap.Modal.getOrCreateInstance(modal);
         instance.show();
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'modal fade';
+        confirmModal.id = 'completeTransactionModal';
+        confirmModal.setAttribute('tabindex', '-1');
+        confirmModal.setAttribute('aria-labelledby', 'completeTransactionModalLabel');
+        confirmModal.setAttribute('aria-hidden', 'true');
+        confirmModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="completeTransactionModalLabel">Confirm Transaction Completion</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>Are you sure you want to finalize and mark this transaction as completed? This action cannot be undone.</p><dl class="row mb-0 small"><dt class="col-7">Final material payout</dt><dd class="col-5 text-end" data-confirm-final-payout>₱0.00</dd><dt class="col-7">Pickup fee</dt><dd class="col-5 text-end" data-confirm-pickup-fee>- ₱0.00</dd><dt class="col-7">EcoPick service fee</dt><dd class="col-5 text-end" data-confirm-service-fee>- ₱0.00</dd></dl></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Review Details</button><button type="button" id="btn-final-complete-submit" class="btn btn-success">Yes, Complete Transaction</button></div></div></div>';
+        document.body.appendChild(confirmModal);
+        const confirmInstance = bootstrap.Modal.getOrCreateInstance(confirmModal);
+        let completionConfirmed = false;
         const formatMoney = value => '₱' + Number(value || 0).toFixed(2);
         const updatePreview = function () {
             const actualRecyclableValue = Array.from(modal.querySelectorAll('.actual-weight-input')).reduce((total, input) => {
@@ -563,10 +573,18 @@ window.addEventListener('DOMContentLoaded', function () {
             if (!event.target.checkValidity()) { event.target.classList.add('was-validated'); return; }
             const activeActualWeight = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).reduce((total, input) => total + (Number.isFinite(Number(input.value)) ? Number(input.value) : 0), 0);
             if (activeActualWeight < 3) {
-                window.alert('The total actual weight must be at least 3 kg to complete this transaction.');
+                showFeedback('The total actual weight must be at least 3 kg to complete this transaction.', false);
                 return;
             }
             const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), buying_price_per_kg: Number(modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]')?.value || 0), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
+            if (!completionConfirmed) {
+                confirmModal.querySelector('[data-confirm-final-payout]').textContent = modal.querySelector('.live-final-value').textContent;
+                confirmModal.querySelector('[data-confirm-pickup-fee]').textContent = modal.querySelector('.live-pickup-fee').textContent;
+                confirmModal.querySelector('[data-confirm-service-fee]').textContent = modal.querySelector('.live-service-fee').textContent;
+                confirmInstance.show();
+                return;
+            }
+            completionConfirmed = false;
             const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
             const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
             const resultPayload = await result.json();
@@ -575,7 +593,13 @@ window.addEventListener('DOMContentLoaded', function () {
             instance.hide();
             showSuccessAndReload(resultPayload.message);
         });
+        confirmModal.querySelector('#btn-final-complete-submit').addEventListener('click', function () {
+            completionConfirmed = true;
+            confirmInstance.hide();
+            modal.querySelector('form').requestSubmit();
+        });
         modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
+        confirmModal.addEventListener('hidden.bs.modal', function () { confirmModal.remove(); });
     }
 
     function renderLifecycleControls(request, requestId) {

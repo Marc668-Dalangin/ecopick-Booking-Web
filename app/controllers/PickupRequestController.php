@@ -389,15 +389,15 @@ class PickupRequestController
         }
 
         $currentStatus = (string) $request['current_status'];
-        if ($currentStatus !== 'Pending Request') {
-            return ['success' => false, 'message' => 'Cancellation is not allowed once the request has been accepted.'];
+        if (!in_array($currentStatus, ['Matched', 'Accepted'], true)) {
+            return ['success' => false, 'message' => 'Cancellation is not allowed for scheduled pickups.'];
         }
 
         try {
             $this->db->beginTransaction();
             $statement = $this->db->query(
-                "UPDATE pickup_requests SET current_status = 'Cancelled by Seller', updated_at = CURRENT_TIMESTAMP
-                 WHERE id = :request_id AND seller_account_id = :seller_id AND current_status = 'Pending Request'",
+                "UPDATE pickup_requests SET current_status = 'Cancelled', updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :request_id AND seller_account_id = :seller_id AND current_status IN ('Matched', 'Accepted')",
                 ['request_id' => (int) $requestId, 'seller_id' => (int) $sellerAccountId]
             );
             if ($statement->rowCount() !== 1) {
@@ -417,7 +417,7 @@ class PickupRequestController
             $result = ['success' => false, 'message' => 'Unable to process the pickup request right now.'];
         }
         if ($result['success']) {
-            StatusLogger::logChange((int) $requestId, $currentStatus, 'Cancelled by Seller', 'Seller', (int) $sellerAccountId);
+            StatusLogger::logChange((int) $requestId, $currentStatus, 'Cancelled', 'Seller', (int) $sellerAccountId);
         }
 
         return $result;
