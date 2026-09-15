@@ -3,6 +3,8 @@
  * Application Constants
  */
 
+define('APP_TIMEZONE', 'Asia/Manila');
+
 // Roles
 define('ROLE_SELLER', 1);
 define('ROLE_JUNKSHOP', 2);

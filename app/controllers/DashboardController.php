@@ -182,7 +182,7 @@ class DashboardController
                     "SELECT config_value FROM fee_configurations WHERE config_key = 'default_junkshop_expiry_days' LIMIT 1"
                 )->fetchColumn();
                 $defaultDays = in_array($defaultDays, [21, 30], true) ? $defaultDays : 30;
-                $expiryDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))
+                $expiryDate = (new DateTimeImmutable('now', new DateTimeZone(APP_TIMEZONE)))
                     ->modify('+' . $defaultDays . ' days')
                     ->setTime(23, 59, 59)
                     ->format('Y-m-d H:i:s');

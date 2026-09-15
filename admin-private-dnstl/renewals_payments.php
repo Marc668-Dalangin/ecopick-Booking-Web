@@ -17,6 +17,8 @@ $action = (string) ($_POST['action'] ?? '');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
     if ($action === 'default_expiry') {
         $feedback = $controller->updateDefaultJunkshopExpiryDays((int) ($_POST['default_junkshop_expiry_days'] ?? 0));
+    } elseif ($action === 'renewal_notice') {
+        $feedback = $controller->updateRenewalNoticeDays((int) ($_POST['renewal_notice_days'] ?? 0));
     } elseif ($action === 'expiry') {
         $customExpiryDate = trim((string) ($_POST['custom_expiry_date'] ?? ''));
         $customExpiryTime = trim((string) ($_POST['custom_expiry_time'] ?? ''));
@@ -40,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
 }
 
 $defaultExpiryDays = $controller->getDefaultJunkshopExpiryDays();
+$renewalNoticeDays = $controller->getRenewalNoticeDays();
 $junkshops = $controller->listApprovedJunkshops();
 $payments = $controller->listPartnershipPayments();
 $commissionPayments = $controller->listCommissionPayments();
@@ -55,6 +58,21 @@ ob_start();
                 <p class="text-muted mb-0">Manage partnership periods, renewals, and payment reconciliation.</p>
             </div>
             <span class="badge bg-warning-subtle text-warning"><?php echo count(array_filter($payments, fn ($payment) => $payment['payment_status'] !== 'Confirmed')); ?> outstanding</span>
+        </div>
+
+        <div class="border rounded p-3 mb-4">
+            <h4 class="h5 fw-bold mb-1">Renewal Email Notifications</h4>
+            <p class="text-muted small mb-3">Approved junkshops receive one email reminder for each subscription expiration.</p>
+            <form method="post">
+                <?php echo CSRF::field(); ?>
+                <input type="hidden" name="action" value="renewal_notice">
+                <div class="mb-3">
+                    <label for="renewal_notice_days" class="form-label fw-bold">Expiration Notice Lead Time (Days)</label>
+                    <input type="number" name="renewal_notice_days" id="renewal_notice_days" class="form-control" min="1" max="30" value="<?php echo (int) $renewalNoticeDays; ?>" required>
+                    <small class="text-muted">Example: Setting '1' sends an automated email warning 1 day (24 hours) prior to the exact expiration date.</small>
+                </div>
+                <button class="btn btn-primary" type="submit">Save notification setting</button>
+            </form>
         </div>
         <?php if ($feedback): ?>
             <div class="alert alert-<?php echo $feedback['success'] ? 'success' : 'danger'; ?>"><?php echo Validator::escape($feedback['message']); ?></div>
@@ -114,7 +132,7 @@ ob_start();
                     <label class="form-check-label fw-bold" for="toggle_expiry_time">Enable Expiration Time</label>
                 </div>
                 <div id="expiry_time_container" class="mb-3" style="display: none;">
-                    <label class="form-label" for="custom_expiry_time">Expiration Time (12-hr format)</label>
+                    <label class="form-label" for="custom_expiry_time">Expiration Time (24-hour format)</label>
                     <div class="input-group">
                         <input class="form-control" type="time" id="custom_expiry_time" name="custom_expiry_time" disabled>
                         <button type="button" class="btn btn-outline-secondary" id="btn-clear-time" title="Clear Time">

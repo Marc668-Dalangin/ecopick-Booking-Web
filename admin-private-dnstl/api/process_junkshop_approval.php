@@ -70,7 +70,7 @@ try {
         if (!in_array($defaultDays, [21, 30], true)) {
             $defaultDays = 30;
         }
-        $expiryDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))
+            $expiryDate = (new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))
             ->modify('+' . $defaultDays . ' days')
             ->setTime(23, 59, 59)
             ->format('Y-m-d H:i:s');

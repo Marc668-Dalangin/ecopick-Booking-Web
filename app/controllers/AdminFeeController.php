@@ -57,6 +57,9 @@ class AdminFeeController
         if ($key === '') {
             return ['success' => false, 'message' => 'Configuration key is required.'];
         }
+        if ($key === 'renewal_notice_days' && ($newValue < 1 || $newValue > 30 || floor($newValue) !== $newValue)) {
+            return ['success' => false, 'message' => 'Renewal notice lead time must be a whole number between 1 and 30 days.'];
+        }
 
         try {
             $statement = $this->db->query(

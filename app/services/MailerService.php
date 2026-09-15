@@ -93,6 +93,56 @@ class MailerService
         }
     }
 
+    public static function sendRenewalNotice(string $recipientEmail, string $recipientName, string $expirationDate): bool
+    {
+        $recipientEmail = strtolower(trim($recipientEmail));
+        if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+        if (!is_file($autoload)) {
+            error_log('Renewal notice email error: Composer autoloader not found.');
+            return false;
+        }
+        require_once $autoload;
+
+        try {
+            $config = self::config();
+            if (!$config['enabled'] || $config['smtp_host'] === '' || $config['smtp_username'] === '' || $config['smtp_password'] === '') {
+                return false;
+            }
+
+            $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mailer->isSMTP();
+            $mailer->Host = $config['smtp_host'];
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $config['smtp_username'];
+            $mailer->Password = $config['smtp_password'];
+            $mailer->SMTPSecure = strtolower($config['smtp_encryption']) === 'ssl'
+                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mailer->Port = (int) $config['smtp_port'];
+            $mailer->setFrom($config['smtp_username'], $config['from_name']);
+            $mailer->addAddress($recipientEmail, trim($recipientName) !== '' ? trim($recipientName) : 'Junkshop partner');
+            $mailer->isHTML(true);
+            $mailer->Subject = $config['subject_prefix'] . ' Partnership renewal reminder';
+            $safeName = htmlspecialchars(trim($recipientName) !== '' ? trim($recipientName) : 'Junkshop partner', ENT_QUOTES, 'UTF-8');
+            $safeExpiry = htmlspecialchars($expirationDate, ENT_QUOTES, 'UTF-8');
+            $renewalUrl = htmlspecialchars(APP_URL . '/user-junkshop/renewal.php', ENT_QUOTES, 'UTF-8');
+            $mailer->Body = '<p>Hello ' . $safeName . ',</p>'
+                . '<p>Your EcoPick junkshop subscription will expire on <strong>' . $safeExpiry . '</strong>.</p>'
+                . '<p>Please log in to your EcoPick account and open the Partnership Renewal page to submit your renewal payment before this date:</p>'
+                . '<p><a href="' . $renewalUrl . '">' . $renewalUrl . '</a></p>'
+                . '<p>EcoPick Team</p>';
+            $mailer->AltBody = "Hello {$recipientName},\n\nYour EcoPick junkshop subscription will expire on {$expirationDate}. Please log in to your EcoPick account and open {$renewalUrl} to submit your renewal payment before this date.\n\nEcoPick Team";
+            return $mailer->send();
+        } catch (Throwable $exception) {
+            error_log('Renewal notice email error: ' . $exception->getMessage());
+            return false;
+        }
+    }
+
     private static function config(): array
     {
         $env = self::loadEnv();

@@ -55,6 +55,36 @@ class AdminFeatureController
         }
     }
 
+    public function getRenewalNoticeDays(): int
+    {
+        $value = $this->db->query(
+            "SELECT config_value FROM fee_configurations WHERE config_key = 'renewal_notice_days' LIMIT 1"
+        )->fetchColumn();
+        $days = (int) $value;
+        return $days >= 1 && $days <= 30 ? $days : 1;
+    }
+
+    public function updateRenewalNoticeDays(int $days): array
+    {
+        $this->requireAdmin();
+        if ($days < 1 || $days > 30) {
+            return ['success' => false, 'message' => 'Enter a notice lead time between 1 and 30 days.'];
+        }
+
+        try {
+            $this->db->query(
+                "INSERT INTO fee_configurations (config_key, config_value, description)
+                 VALUES ('renewal_notice_days', :days, 'Number of days before expiry to email junkshops a renewal reminder.')
+                 ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_at = CURRENT_TIMESTAMP",
+                ['days' => $days]
+            );
+            return ['success' => true, 'message' => 'Renewal notification lead time updated.'];
+        } catch (Throwable $exception) {
+            error_log('Renewal notice setting update error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => 'Unable to update the renewal notification lead time.'];
+        }
+    }
+
     public function listApprovedJunkshops(): array
     {
         $this->requireAdmin();
@@ -177,11 +207,18 @@ class AdminFeatureController
         $expiryTime = $enableExpiryTime ? trim($expiryTime) : '';
         if ($expiryTime === '') {
             $expiryTime = '23:59:59';
-        } elseif (preg_match('/^\d{2}:\d{2}$/', $expiryTime) === 1) {
-            $expiryTime .= ':00';
+        } else {
+            $time = DateTimeImmutable::createFromFormat('!H:i', $expiryTime, new DateTimeZone(APP_TIMEZONE));
+            if (!$time) {
+                $time = DateTimeImmutable::createFromFormat('!g:i A', strtoupper($expiryTime), new DateTimeZone(APP_TIMEZONE));
+            }
+            if (!$time) {
+                return ['success' => false, 'message' => 'Enter a valid expiry date and time.'];
+            }
+            $expiryTime = $time->format('H:i:s');
         }
 
-        $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $expiryDate . ' ' . $expiryTime);
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $expiryDate . ' ' . $expiryTime, new DateTimeZone(APP_TIMEZONE));
         $dateErrors = DateTimeImmutable::getLastErrors();
         if (!$date || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $date->format('Y-m-d H:i:s') !== $expiryDate . ' ' . $expiryTime) {
             return ['success' => false, 'message' => 'Enter a valid expiry date and time.'];

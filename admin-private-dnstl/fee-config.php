@@ -31,6 +31,7 @@ $feeLabels = [
     'junkshop_commission_pct' => 'Junkshop Commission %',
     'junkshop_registration_fee' => 'Junkshop Registration Fee',
     'junkshop_renewal_fee' => 'Junkshop Renewal Fee',
+    'renewal_notice_days' => 'Expiration Notice Lead Time (Days)',
 ];
 $feeMap = [];
 foreach ($feeConfigs as $config) {
@@ -63,6 +64,7 @@ ob_start();
                             <option value="junkshop_commission_pct"><?php echo $feeLabels['junkshop_commission_pct']; ?></option>
                             <option value="junkshop_registration_fee"><?php echo $feeLabels['junkshop_registration_fee']; ?></option>
                             <option value="junkshop_renewal_fee"><?php echo $feeLabels['junkshop_renewal_fee']; ?></option>
+                            <option value="renewal_notice_days"><?php echo $feeLabels['renewal_notice_days']; ?></option>
                         </select>
                     </div>
                     <div class="mb-3">

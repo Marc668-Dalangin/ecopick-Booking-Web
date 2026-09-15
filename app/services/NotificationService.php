@@ -2,6 +2,66 @@
 /** Durable in-app notifications. */
 class NotificationService
 {
+    public static function sendRenewalReminders(): int
+    {
+        $db = Database::getInstance();
+        $noticeDays = (int) $db->query(
+            "SELECT config_value FROM fee_configurations WHERE config_key = 'renewal_notice_days' LIMIT 1"
+        )->fetchColumn();
+        $noticeDays = $noticeDays >= 1 && $noticeDays <= 30 ? $noticeDays : 1;
+        $junkshops = $db->query(
+            "SELECT a.id AS account_id, a.email, a.full_name, jp.business_name, jp.partnership_expires_at
+             FROM accounts a
+             JOIN junkshop_profiles jp ON jp.account_id = a.id
+             JOIN roles r ON r.id = a.role_id
+             WHERE r.name = 'junkshop' AND jp.approval_status = 'approved'
+               AND a.email IS NOT NULL AND a.email <> ''
+               AND jp.partnership_expires_at > CURRENT_TIMESTAMP
+               AND jp.partnership_expires_at <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL {$noticeDays} DAY)"
+        )->fetchAll();
+        $sent = 0;
+
+        foreach ($junkshops as $junkshop) {
+            $expiry = (string) $junkshop['partnership_expires_at'];
+            try {
+                $claim = $db->query(
+                    'INSERT INTO renewal_notification_log (junkshop_account_id, partnership_expires_at) VALUES (:account_id, :expires_at)',
+                    ['account_id' => (int) $junkshop['account_id'], 'expires_at' => $expiry]
+                );
+                if ($claim->rowCount() !== 1) {
+                    continue;
+                }
+
+                $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $expiry, new DateTimeZone(APP_TIMEZONE));
+                $displayExpiry = $date ? $date->format('F j, Y g:i A T') : $expiry;
+                if (!MailerService::sendRenewalNotice((string) $junkshop['email'], (string) ($junkshop['full_name'] ?: $junkshop['business_name']), $displayExpiry)) {
+                    $db->query(
+                        'DELETE FROM renewal_notification_log WHERE junkshop_account_id = :account_id AND partnership_expires_at = :expires_at',
+                        ['account_id' => (int) $junkshop['account_id'], 'expires_at' => $expiry]
+                    );
+                    continue;
+                }
+
+                $message = "Your EcoPick subscription expires on {$displayExpiry}. Please log in and renew before this date.";
+                $db->query(
+                    'INSERT INTO notifications (recipient_account_id, notification_type, title, message, link_url) VALUES (:account_id, :type, :title, :message, :link_url)',
+                    [
+                        'account_id' => (int) $junkshop['account_id'],
+                        'type' => 'renewal_notice',
+                        'title' => 'Partnership renewal reminder',
+                        'message' => $message,
+                        'link_url' => APP_URL . '/user-junkshop/renewal.php',
+                    ]
+                );
+                $sent++;
+            } catch (Throwable $exception) {
+                error_log('Renewal reminder error: ' . $exception->getMessage());
+            }
+        }
+
+        return $sent;
+    }
+
     public static function notifyBookingStatus(int $pickupRequestId, ?string $newStatus, string $responsibleParty): void
     {
         $status = trim((string) $newStatus);

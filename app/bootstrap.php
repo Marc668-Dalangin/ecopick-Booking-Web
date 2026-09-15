@@ -7,6 +7,8 @@
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/config/Constants.php';
 
+date_default_timezone_set(APP_TIMEZONE);
+
 // Set error reporting after configuration is available
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
@@ -58,5 +60,3 @@ require_once __DIR__ . '/controllers/FeeCalculator.php';
 // Start session
 Session::start();
 
-// Set default timezone
-date_default_timezone_set('UTC');

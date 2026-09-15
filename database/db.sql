@@ -380,7 +380,8 @@ VALUES
     ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
     ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
     ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.'),
-    ('default_junkshop_expiry_days', 30.00, 'Default partnership expiration period for newly approved junkshops.')
+    ('default_junkshop_expiry_days', 30.00, 'Default partnership expiration period for newly approved junkshops.'),
+    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
 ON DUPLICATE KEY UPDATE
     config_value = VALUES(config_value),
     description = VALUES(description),
@@ -414,7 +415,8 @@ CREATE TABLE IF NOT EXISTS booking_status_history (
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES
     ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('junkshop_renewal_fee', 0.00, 'Configurable renewal fee for an existing junkshop partnership.')
+    ('junkshop_renewal_fee', 0.00, 'Configurable renewal fee for an existing junkshop partnership.'),
+    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     updated_at = CURRENT_TIMESTAMP;
@@ -447,7 +449,8 @@ ALTER TABLE transactions
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES
     ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('junkshop_renewal_fee', 0.00, 'Configurable renewal fee for an existing junkshop partnership.')
+    ('junkshop_renewal_fee', 0.00, 'Configurable renewal fee for an existing junkshop partnership.'),
+    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     updated_at = CURRENT_TIMESTAMP;
@@ -671,6 +674,15 @@ CREATE TABLE IF NOT EXISTS notifications (
     INDEX idx_notification_booking (related_pickup_request_id),
     CONSTRAINT fk_notification_recipient FOREIGN KEY (recipient_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     CONSTRAINT fk_notification_booking FOREIGN KEY (related_pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS renewal_notification_log (
+    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    junkshop_account_id INT NOT NULL,
+    partnership_expires_at DATETIME NOT NULL,
+    sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_renewal_notice_account_expiry (junkshop_account_id, partnership_expires_at),
+    CONSTRAINT fk_renewal_notice_account FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE notifications
