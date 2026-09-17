@@ -1229,3 +1229,19 @@
 [15-Sep-2026 06:57:46 UTC] Login database error [42S22]: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
 [15-Sep-2026 22:58:03 Asia/Manila] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:101
 [16-Sep-2026 21:00:10 Asia/Manila] PHP Warning:  session_destroy(): Trying to destroy uninitialized session in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 77
+[17-Sep-2026 12:58:12 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\app\views\admin_dashboard_shell.php:10
+[17-Sep-2026 13:15:05 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed_report' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\admin-private-dnstl\reports.php:4
+[17-Sep-2026 13:15:06 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed_report' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\app\views\admin_dashboard_shell.php:13
+[17-Sep-2026 13:15:07 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed_report' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\admin-private-dnstl\reports.php:4
+[17-Sep-2026 13:15:08 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed_report' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\app\views\admin_dashboard_shell.php:13
+[17-Sep-2026 13:15:08 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed_report' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\admin-private-dnstl\reports.php:4
+[17-Sep-2026 13:15:28 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'admin_viewed_report' in 'where clause' in C:\xampp\htdocs\booking-website-lipacity\app\views\admin_dashboard_shell.php:13
+[17-Sep-2026 13:23:40 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:40 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:40 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:42 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:43 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:45 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:45 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:45 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 13:23:48 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'

@@ -129,7 +129,7 @@ class PaymentController
             }
 
             $bookingUpdate = $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                'UPDATE pickup_requests SET current_status = :status, admin_viewed_report = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                 ['status' => 'Completed', 'pickup_request_id' => (int) $transaction['pickup_request_id'], 'expected_status' => 'For Pickup']
             );
             if ($bookingUpdate->rowCount() !== 1) {

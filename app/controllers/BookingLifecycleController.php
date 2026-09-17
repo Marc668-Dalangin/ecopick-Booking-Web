@@ -242,7 +242,7 @@ class BookingLifecycleController
 
             {
                 $statusStatement = $this->db->query(
-                    'UPDATE pickup_requests SET current_status = :status, final_recyclable_value = :final_recyclable_value, pickup_collection_fee = :pickup_collection_fee, ecopick_service_fee = :ecopick_service_fee, final_amount_paid = :final_amount_paid, payment_method = :payment_method, payment_status = :payment_status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                    'UPDATE pickup_requests SET current_status = :status, admin_viewed_report = 0, final_recyclable_value = :final_recyclable_value, pickup_collection_fee = :pickup_collection_fee, ecopick_service_fee = :ecopick_service_fee, final_amount_paid = :final_amount_paid, payment_method = :payment_method, payment_status = :payment_status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                     [
                         'status' => 'Completed',
                         'final_recyclable_value' => number_format((float) $settlement['final_recyclable_value'], 2, '.', ''),

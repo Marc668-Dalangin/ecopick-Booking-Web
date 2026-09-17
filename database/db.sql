@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     seller_account_id INT NOT NULL,
     junkshop_id INT NULL,
     current_status ENUM('Pending Request', 'Cancelled') NOT NULL DEFAULT 'Pending Request',
+    admin_viewed_report TINYINT(1) NOT NULL DEFAULT 0,
     final_recyclable_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     pickup_collection_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     ecopick_service_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -342,6 +343,9 @@ ALTER TABLE pickup_requests
         'Completed',
         'Cancelled'
     ) NOT NULL DEFAULT 'Pending Request';
+
+ALTER TABLE pickup_requests
+    ADD COLUMN IF NOT EXISTS admin_viewed_report TINYINT(1) NOT NULL DEFAULT 0 AFTER current_status;
 
 CREATE TABLE IF NOT EXISTS fee_configurations (
     id INT PRIMARY KEY AUTO_INCREMENT,

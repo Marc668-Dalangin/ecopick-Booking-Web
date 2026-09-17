@@ -307,6 +307,55 @@ class AdminFeatureController
     {
         $this->requireAdmin();
         $row = $this->db->query('SELECT COUNT(*) AS completed_pickups, COALESCE(SUM(ecopick_service_fee), 0) AS service_fees, COALESCE(SUM(transaction_commission), 0) AS commissions, COALESCE(SUM(final_recyclable_value), 0) AS recyclable_value FROM transactions WHERE completed_at >= :start_date AND completed_at < DATE_ADD(:end_date, INTERVAL 1 DAY)', ['start_date' => $startDate, 'end_date' => $endDate])->fetch();
-        return $row ?: ['completed_pickups' => 0, 'service_fees' => 0, 'commissions' => 0, 'recyclable_value' => 0];
+        $junkshopReports = $this->db->query(
+            "SELECT a.id AS junkshop_id, jp.business_name, a.email, a.mobile_number,
+                    COUNT(t.id) AS total_transactions,
+                    COALESCE(SUM(t.actual_weight_kg), 0) AS total_weight_kg,
+                    COALESCE(SUM(t.ecopick_service_fee), 0) AS total_service_fees
+             FROM accounts a
+             JOIN roles r ON r.id = a.role_id AND r.name = 'junkshop'
+             JOIN junkshop_profiles jp ON jp.account_id = a.id
+             LEFT JOIN transactions t
+                    ON t.junkshop_id = a.id
+                   AND t.completed_at >= :start_date
+                   AND t.completed_at < DATE_ADD(:end_date, INTERVAL 1 DAY)
+             GROUP BY a.id, jp.business_name, a.email, a.mobile_number
+             ORDER BY total_service_fees DESC, jp.business_name ASC",
+            ['start_date' => $startDate, 'end_date' => $endDate]
+        )->fetchAll();
+
+        $transactionRows = $this->db->query(
+            "SELECT t.id AS transaction_id, t.junkshop_id, t.actual_weight_kg, t.ecopick_service_fee,
+                    t.final_recyclable_value, t.completed_at, pr.booking_reference,
+                    seller.full_name AS seller_name, seller.email AS seller_email,
+                    seller.mobile_number AS seller_mobile
+             FROM transactions t
+             JOIN pickup_requests pr ON pr.id = t.pickup_request_id
+             JOIN accounts seller ON seller.id = t.seller_id
+             WHERE t.completed_at >= :start_date
+               AND t.completed_at < DATE_ADD(:end_date, INTERVAL 1 DAY)
+             ORDER BY t.junkshop_id ASC, t.completed_at DESC, t.id DESC",
+            ['start_date' => $startDate, 'end_date' => $endDate]
+        )->fetchAll();
+
+        $transactionsByJunkshop = [];
+        foreach ($transactionRows as $transaction) {
+            $junkshopId = (int) $transaction['junkshop_id'];
+            $transactionsByJunkshop[$junkshopId][] = $transaction;
+        }
+
+        foreach ($junkshopReports as &$junkshopReport) {
+            $junkshopId = (int) $junkshopReport['junkshop_id'];
+            $junkshopReport['transactions'] = $transactionsByJunkshop[$junkshopId] ?? [];
+        }
+        unset($junkshopReport);
+
+        return [
+            'completed_pickups' => (int) ($row['completed_pickups'] ?? 0),
+            'service_fees' => (float) ($row['service_fees'] ?? 0),
+            'commissions' => (float) ($row['commissions'] ?? 0),
+            'recyclable_value' => (float) ($row['recyclable_value'] ?? 0),
+            'junkshop_reports' => $junkshopReports,
+        ];
     }
 }
