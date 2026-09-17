@@ -236,13 +236,16 @@ ob_start();
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="complete_address">Address</label>
-                                <input type="text" class="form-control" id="complete_address" name="complete_address" value="<?php echo Validator::escape($currentProfile['complete_address'] ?? ''); ?>" required>
+                                <label class="form-label" for="address">Address</label>
+                                <input type="text" class="form-control" id="address" name="complete_address" value="<?php echo Validator::escape($currentProfile['complete_address'] ?? ''); ?>" required>
                             </div>
+                            </div>
+                        </fieldset>
                             <div class="col-12">
                                 <hr>
                                 <h5 class="fw-bold mb-3">Junkshop Location</h5>
-                                <button type="button" id="btn-track-junkshop-location" class="btn btn-primary">Track your junkshop location</button>
+                                <button type="button" id="btn-track-location" class="btn btn-primary"><i class="bi bi-geo-alt-fill me-1"></i>Track your junkshop location</button>
+                                <div id="location-feedback" class="alert d-none mt-3 mb-0" role="alert" aria-live="polite"></div>
                                 <div class="row g-3 mt-1">
                                     <input type="hidden" id="latitude" name="latitude" value="<?php echo htmlspecialchars($currentProfile['latitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" id="longitude" name="longitude" value="<?php echo htmlspecialchars($currentProfile['longitude'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
@@ -251,6 +254,8 @@ ob_start();
                                     </div>
                                 </div>
                             </div>
+                    <fieldset <?php echo $profileFormLocked ? 'disabled' : ''; ?>>
+                        <div class="row g-3">
                             <div class="col-md-12">
                                 <label class="form-label">Operating Days</label>
                                 <div class="row g-2 mb-2">
@@ -458,7 +463,7 @@ ob_start();
     });
 
     document.addEventListener('DOMContentLoaded', function() {
-        const trackButton = document.getElementById('btn-track-junkshop-location');
+        const trackButton = document.getElementById('btn-track-location');
         const highPrecisionGeoOptions = {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -466,8 +471,9 @@ ob_start();
         };
         const latitudeInput = document.getElementById('latitude');
         const longitudeInput = document.getElementById('longitude');
-        const addressInput = document.getElementById('complete_address');
+        const addressInput = document.getElementById('address');
         const mapElement = document.getElementById('junkshop-profile-map');
+        const locationFeedback = document.getElementById('location-feedback');
         let junkshopMap = null;
         let junkshopMarker = null;
 
@@ -479,19 +485,35 @@ ob_start();
         }
 
         function reverseGeocodeJunkshopLocation(lat, lng) {
-            const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
-            return fetch(url, { headers: { 'Accept': 'application/json' } })
+            const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&zoom=18&addressdetails=1&accept-language=en';
+            return fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en'
+                }
+            })
                 .then(function(response) {
                     if (!response.ok) throw new Error('Reverse geocoding failed.');
                     return response.json();
                 })
                 .then(function(data) {
+                    if (data.display_name) return data.display_name;
                     const address = data.address || {};
-                    const barangay = address.village || address.suburb || address.neighbourhood || address.quarter || '';
-                    const city = address.city || address.town || address.municipality || address.city_district || '';
-                    const province = address.state || address.region || '';
-                    addressInput.value = [barangay, city, province].filter(Boolean).join(', ');
+                    return [
+                        address.road,
+                        address.house_number,
+                        address.neighbourhood || address.suburb || address.village,
+                        address.city || address.town || address.municipality,
+                        address.state || address.region,
+                        address.country
+                    ].filter(Boolean).join(', ');
                 });
+        }
+
+        function showLocationFeedback(message, success) {
+            if (!locationFeedback) return;
+            locationFeedback.className = 'alert mt-3 mb-0 ' + (success ? 'alert-success' : 'alert-danger');
+            locationFeedback.textContent = message;
         }
 
         function initializeJunkshopMap(lat, lng) {
@@ -512,7 +534,11 @@ ob_start();
                 junkshopMarker.on('dragend', function() {
                     const position = junkshopMarker.getLatLng();
                     setCoordinates(position.lat, position.lng);
-                    reverseGeocodeJunkshopLocation(position.lat, position.lng).catch(function() {});
+                    reverseGeocodeJunkshopLocation(position.lat, position.lng)
+                        .then(function(address) {
+                            if (address) addressInput.value = address;
+                        })
+                        .catch(function() {});
                 });
             } else {
                 junkshopMarker.setLatLng([lat, lng]);
@@ -524,7 +550,7 @@ ob_start();
 
         function resetTrackButton() {
             trackButton.disabled = false;
-            trackButton.textContent = 'Track your junkshop location';
+            trackButton.innerHTML = '<i class="bi bi-geo-alt-fill me-1"></i>Track your junkshop location';
         }
 
         function handleLocationError(error) {
@@ -569,15 +595,38 @@ ob_start();
                 return;
             }
             trackButton.disabled = true;
-            trackButton.textContent = 'Locating...';
-            navigator.geolocation.getCurrentPosition(function(position) {
+            trackButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Locating...';
+            navigator.geolocation.getCurrentPosition(async function(position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                document.getElementById('latitude').value = lat;
-                document.getElementById('longitude').value = lng;
                 setCoordinates(lat, lng);
                 initializeJunkshopMap(lat, lng);
-                reverseGeocodeJunkshopLocation(lat, lng).catch(function() {}).finally(resetTrackButton);
+                let address = '';
+                try {
+                    address = await reverseGeocodeJunkshopLocation(lat, lng);
+                } catch (error) {
+                    console.warn('Reverse geocode failed:', error);
+                }
+                if (!address) address = addressInput.value.trim();
+                if (address) addressInput.value = address;
+
+                try {
+                    const response = await fetch('update_junkshop_location.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                        body: new URLSearchParams({latitude: latitudeInput.value, longitude: longitudeInput.value, address: address})
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Unable to update location.');
+                    }
+                    if (address) addressInput.value = address;
+                    showLocationFeedback(result.message, true);
+                } catch (error) {
+                    showLocationFeedback(error.message || 'Unable to update location.', false);
+                } finally {
+                    resetTrackButton();
+                }
             }, handleLocationError, highPrecisionGeoOptions);
         });
     });
