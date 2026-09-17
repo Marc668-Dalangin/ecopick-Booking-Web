@@ -303,15 +303,20 @@ class AdminFeatureController
         } catch (Throwable $exception) { $this->db->rollBack(); return ['success' => false, 'message' => 'Concern update failed.']; }
     }
 
-    public function getReport(string $startDate, string $endDate): array
+    public function getReport(string $startDate, string $endDate, string $sortOrder = 'DESC'): array
     {
         $this->requireAdmin();
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
         $row = $this->db->query('SELECT COUNT(*) AS completed_pickups, COALESCE(SUM(ecopick_service_fee), 0) AS service_fees, COALESCE(SUM(transaction_commission), 0) AS commissions, COALESCE(SUM(final_recyclable_value), 0) AS recyclable_value FROM transactions WHERE completed_at >= :start_date AND completed_at < DATE_ADD(:end_date, INTERVAL 1 DAY)', ['start_date' => $startDate, 'end_date' => $endDate])->fetch();
         $junkshopReports = $this->db->query(
             "SELECT a.id AS junkshop_id, jp.business_name, a.email, a.mobile_number,
                     COUNT(t.id) AS total_transactions,
                     COALESCE(SUM(t.actual_weight_kg), 0) AS total_weight_kg,
-                    COALESCE(SUM(t.ecopick_service_fee), 0) AS total_service_fees
+                    COALESCE(SUM(t.ecopick_service_fee), 0) AS total_service_fees,
+                    COALESCE(SUM(t.transaction_commission), 0) AS total_commissions,
+                    COALESCE(SUM(t.final_recyclable_value), 0) AS total_recyclable_value,
+                    COALESCE(SUM(t.pickup_fee), 0) AS total_pickup_fees,
+                    COALESCE(SUM(t.final_seller_amount), 0) AS total_seller_amount
              FROM accounts a
              JOIN roles r ON r.id = a.role_id AND r.name = 'junkshop'
              JOIN junkshop_profiles jp ON jp.account_id = a.id
@@ -320,13 +325,14 @@ class AdminFeatureController
                    AND t.completed_at >= :start_date
                    AND t.completed_at < DATE_ADD(:end_date, INTERVAL 1 DAY)
              GROUP BY a.id, jp.business_name, a.email, a.mobile_number
-             ORDER BY total_service_fees DESC, jp.business_name ASC",
+            ORDER BY total_service_fees DESC, jp.business_name ASC",
             ['start_date' => $startDate, 'end_date' => $endDate]
         )->fetchAll();
 
         $transactionRows = $this->db->query(
-            "SELECT t.id AS transaction_id, t.junkshop_id, t.actual_weight_kg, t.ecopick_service_fee,
-                    t.final_recyclable_value, t.completed_at, pr.booking_reference,
+                "SELECT t.id AS transaction_id, t.junkshop_id, t.actual_weight_kg, t.ecopick_service_fee,
+                    t.final_recyclable_value, t.pickup_fee, t.transaction_commission,
+                    t.final_seller_amount, t.completed_at, pr.booking_reference,
                     seller.full_name AS seller_name, seller.email AS seller_email,
                     seller.mobile_number AS seller_mobile
              FROM transactions t
@@ -334,7 +340,7 @@ class AdminFeatureController
              JOIN accounts seller ON seller.id = t.seller_id
              WHERE t.completed_at >= :start_date
                AND t.completed_at < DATE_ADD(:end_date, INTERVAL 1 DAY)
-             ORDER BY t.junkshop_id ASC, t.completed_at DESC, t.id DESC",
+             ORDER BY t.junkshop_id ASC, t.completed_at {$sortOrder}, t.id {$sortOrder}",
             ['start_date' => $startDate, 'end_date' => $endDate]
         )->fetchAll();
 
