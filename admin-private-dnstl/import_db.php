@@ -44,6 +44,7 @@ $importType = 'danger';
 try {
     $pdo = Database::getInstance()->getPDO();
     $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+    $pdo->exec("SET time_zone = '+00:00'");
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0;');
     $foreignKeysDisabled = true;
     $pdo->exec($sqlContent);

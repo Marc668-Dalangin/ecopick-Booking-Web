@@ -8,6 +8,8 @@ if (!Auth::check() || Auth::userRole() !== 'admin') {
 
 $pdo = Database::getInstance()->getPDO();
 $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+// Keep TIMESTAMP values in UTC while they are read and restored.
+$pdo->exec("SET time_zone = '+00:00'");
 
 $quoteIdentifier = static function (string $identifier): string {
     return '`' . str_replace('`', '``', $identifier) . '`';
@@ -36,11 +38,11 @@ $formatValue = static function ($value, string $columnType) use ($pdo): string {
 
 try {
     $sqlOutput = [
-        '-- EcoPick database backup generated ' . gmdate('c'),
-        'SET NAMES utf8mb4;',
+        '-- EcoPick Complete Database Backup',
         'SET FOREIGN_KEY_CHECKS = 0;',
         'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";',
         'SET time_zone = "+00:00";',
+        'SET NAMES utf8mb4;',
         '',
     ];
 
