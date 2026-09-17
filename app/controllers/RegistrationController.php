@@ -36,6 +36,20 @@ class RegistrationController
                 return ['success' => false, 'errors' => ['Username already registered']];
             }
 
+            $nameExists = (int) $this->db->query(
+                'SELECT COUNT(*)
+                 FROM accounts
+                 WHERE role_id = (SELECT id FROM roles WHERE name = :role)
+                   AND LOWER(TRIM(full_name)) = LOWER(TRIM(:full_name))',
+                [
+                    'role' => 'seller',
+                    'full_name' => $firstName . ' ' . $lastName,
+                ]
+            )->fetchColumn() > 0;
+            if ($nameExists) {
+                return ['success' => false, 'errors' => ['An account with this exact full name (First Name and Last Name) is already registered.']];
+            }
+
             $existing = $this->db->query(
                 'SELECT id FROM accounts WHERE email = :email OR username = :username LIMIT 1',
                 ['email' => $data['email'], 'username' => trim((string) ($data['username'] ?? ''))]

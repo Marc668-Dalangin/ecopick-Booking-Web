@@ -36,65 +36,82 @@ $formatValue = static function ($value, string $columnType) use ($pdo): string {
 
 try {
     $sqlOutput = [
-    '-- EcoPick database backup generated ' . gmdate('c'),
-    'SET FOREIGN_KEY_CHECKS = 0;',
-    'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";',
-    'SET time_zone = "+00:00";',
-    'START TRANSACTION;',
-    '',
+        '-- EcoPick database backup generated ' . gmdate('c'),
+        'SET NAMES utf8mb4;',
+        'SET FOREIGN_KEY_CHECKS = 0;',
+        'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";',
+        'SET time_zone = "+00:00";',
+        '',
     ];
 
-$tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-foreach ($tables as $tableName) {
-    $tableName = (string) $tableName;
-    if ($tableName === '') {
-        continue;
+    $views = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'VIEW'")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($views as $viewName) {
+        $sqlOutput[] = 'DROP VIEW IF EXISTS ' . $quoteIdentifier((string) $viewName) . ';';
+    }
+    if ($views !== []) {
+        $sqlOutput[] = '';
     }
 
-    $quotedTable = $quoteIdentifier($tableName);
-    $createStatement = $pdo->query('SHOW CREATE TABLE ' . $quotedTable);
-    $createRow = $createStatement->fetch(PDO::FETCH_ASSOC);
-    $createSql = (string) ($createRow['Create Table'] ?? $createRow['Create View'] ?? '');
-    if ($createSql === '') {
-        continue;
-    }
-
-    $sqlOutput[] = '-- Table: ' . $tableName;
-    $sqlOutput[] = 'DROP TABLE IF EXISTS ' . $quotedTable . ';';
-    $sqlOutput[] = rtrim($createSql, " ;\t\r\n") . ';';
-
-    $columns = [];
-    $columnStatement = $pdo->query('SHOW COLUMNS FROM ' . $quotedTable);
-    foreach ($columnStatement->fetchAll(PDO::FETCH_ASSOC) as $column) {
-        $columns[] = [
-            'name' => (string) ($column['Field'] ?? ''),
-            'type' => (string) ($column['Type'] ?? ''),
-        ];
-    }
-
-    $rows = $pdo->query('SELECT * FROM ' . $quotedTable);
-    $valueBatch = [];
-    while (($row = $rows->fetch(PDO::FETCH_NUM)) !== false) {
-        $values = [];
-        foreach ($columns as $index => $column) {
-            $values[] = $formatValue($row[$index] ?? null, $column['type']);
+    $tables = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($tables as $tableName) {
+        $tableName = (string) $tableName;
+        $quotedTable = $quoteIdentifier($tableName);
+        $createRow = $pdo->query('SHOW CREATE TABLE ' . $quotedTable)->fetch(PDO::FETCH_ASSOC);
+        $createSql = (string) ($createRow['Create Table'] ?? '');
+        if ($createSql === '') {
+            continue;
         }
-        $valueBatch[] = '(' . implode(', ', $values) . ')';
 
-        if (count($valueBatch) >= 50) {
-            $sqlOutput[] = 'INSERT INTO ' . $quotedTable . ' VALUES ' . implode(",\n", $valueBatch) . ';';
-            $valueBatch = [];
+        $sqlOutput[] = '-- Table: ' . $tableName;
+        $sqlOutput[] = 'DROP TABLE IF EXISTS ' . $quotedTable . ';';
+        $sqlOutput[] = rtrim($createSql, " ;\t\r\n") . ';';
+
+        $columns = [];
+        foreach ($pdo->query('SHOW COLUMNS FROM ' . $quotedTable)->fetchAll(PDO::FETCH_ASSOC) as $column) {
+            $columns[] = [
+                'name' => (string) ($column['Field'] ?? ''),
+                'type' => (string) ($column['Type'] ?? ''),
+            ];
         }
+        $columnList = implode(', ', array_map(static fn (array $column): string => $quoteIdentifier($column['name']), $columns));
+        $rows = $pdo->query('SELECT * FROM ' . $quotedTable);
+        $valueBatch = [];
+        while (($row = $rows->fetch(PDO::FETCH_NUM)) !== false) {
+            $values = [];
+            foreach ($columns as $index => $column) {
+                $values[] = $formatValue($row[$index] ?? null, $column['type']);
+            }
+            $valueBatch[] = '(' . implode(', ', $values) . ')';
+            if (count($valueBatch) >= 50) {
+                $sqlOutput[] = 'INSERT INTO ' . $quotedTable . ' (' . $columnList . ') VALUES ' . implode(",\n", $valueBatch) . ';';
+                $valueBatch = [];
+            }
+        }
+        if ($valueBatch !== []) {
+            $sqlOutput[] = 'INSERT INTO ' . $quotedTable . ' (' . $columnList . ') VALUES ' . implode(",\n", $valueBatch) . ';';
+        }
+
+        $autoIncrement = $pdo->query("SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($tableName))->fetchColumn();
+        if ($autoIncrement !== false && $autoIncrement !== null) {
+            $sqlOutput[] = 'ALTER TABLE ' . $quotedTable . ' AUTO_INCREMENT = ' . (int) $autoIncrement . ';';
+        }
+        $sqlOutput[] = '';
     }
 
-    if ($valueBatch !== []) {
-        $sqlOutput[] = 'INSERT INTO ' . $quotedTable . ' VALUES ' . implode(",\n", $valueBatch) . ';';
+    foreach ($views as $viewName) {
+        $quotedView = $quoteIdentifier((string) $viewName);
+        $createRow = $pdo->query('SHOW CREATE VIEW ' . $quotedView)->fetch(PDO::FETCH_ASSOC);
+        $createSql = (string) ($createRow['Create View'] ?? '');
+        if ($createSql === '') {
+            continue;
+        }
+        $sqlOutput[] = '-- View: ' . $viewName;
+        $sqlOutput[] = 'DROP VIEW IF EXISTS ' . $quotedView . ';';
+        $sqlOutput[] = rtrim($createSql, " ;\t\r\n") . ';';
+        $sqlOutput[] = '';
     }
-    $sqlOutput[] = '';
-}
 
-$sqlOutput[] = 'COMMIT;';
-$sqlOutput[] = 'SET FOREIGN_KEY_CHECKS = 1;';
+    $sqlOutput[] = 'SET FOREIGN_KEY_CHECKS = 1;';
 
 header('Content-Type: application/sql; charset=utf-8');
 header('Content-Disposition: attachment; filename="backup_' . gmdate('Y-m-d_H-i') . '.sql"');

@@ -445,8 +445,8 @@ class DashboardController
             LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1
             WHERE pr.junkshop_id = :junkshop_id
                         AND pr.current_status IN (:pending_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status, :cancelled_status, :cancelled_by_seller_status)
-            GROUP BY pr.id, seller.id, sp.id
-                    ORDER BY pr.updated_at DESC',
+                GROUP BY pr.id, seller.id, sp.id
+                    ORDER BY pr.created_at DESC, pr.id DESC',
             [
                 'junkshop_id' => $junkshopId,
                 'pending_status' => 'Pending Request',
