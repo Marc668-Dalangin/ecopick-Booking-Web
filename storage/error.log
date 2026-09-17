@@ -1228,3 +1228,4 @@
 [15-Sep-2026 06:57:46 UTC] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
 [15-Sep-2026 06:57:46 UTC] Login database error [42S22]: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
 [15-Sep-2026 22:58:03 Asia/Manila] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:101
+[16-Sep-2026 21:00:10 Asia/Manila] PHP Warning:  session_destroy(): Trying to destroy uninitialized session in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 77

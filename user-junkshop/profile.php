@@ -98,6 +98,11 @@ if ($role === 'seller') {
     }
 }
 
+$profileUpdatedAt = !empty($currentProfile['profile_updated_at']) ? strtotime((string) $currentProfile['profile_updated_at']) : false;
+$profileCooldownActive = $profileUpdatedAt !== false && $profileUpdatedAt > strtotime('-7 days');
+$profileCooldownUntil = $profileCooldownActive ? $profileUpdatedAt + (7 * 24 * 60 * 60) : null;
+$profileFormLocked = $isExpiredJunkshop || $profileCooldownActive;
+
 $pageTitle = 'Profile';
 $currentPage = 'profile';
 $userDisplayName = Auth::userName();
@@ -130,6 +135,9 @@ ob_start();
                 <?php if ($isExpiredJunkshop): ?>
                     <div class="alert alert-warning" role="alert">Your profile is read-only while your partnership subscription is expired.</div>
                 <?php endif; ?>
+                <?php if ($profileCooldownActive): ?>
+                    <div class="alert alert-info" role="alert">Profile information edits are locked until <?php echo Validator::escape(date('M d, Y g:i A', $profileCooldownUntil)); ?>. You can update your profile again after the 7-day cooldown. Shop operational status can still be changed.</div>
+                <?php endif; ?>
 
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger">
@@ -143,7 +151,12 @@ ob_start();
 
                 <form method="POST" action="" novalidate>
                     <?php echo CSRF::field(); ?>
-                    <fieldset <?php echo $isExpiredJunkshop ? 'disabled' : ''; ?>>
+                    <fieldset <?php echo $profileFormLocked ? 'disabled' : ''; ?>>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" for="registered_email">Email Address</label>
+                        <input type="email" class="form-control bg-light" id="registered_email" value="<?php echo htmlspecialchars($currentProfile['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly disabled>
+                        <small class="text-muted">Registered email addresses cannot be modified directly.</small>
+                    </div>
 
                     <?php if ($role === 'seller'): ?>
                         <?php
@@ -188,6 +201,7 @@ ob_start();
                             $junkshopMobile = substr($junkshopMobile, 2);
                         }
                         ?>
+                    </fieldset>
                         <div class="card mb-3 border-0 shadow-sm">
                             <div class="card-body d-flex align-items-center justify-content-between">
                                 <div>
@@ -204,6 +218,7 @@ ob_start();
                                 </div>
                             </div>
                         </div>
+                    <fieldset <?php echo $profileFormLocked ? 'disabled' : ''; ?>>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="business_name">Business Name</label>
@@ -288,7 +303,7 @@ ob_start();
                     <?php endif; ?>
 
                     <div class="mt-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Changes</button>
+                        <button type="submit" class="btn btn-primary" <?php echo $profileFormLocked ? 'disabled' : ''; ?>><i class="bi bi-save"></i> Save Changes</button>
                         <a href="<?php echo APP_URL; ?>/user-junkshop/dashboard.php" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                     </fieldset>

@@ -211,7 +211,7 @@ class DashboardController
     {
         return $this->db->query(
             "SELECT a.id AS account_id, a.username, a.full_name, a.email, a.mobile_number, a.account_status,
-                    sp.address, sp.barangay, a.created_at
+                    sp.address, sp.barangay, a.created_at, NULLIF(sp.updated_at, sp.created_at) AS profile_updated_at
              FROM accounts a
              LEFT JOIN seller_profiles sp ON sp.account_id = a.id
              WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'seller')",
@@ -224,12 +224,22 @@ class DashboardController
         try {
             $this->db->beginTransaction();
             $account = $this->db->query(
-                "SELECT id FROM accounts WHERE id = :account_id AND role_id = (SELECT id FROM roles WHERE name = 'seller') LIMIT 1",
+                "SELECT a.id, sp.created_at, sp.updated_at
+                 FROM accounts a
+                 LEFT JOIN seller_profiles sp ON sp.account_id = a.id
+                 WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'seller')
+                 LIMIT 1 FOR UPDATE",
                 ['account_id' => (int) $accountId]
             )->fetch();
             if (!$account) {
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Seller account not found'];
+            }
+            if ($account['created_at'] !== null && $account['updated_at'] !== null
+                && strtotime((string) $account['updated_at']) > strtotime((string) $account['created_at'])
+                && strtotime((string) $account['updated_at']) > strtotime('-7 days')) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Profile edits are locked for 7 days after an update.'];
             }
             $this->db->query(
                 'UPDATE accounts SET full_name = :full_name, mobile_number = :mobile_number, updated_at = CURRENT_TIMESTAMP WHERE id = :account_id',
@@ -256,7 +266,7 @@ class DashboardController
                 "SELECT a.id AS account_id, a.username, a.email, a.full_name AS owner_name, a.mobile_number,
                         a.account_status, jp.business_name, jp.complete_address, jp.latitude, jp.longitude, jp.operating_schedule,
                         jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number, jp.is_available,
-                        jp.approval_status, jp.created_at
+                        jp.approval_status, jp.created_at, NULLIF(jp.updated_at, jp.created_at) AS profile_updated_at
                  FROM accounts a
                  JOIN junkshop_profiles jp ON jp.account_id = a.id
                  WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
@@ -273,12 +283,22 @@ class DashboardController
         try {
             $this->db->beginTransaction();
             $account = $this->db->query(
-                "SELECT id FROM accounts WHERE id = :account_id AND role_id = (SELECT id FROM roles WHERE name = 'junkshop') LIMIT 1",
+                "SELECT a.id, jp.created_at, jp.updated_at
+                 FROM accounts a
+                 JOIN junkshop_profiles jp ON jp.account_id = a.id
+                 WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')
+                 LIMIT 1 FOR UPDATE",
                 ['account_id' => (int) $accountId]
             )->fetch();
             if (!$account) {
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop account not found'];
+            }
+            if ($account['created_at'] !== null && $account['updated_at'] !== null
+                && strtotime((string) $account['updated_at']) > strtotime((string) $account['created_at'])
+                && strtotime((string) $account['updated_at']) > strtotime('-7 days')) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Profile edits are locked for 7 days after an update.'];
             }
             $this->db->query(
                 'UPDATE accounts SET full_name = :account_owner_name, mobile_number = :mobile_number, updated_at = CURRENT_TIMESTAMP WHERE id = :account_id',
@@ -342,10 +362,11 @@ class DashboardController
         }
     }
 
-    public function getSellerTransactionHistory(int $sellerId): array
+    public function getSellerTransactionHistory(int $sellerId, string $sortOrder = 'DESC'): array
     {
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(jp.business_name, junkshop.full_name, \'Junkshop\') AS junkshop_name, COALESCE(SUM(tm.actual_weight_kg), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, pr.current_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id AND tm.accepted = 1 LEFT JOIN junkshop_profiles jp ON jp.account_id = t.junkshop_id LEFT JOIN accounts junkshop ON junkshop.id = t.junkshop_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, jp.account_id, junkshop.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(jp.business_name, junkshop.full_name, \'Junkshop\') AS junkshop_name, COALESCE(SUM(tm.actual_weight_kg), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, pr.current_status, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id AND tm.accepted = 1 LEFT JOIN junkshop_profiles jp ON jp.account_id = t.junkshop_id LEFT JOIN accounts junkshop ON junkshop.id = t.junkshop_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, jp.account_id, junkshop.id, pp.id ORDER BY t.completed_at ' . $sortOrder . ', pp.uploaded_at ' . $sortOrder,
             ['seller_id' => $sellerId]
         )->fetchAll();
     }
@@ -404,6 +425,7 @@ class DashboardController
                 sp.address AS seller_address,
                 sp.barangay AS seller_barangay,
                 COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
+                COALESCE(NULLIF(SUM(pri.actual_weight), 0), (SELECT SUM(tm.actual_weight_kg) FROM transaction_materials tm JOIN transactions tx ON tx.id = tm.transaction_id WHERE tx.pickup_request_id = pr.id AND tm.accepted = 1), 0) AS actual_weight,
                 GROUP_CONCAT(CONCAT(rm.material_name, " (", FORMAT(pri.estimated_weight, 2), " kg)") ORDER BY rm.material_name SEPARATOR ", ") AS materials_summary,
                 GROUP_CONCAT(CONCAT(pri.id, ":", rm.material_name, ":", FORMAT(pri.estimated_weight, 2), ":", FORMAT(COALESCE(jmp.buying_price, 0), 2), ":", IF(jmp.material_id IS NULL, 0, 1)) ORDER BY rm.material_name SEPARATOR "|") AS settlement_items,
                 COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct,
@@ -438,18 +460,20 @@ class DashboardController
         )->fetchAll();
     }
 
-    public function getJunkshopCompletedTransactions(int $junkshopId): array
+    public function getJunkshopCompletedTransactions(int $junkshopId, string $sortOrder = 'DESC'): array
     {
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.seller_id, seller.full_name AS seller_fullname, pr.pickup_address, COALESCE(SUM(tm.actual_weight_kg), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, t.transaction_commission, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg x ₱\', FORMAT(tm.buying_price_per_kg, 2), \')\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \'|||\', FORMAT(tm.actual_weight_kg, 2), \'|||\', COALESCE(tm.`condition`, \'\')) ORDER BY rm.material_name SEPARATOR \'~~~\') AS material_details FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id JOIN accounts seller ON seller.id = t.seller_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id AND tm.accepted = 1 LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.junkshop_id = :junkshop_id GROUP BY t.id, pr.id, seller.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.seller_id, seller.full_name AS seller_fullname, pr.pickup_address, COALESCE(SUM(tm.actual_weight_kg), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, t.transaction_commission, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg x ₱\', FORMAT(tm.buying_price_per_kg, 2), \')\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \'|||\', FORMAT(tm.actual_weight_kg, 2), \'|||\', COALESCE(tm.`condition`, \'\')) ORDER BY rm.material_name SEPARATOR \'~~~\') AS material_details FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id JOIN accounts seller ON seller.id = t.seller_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id AND tm.accepted = 1 LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.junkshop_id = :junkshop_id GROUP BY t.id, pr.id, seller.id, pp.id ORDER BY t.completed_at ' . $sortOrder . ', pp.uploaded_at ' . $sortOrder,
             ['junkshop_id' => $junkshopId]
         )->fetchAll();
     }
 
-    public function getSellerCompletedTransactions(int $sellerId): array
+    public function getSellerCompletedTransactions(int $sellerId, string $sortOrder = 'DESC'): array
     {
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
         return $this->db->query(
-            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(jp.business_name, junkshop.full_name, \'Junkshop\') AS junkshop_name, COALESCE(SUM(tm.actual_weight_kg), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg)\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \'|||\', FORMAT(tm.actual_weight_kg, 2), \'|||\', COALESCE(tm.`condition`, \'\')) ORDER BY rm.material_name SEPARATOR \'~~~\') AS material_details FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id AND tm.accepted = 1 LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN junkshop_profiles jp ON jp.account_id = t.junkshop_id LEFT JOIN accounts junkshop ON junkshop.id = t.junkshop_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, jp.account_id, junkshop.id, pp.id ORDER BY t.completed_at DESC, pp.uploaded_at DESC',
+            'SELECT t.id, t.pickup_request_id, t.junkshop_id, COALESCE(jp.business_name, junkshop.full_name, \'Junkshop\') AS junkshop_name, COALESCE(SUM(tm.actual_weight_kg), t.actual_weight_kg) AS actual_weight_kg, pr.final_recyclable_value, pr.pickup_collection_fee AS pickup_fee, pr.ecopick_service_fee, pr.final_amount_paid AS final_seller_amount, pr.payment_method, pr.payment_status, t.payment_confirmed_at, pp.id AS payment_proof_id, t.completed_at, pr.booking_reference, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \' (\', FORMAT(tm.actual_weight_kg, 2), \' kg)\') ORDER BY rm.material_name SEPARATOR \', \') AS materials_summary, GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, \'|||\', FORMAT(tm.actual_weight_kg, 2), \'|||\', COALESCE(tm.`condition`, \'\')) ORDER BY rm.material_name SEPARATOR \'~~~\') AS material_details FROM transactions t JOIN pickup_requests pr ON pr.id = t.pickup_request_id LEFT JOIN transaction_materials tm ON tm.transaction_id = t.id AND tm.accepted = 1 LEFT JOIN recyclable_materials rm ON rm.id = tm.material_id LEFT JOIN junkshop_profiles jp ON jp.account_id = t.junkshop_id LEFT JOIN accounts junkshop ON junkshop.id = t.junkshop_id LEFT JOIN payment_proofs pp ON pp.transaction_id = t.id AND pp.proof_status IN (\'Submitted\', \'Approved\') WHERE t.seller_id = :seller_id GROUP BY t.id, pr.id, jp.account_id, junkshop.id, pp.id ORDER BY t.completed_at ' . $sortOrder . ', pp.uploaded_at ' . $sortOrder,
             ['seller_id' => $sellerId]
         )->fetchAll();
     }

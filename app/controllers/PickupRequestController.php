@@ -201,7 +201,9 @@ class PickupRequestController
                 pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
                 pr.confirmed_pickup_time, DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                 TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path,
-                pr.notes, pr.created_at, pr.updated_at, COALESCE(jp.business_name, junkshop.full_name, 'Junkshop') AS junkshop_name,
+                pr.notes, pr.created_at, pr.updated_at, pr.current_status AS status,
+                COALESCE(NULLIF(SUM(pri.actual_weight), 0), (SELECT SUM(tm.actual_weight_kg) FROM transaction_materials tm JOIN transactions tx ON tx.id = tm.transaction_id WHERE tx.pickup_request_id = pr.id AND tm.accepted = 1), 0) AS actual_weight,
+                COALESCE(jp.business_name, junkshop.full_name, 'Junkshop') AS junkshop_name,
                 COUNT(pri.id) AS item_count,
                 COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
                 GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
