@@ -2,64 +2,150 @@
 /** Durable in-app notifications. */
 class NotificationService
 {
-    public static function sendRenewalReminders(): int
+    public static function dispatchIfDue(int $throttleSeconds = 60): void
     {
+        if (PHP_SAPI === 'cli') {
+            return;
+        }
+
+        $lockPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'renewal-notifier.lock';
+        $lockHandle = @fopen($lockPath, 'c+');
+        if ($lockHandle === false || !@flock($lockHandle, LOCK_EX | LOCK_NB)) {
+            if (is_resource($lockHandle)) {
+                fclose($lockHandle);
+            }
+            return;
+        }
+
+        try {
+            $lastRun = (int) trim((string) stream_get_contents($lockHandle));
+            if ($lastRun > 0 && (time() - $lastRun) < $throttleSeconds) {
+                return;
+            }
+
+            ftruncate($lockHandle, 0);
+            rewind($lockHandle);
+            fwrite($lockHandle, (string) time());
+            fflush($lockHandle);
+            self::sendRenewalReminders();
+        } catch (Throwable $exception) {
+            error_log('Automatic renewal notification dispatch error: ' . $exception->getMessage());
+        } finally {
+            flock($lockHandle, LOCK_UN);
+            fclose($lockHandle);
+        }
+    }
+
+    public static function sendRenewalReminders(): array
+    {
+        $results = ['sent' => 0, 'failed' => 0, 'details' => []];
         $db = Database::getInstance();
-        $noticeDays = (int) $db->query(
-            "SELECT config_value FROM fee_configurations WHERE config_key = 'renewal_notice_days' LIMIT 1"
-        )->fetchColumn();
-        $noticeDays = $noticeDays >= 1 && $noticeDays <= 30 ? $noticeDays : 1;
-        $junkshops = $db->query(
-            "SELECT a.id AS account_id, a.email, a.full_name, jp.business_name, jp.partnership_expires_at
-             FROM accounts a
-             JOIN junkshop_profiles jp ON jp.account_id = a.id
-             JOIN roles r ON r.id = a.role_id
-             WHERE r.name = 'junkshop' AND jp.approval_status = 'approved'
-               AND a.email IS NOT NULL AND a.email <> ''
-               AND jp.partnership_expires_at > CURRENT_TIMESTAMP
-               AND jp.partnership_expires_at <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL {$noticeDays} DAY)"
-        )->fetchAll();
-        $sent = 0;
+        try {
+            $noticeDays = (int) $db->query(
+                "SELECT expiration_notice_lead_days
+                 FROM fee_settings
+                 WHERE id = 1
+                 LIMIT 1"
+            )->fetchColumn();
+            $noticeDays = $noticeDays >= 1 && $noticeDays <= 30 ? $noticeDays : 1;
+            $noticeHours = $noticeDays * 24;
+            $junkshops = $db->query(
+                "SELECT a.id AS account_id, a.email, a.full_name, jp.business_name,
+                        jp.partnership_expires_at, jp.last_expiration_notice_sent
+                 FROM accounts a
+                 JOIN junkshop_profiles jp ON jp.account_id = a.id
+                 JOIN roles r ON r.id = a.role_id
+                 WHERE r.name = 'junkshop' AND jp.approval_status = 'approved'
+                   AND a.email IS NOT NULL AND a.email <> ''
+                   AND jp.partnership_expires_at > CURRENT_TIMESTAMP
+                   AND jp.partnership_expires_at <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL {$noticeHours} HOUR)
+                   AND (jp.last_expiration_notice_sent IS NULL
+                        OR jp.last_expiration_notice_sent < DATE_SUB(jp.partnership_expires_at, INTERVAL {$noticeHours} HOUR))"
+            )->fetchAll();
+        } catch (Throwable $exception) {
+            $results['failed']++;
+            $results['details'][] = 'Renewal notification query failed: ' . $exception->getMessage();
+            error_log('Renewal notification query error: ' . $exception->getMessage());
+            return $results;
+        }
 
         foreach ($junkshops as $junkshop) {
             $expiry = (string) $junkshop['partnership_expires_at'];
+            $accountId = (int) $junkshop['account_id'];
             try {
-                $claim = $db->query(
-                    'INSERT INTO renewal_notification_log (junkshop_account_id, partnership_expires_at) VALUES (:account_id, :expires_at)',
-                    ['account_id' => (int) $junkshop['account_id'], 'expires_at' => $expiry]
+                try {
+                    $db->query(
+                        'INSERT INTO renewal_notification_log (junkshop_account_id, partnership_expires_at)
+                         VALUES (:account_id, :expires_at)
+                         ON DUPLICATE KEY UPDATE sent_at = sent_at',
+                        ['account_id' => $accountId, 'expires_at' => $expiry]
+                    );
+                } catch (Throwable $claimException) {
+                    $results['details'][] = 'Tracking claim failed for ' . $junkshop['email'] . '; email delivery will continue: ' . $claimException->getMessage();
+                    error_log('Renewal notification claim error: ' . $claimException->getMessage());
+                }
+                $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $expiry, new DateTimeZone(APP_TIMEZONE));
+                $displayExpiry = $date ? $date->format('F j, Y g:i A T') : $expiry;
+                $mailResult = MailerService::sendRenewalNotice(
+                    (string) $junkshop['email'],
+                    (string) ($junkshop['full_name'] ?: $junkshop['business_name']),
+                    $displayExpiry
                 );
-                if ($claim->rowCount() !== 1) {
+                if (!$mailResult['sent']) {
+                    $errorMessage = (string) ($mailResult['error'] ?? 'Unknown SMTP delivery error.');
+                    $results['failed']++;
+                    $results['details'][] = 'Failed sending notice to ' . $junkshop['email'] . ' (' . $junkshop['business_name'] . '): ' . $errorMessage;
+                    try {
+                        $db->query(
+                            'DELETE FROM renewal_notification_log
+                             WHERE junkshop_account_id = :account_id AND partnership_expires_at = :expires_at',
+                            ['account_id' => $accountId, 'expires_at' => $expiry]
+                        );
+                    } catch (Throwable $logException) {
+                        error_log('Renewal notification claim cleanup error: ' . $logException->getMessage());
+                    }
                     continue;
                 }
 
-                $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $expiry, new DateTimeZone(APP_TIMEZONE));
-                $displayExpiry = $date ? $date->format('F j, Y g:i A T') : $expiry;
-                if (!MailerService::sendRenewalNotice((string) $junkshop['email'], (string) ($junkshop['full_name'] ?: $junkshop['business_name']), $displayExpiry)) {
+                $results['sent']++;
+                $results['details'][] = 'Sent notice to ' . $junkshop['email'] . ' (' . $junkshop['business_name'] . ').';
+
+                try {
                     $db->query(
-                        'DELETE FROM renewal_notification_log WHERE junkshop_account_id = :account_id AND partnership_expires_at = :expires_at',
-                        ['account_id' => (int) $junkshop['account_id'], 'expires_at' => $expiry]
+                        'UPDATE junkshop_profiles
+                         SET last_expiration_notice_sent = CURRENT_TIMESTAMP
+                         WHERE account_id = :account_id AND partnership_expires_at = :expires_at',
+                        ['account_id' => $accountId, 'expires_at' => $expiry]
                     );
-                    continue;
+                } catch (Throwable $trackingException) {
+                    $results['details'][] = 'Email sent, but notice timestamp was not saved for ' . $junkshop['email'] . ': ' . $trackingException->getMessage();
+                    error_log('Renewal notification timestamp error: ' . $trackingException->getMessage());
                 }
 
                 $message = "Your EcoPick subscription expires on {$displayExpiry}. Please log in and renew before this date.";
-                $db->query(
-                    'INSERT INTO notifications (recipient_account_id, notification_type, title, message, link_url) VALUES (:account_id, :type, :title, :message, :link_url)',
-                    [
-                        'account_id' => (int) $junkshop['account_id'],
-                        'type' => 'renewal_notice',
-                        'title' => 'Partnership renewal reminder',
-                        'message' => $message,
-                        'link_url' => APP_URL . '/user-junkshop/renewal.php',
-                    ]
-                );
-                $sent++;
+                try {
+                    $db->query(
+                        'INSERT INTO notifications (recipient_account_id, notification_type, title, message, link_url) VALUES (:account_id, :type, :title, :message, :link_url)',
+                        [
+                            'account_id' => $accountId,
+                            'type' => 'renewal_notice',
+                            'title' => 'Partnership renewal reminder',
+                            'message' => $message,
+                            'link_url' => APP_URL . '/user-junkshop/renewal.php',
+                        ]
+                    );
+                } catch (Throwable $notificationException) {
+                    $results['details'][] = 'Email sent, but in-app notification was not saved for ' . $junkshop['email'] . ': ' . $notificationException->getMessage();
+                    error_log('Renewal in-app notification error: ' . $notificationException->getMessage());
+                }
             } catch (Throwable $exception) {
+                $results['failed']++;
+                $results['details'][] = 'Renewal notice error for ' . ($junkshop['email'] ?? 'unknown recipient') . ': ' . $exception->getMessage();
                 error_log('Renewal reminder error: ' . $exception->getMessage());
             }
         }
 
-        return $sent;
+        return $results;
     }
 
     public static function notifyBookingStatus(int $pickupRequestId, ?string $newStatus, string $responsibleParty): void

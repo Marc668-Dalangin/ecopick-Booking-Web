@@ -7,6 +7,16 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 
 class AdminFeeController
 {
+    private const ACTIVE_FEE_KEYS = [
+        'default_pickup_fee',
+        'ecopick_service_fee_pct',
+        'junkshop_commission_pct',
+        'junkshop_registration_fee',
+        'renewal_fee_1_month',
+        'renewal_fee_6_months',
+        'renewal_fee_1_year',
+    ];
+
     private Database $db;
 
     public function __construct()
@@ -40,7 +50,19 @@ class AdminFeeController
         $this->ensureAdminAccess();
 
         $rows = $this->db->query(
-            'SELECT id, config_key, config_value, description, updated_at FROM fee_configurations ORDER BY config_key ASC'
+            'SELECT id, config_key, config_value, description, updated_at
+             FROM fee_configurations
+             WHERE config_key IN (:pickup_fee, :service_fee, :commission, :registration_fee, :renewal_1_month, :renewal_6_months, :renewal_1_year)
+             ORDER BY id ASC',
+            [
+                'pickup_fee' => 'default_pickup_fee',
+                'service_fee' => 'ecopick_service_fee_pct',
+                'commission' => 'junkshop_commission_pct',
+                'registration_fee' => 'junkshop_registration_fee',
+                'renewal_1_month' => 'renewal_fee_1_month',
+                'renewal_6_months' => 'renewal_fee_6_months',
+                'renewal_1_year' => 'renewal_fee_1_year',
+            ]
         )->fetchAll();
 
         return $rows;
@@ -54,11 +76,8 @@ class AdminFeeController
         $this->ensureAdminAccess();
 
         $key = trim($configKey);
-        if ($key === '') {
+        if (!in_array($key, self::ACTIVE_FEE_KEYS, true)) {
             return ['success' => false, 'message' => 'Configuration key is required.'];
-        }
-        if ($key === 'renewal_notice_days' && ($newValue < 1 || $newValue > 30 || floor($newValue) !== $newValue)) {
-            return ['success' => false, 'message' => 'Renewal notice lead time must be a whole number between 1 and 30 days.'];
         }
 
         try {

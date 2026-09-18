@@ -11,14 +11,31 @@ if (Auth::userRole() !== 'admin') {
     exit;
 }
 
+$automaticDispatch = null;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    try {
+        $automaticDispatch = NotificationService::sendRenewalReminders();
+    } catch (Throwable $exception) {
+        error_log('Admin renewal notification dispatch error: ' . $exception->getMessage());
+        $automaticDispatch = ['sent' => 0, 'failed' => 1, 'details' => [$exception->getMessage()]];
+    }
+}
+
 $controller = new AdminFeatureController();
 $feedback = null;
+$errorMessage = null;
 $action = (string) ($_POST['action'] ?? '');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
-    if ($action === 'default_expiry') {
-        $feedback = $controller->updateDefaultJunkshopExpiryDays((int) ($_POST['default_junkshop_expiry_days'] ?? 0));
-    } elseif ($action === 'renewal_notice') {
+    if ($action === 'renewal_notice') {
         $feedback = $controller->updateRenewalNoticeDays((int) ($_POST['renewal_notice_days'] ?? 0));
+        if ($feedback['success']) {
+            $dispatch = NotificationService::sendRenewalReminders();
+            $feedback['message'] .= sprintf(' Notification dispatch: %d sent, %d failed.', $dispatch['sent'], $dispatch['failed']);
+            if ($dispatch['failed'] > 0 && $dispatch['details']) {
+                $feedback['success'] = false;
+                $feedback['message'] .= ' ' . implode(' ', $dispatch['details']);
+            }
+        }
     } elseif ($action === 'expiry') {
         $customExpiryDate = trim((string) ($_POST['custom_expiry_date'] ?? ''));
         $customExpiryTime = trim((string) ($_POST['custom_expiry_time'] ?? ''));
@@ -29,6 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
             $customExpiryTime,
             $enableExpiryTime
         );
+        if ($feedback['success']) {
+            $dispatch = NotificationService::sendRenewalReminders();
+            $feedback['message'] .= sprintf(' Notification dispatch: %d sent, %d failed.', $dispatch['sent'], $dispatch['failed']);
+            if ($dispatch['failed'] > 0 && $dispatch['details']) {
+                $feedback['success'] = false;
+                $feedback['message'] .= ' ' . implode(' ', $dispatch['details']);
+            }
+        }
     } elseif ($action === 'reconcile') {
         $feedback = $controller->reconcilePartnershipPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''));
     } elseif ($action === 'commission') {
@@ -41,11 +66,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
     }
 }
 
-$defaultExpiryDays = $controller->getDefaultJunkshopExpiryDays();
-$renewalNoticeDays = $controller->getRenewalNoticeDays();
-$junkshops = $controller->listApprovedJunkshops();
-$payments = $controller->listPartnershipPayments();
-$commissionPayments = $controller->listCommissionPayments();
+if ($feedback === null && is_array($automaticDispatch) && $automaticDispatch['failed'] > 0) {
+    $feedback = [
+        'success' => false,
+        'message' => 'Automatic renewal notification dispatch failed. ' . implode(' ', $automaticDispatch['details']),
+    ];
+}
+
+$loadRenewalData = static function (callable $loader, mixed $fallback) use (&$errorMessage): mixed {
+    try {
+        return $loader();
+    } catch (PDOException $exception) {
+        error_log('Renewals & Payments Error: ' . $exception->getMessage());
+        $errorMessage = 'Unable to fetch some renewal records. Please ensure your db.sql schema is updated.';
+        return $fallback;
+    }
+};
+
+$renewalNoticeDays = $loadRenewalData(
+    static fn (): int => $controller->getRenewalNoticeDays(),
+    1
+);
+$junkshops = $loadRenewalData(
+    static fn (): array => $controller->listApprovedJunkshops(),
+    []
+);
+$payments = $loadRenewalData(
+    static fn (): array => $controller->listPartnershipPayments(),
+    []
+);
 $pageTitle = 'Renewals & Payments';
 $activePage = 'partnership-payments';
 ob_start();
@@ -77,22 +126,15 @@ ob_start();
         <?php if ($feedback): ?>
             <div class="alert alert-<?php echo $feedback['success'] ? 'success' : 'danger'; ?>"><?php echo Validator::escape($feedback['message']); ?></div>
         <?php endif; ?>
+        <?php if ($errorMessage): ?>
+            <div class="alert alert-warning" role="alert"><?php echo Validator::escape($errorMessage); ?></div>
+        <?php endif; ?>
 
-        <div class="border rounded p-3 mb-4">
-            <h4 class="h5 fw-bold mb-1">Default Junkshop Expiration Period</h4>
-            <p class="text-muted small mb-3">This setting applies only to junkshops approved after the change. Existing accounts keep their assigned date.</p>
-            <form method="post" class="row g-2 align-items-end">
-                <?php echo CSRF::field(); ?>
-                <input type="hidden" name="action" value="default_expiry">
-                <div class="col-sm-6 col-md-4">
-                    <label class="form-label" for="default_junkshop_expiry_days">Period</label>
-                    <select class="form-select" id="default_junkshop_expiry_days" name="default_junkshop_expiry_days" required>
-                        <option value="21" <?php echo $defaultExpiryDays === 21 ? 'selected' : ''; ?>>3 Weeks (21 Days)</option>
-                        <option value="30" <?php echo $defaultExpiryDays === 30 ? 'selected' : ''; ?>>1 Month (30 Days)</option>
-                    </select>
-                </div>
-                <div class="col-auto"><button class="btn btn-primary" type="submit">Save default</button></div>
-            </form>
+        <div class="alert alert-info d-flex align-items-center small mb-4" role="alert">
+            <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+            <div>
+                <strong>Default Free Trial:</strong> All newly registered and approved junkshop accounts automatically receive a 3-week free trial upon approval. Once expired, standard renewal options apply.
+            </div>
         </div>
 
         <h4 class="h5 fw-bold mb-3">Junkshop Expiration Management</h4>
@@ -118,15 +160,18 @@ ob_start();
 
 <div class="modal fade" id="expiryModal" tabindex="-1" aria-labelledby="expiryModalLabel" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
-        <form method="post">
+        <form method="post" id="modifyExpirationForm" onsubmit="return validateExpirationForm(event)">
             <div class="modal-header"><h5 class="modal-title" id="expiryModalLabel">Modify expiration</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <div class="modal-body">
                 <?php echo CSRF::field(); ?><input type="hidden" name="action" value="expiry"><input type="hidden" name="junkshop_account_id" id="expiry_account_id">
                 <p class="text-muted" id="expiry_junkshop_name"></p>
                 <label class="form-label" for="expiry_preset">Quick preset</label>
-                <select class="form-select mb-3" id="expiry_preset"><option value="">Select a preset</option><option value="21">+3 Weeks (21 Days)</option><option value="30">+1 Month (30 Days)</option></select>
+                <select name="expiration_preset" id="expiration_preset" class="form-select form-select-sm"><option value="" selected>Select new duration...</option><option value="1_month">1 Month</option><option value="6_months">6 Months</option><option value="1_year">1 Year</option></select>
                 <label class="form-label" for="custom_expiry_date">Custom expiration date</label>
                 <input class="form-control" type="date" id="custom_expiry_date" name="custom_expiry_date">
+                <div id="expiration_error_msg" class="alert alert-danger d-none small py-2 mb-3">
+                    Please either choose a quick preset or enter a custom expiration date.
+                </div>
                 <div class="form-check form-switch mb-2 mt-3">
                     <input class="form-check-input" type="checkbox" id="toggle_expiry_time" name="enable_expiry_time" value="1">
                     <label class="form-check-label fw-bold" for="toggle_expiry_time">Enable Expiration Time</label>
@@ -152,13 +197,39 @@ ob_start();
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('expiryModal');
-    const preset = document.getElementById('expiry_preset');
+    const preset = document.getElementById('expiration_preset');
     const dateInput = document.getElementById('custom_expiry_date');
     const timeToggle = document.getElementById('toggle_expiry_time');
     const timeContainer = document.getElementById('expiry_time_container');
     const timeInput = document.getElementById('custom_expiry_time');
     const clearTimeButton = document.getElementById('btn-clear-time');
+    const expirationErrorMessage = document.getElementById('expiration_error_msg');
     let currentExpiry = '';
+
+    window.clearCustomDate = function () {
+        if (preset.value !== '') {
+            dateInput.value = '';
+            expirationErrorMessage.classList.add('d-none');
+        }
+    };
+
+    window.clearPreset = function () {
+        if (dateInput.value !== '') {
+            preset.value = '';
+            expirationErrorMessage.classList.add('d-none');
+        }
+    };
+
+    window.validateExpirationForm = function (event) {
+        if (!preset.value && !dateInput.value) {
+            event.preventDefault();
+            expirationErrorMessage.classList.remove('d-none');
+            return false;
+        }
+        expirationErrorMessage.classList.add('d-none');
+        return true;
+    };
+
     function updateTimeVisibility() {
         const enabled = timeToggle.checked;
         timeContainer.style.display = enabled ? '' : 'none';
@@ -181,16 +252,19 @@ document.addEventListener('DOMContentLoaded', function () {
     clearTimeButton.addEventListener('click', function () {
         timeInput.value = '';
     });
+    preset.addEventListener('change', window.clearCustomDate);
     preset.addEventListener('change', function () {
         if (!preset.value) return;
         const baseDate = currentExpiry ? currentExpiry.replace(' ', 'T') : '';
         const base = baseDate && new Date(baseDate) > new Date() ? new Date(baseDate) : new Date();
-        base.setDate(base.getDate() + Number(preset.value));
+        const presetDays = { '1_month': 30, '6_months': 180, '1_year': 365 };
+        base.setDate(base.getDate() + presetDays[preset.value]);
         dateInput.value = base.toISOString().slice(0, 10);
         timeToggle.checked = true;
         updateTimeVisibility();
         timeInput.value = base.toTimeString().slice(0, 5);
     });
+    dateInput.addEventListener('change', window.clearPreset);
 });
 </script>
 <?php $content = ob_get_clean(); require_once __DIR__ . '/../app/views/admin_dashboard_shell.php';

@@ -73,7 +73,7 @@ try {
 
     if ($pending['type'] === 'seller') {
         $db->query(
-            'INSERT INTO seller_profiles (account_id, address, barangay) VALUES (:account_id, :address, :barangay)',
+            'INSERT INTO sellers (account_id, address, barangay, last_profile_edit) VALUES (:account_id, :address, :barangay, NULL)',
             [
                 'account_id' => $accountId,
                 'address' => $pending['address'],
@@ -83,8 +83,8 @@ try {
     } else {
         $db->query(
             "INSERT INTO junkshop_profiles
-                (account_id, business_name, owner_name, complete_address, operating_schedule, business_permit_reference, approval_status)
-             VALUES (:account_id, :business_name, :owner_name, :complete_address, :operating_schedule, :permit_reference, 'pending')",
+                (account_id, business_name, owner_name, complete_address, operating_schedule, business_permit_reference, approval_status, last_profile_edit)
+             VALUES (:account_id, :business_name, :owner_name, :complete_address, :operating_schedule, :permit_reference, 'pending', NULL)",
             [
                 'account_id' => $accountId,
                 'business_name' => $pending['business_name'],

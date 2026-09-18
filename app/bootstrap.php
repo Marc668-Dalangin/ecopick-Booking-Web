@@ -60,3 +60,7 @@ require_once __DIR__ . '/controllers/FeeCalculator.php';
 // Start session
 Session::start();
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+	NotificationService::dispatchIfDue();
+}
+

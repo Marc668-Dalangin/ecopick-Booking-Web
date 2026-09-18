@@ -3,6 +3,7 @@
 class AdminFeatureController
 {
     private Database $db;
+    private array $columnAvailability = [];
 
     public function __construct()
     {
@@ -17,48 +18,51 @@ class AdminFeatureController
         }
     }
 
+    private function hasColumn(string $table, string $column): bool
+    {
+        $key = $table . '.' . $column;
+        if (!array_key_exists($key, $this->columnAvailability)) {
+            $this->columnAvailability[$key] = (bool) $this->db->query(
+                'SELECT 1
+                 FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = :table_name AND column_name = :column_name
+                 LIMIT 1',
+                ['table_name' => $table, 'column_name' => $column]
+            )->fetchColumn();
+        }
+        return $this->columnAvailability[$key];
+    }
+
     public function listPartnershipPayments(): array
     {
         $this->requireAdmin();
+        $paymentReference = $this->hasColumn('junkshop_partnership_payments', 'payment_reference')
+            ? 'p.payment_reference'
+            : 'NULL';
+        $partnershipExpiry = $this->hasColumn('junkshop_profiles', 'partnership_expires_at')
+            ? 'jp.partnership_expires_at'
+            : 'NULL';
+        $renewalStatus = $this->hasColumn('junkshop_profiles', 'renewal_status')
+            ? 'jp.renewal_status'
+            : "'Current'";
         return $this->db->query(
-            'SELECT p.id, p.junkshop_account_id, p.payment_type, p.amount, p.payment_method, p.payment_status, p.payment_reference, p.due_at, p.paid_at, p.confirmed_at, p.created_at, jp.business_name, jp.partnership_expires_at, jp.renewal_status FROM junkshop_partnership_payments p JOIN junkshop_profiles jp ON jp.account_id = p.junkshop_account_id ORDER BY p.payment_status = \'Confirmed\', p.created_at DESC'
+            "SELECT p.id, p.junkshop_account_id, p.payment_type, p.amount, p.payment_method,
+                    p.payment_status, {$paymentReference} AS payment_reference, p.due_at,
+                    p.paid_at, p.confirmed_at, p.created_at, COALESCE(jp.business_name, 'Unknown') AS business_name,
+                    {$partnershipExpiry} AS partnership_expires_at, {$renewalStatus} AS renewal_status
+             FROM junkshop_partnership_payments p
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = p.junkshop_account_id
+             ORDER BY p.payment_status = 'Confirmed', p.created_at DESC"
         )->fetchAll();
-    }
-
-    public function getDefaultJunkshopExpiryDays(): int
-    {
-        $value = $this->db->query(
-            "SELECT config_value FROM fee_configurations WHERE config_key = 'default_junkshop_expiry_days' LIMIT 1"
-        )->fetchColumn();
-        $days = (int) $value;
-        return in_array($days, [21, 30], true) ? $days : 30;
-    }
-
-    public function updateDefaultJunkshopExpiryDays(int $days): array
-    {
-        $this->requireAdmin();
-        if (!in_array($days, [21, 30], true)) {
-            return ['success' => false, 'message' => 'Select a valid default expiration period.'];
-        }
-
-        try {
-            $this->db->query(
-                "INSERT INTO fee_configurations (config_key, config_value, description)
-                 VALUES ('default_junkshop_expiry_days', :days, 'Default partnership expiration period for newly approved junkshops.')
-                 ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_at = CURRENT_TIMESTAMP",
-                ['days' => $days]
-            );
-            return ['success' => true, 'message' => 'Default expiration period updated.'];
-        } catch (Throwable $exception) {
-            error_log('Default junkshop expiry update error: ' . $exception->getMessage());
-            return ['success' => false, 'message' => 'Unable to update the default expiration period.'];
-        }
     }
 
     public function getRenewalNoticeDays(): int
     {
         $value = $this->db->query(
-            "SELECT config_value FROM fee_configurations WHERE config_key = 'renewal_notice_days' LIMIT 1"
+            "SELECT expiration_notice_lead_days
+             FROM fee_settings
+             WHERE id = 1
+             LIMIT 1"
         )->fetchColumn();
         $days = (int) $value;
         return $days >= 1 && $days <= 30 ? $days : 1;
@@ -73,11 +77,13 @@ class AdminFeatureController
 
         try {
             $this->db->query(
-                "INSERT INTO fee_configurations (config_key, config_value, description)
-                 VALUES ('renewal_notice_days', :days, 'Number of days before expiry to email junkshops a renewal reminder.')
-                 ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_at = CURRENT_TIMESTAMP",
+                "INSERT INTO fee_settings (id, expiration_notice_lead_days)
+                 VALUES (1, :days)
+                 ON DUPLICATE KEY UPDATE expiration_notice_lead_days = VALUES(expiration_notice_lead_days), updated_at = CURRENT_TIMESTAMP",
                 ['days' => $days]
             );
+            $this->db->query('UPDATE junkshop_profiles SET last_expiration_notice_sent = NULL');
+            $this->db->query('DELETE FROM renewal_notification_log');
             return ['success' => true, 'message' => 'Renewal notification lead time updated.'];
         } catch (Throwable $exception) {
             error_log('Renewal notice setting update error: ' . $exception->getMessage());
@@ -88,12 +94,18 @@ class AdminFeatureController
     public function listApprovedJunkshops(): array
     {
         $this->requireAdmin();
+        $partnershipExpiry = $this->hasColumn('junkshop_profiles', 'partnership_expires_at')
+            ? 'jp.partnership_expires_at'
+            : 'NULL';
+        $renewalStatus = $this->hasColumn('junkshop_profiles', 'renewal_status')
+            ? 'jp.renewal_status'
+            : "'Current'";
         return $this->db->query(
-            "SELECT a.id AS account_id, a.account_status, jp.business_name,
-                    jp.partnership_expires_at, jp.renewal_status,
-                    CASE WHEN jp.partnership_expires_at IS NOT NULL
-                            AND jp.partnership_expires_at <= CURRENT_TIMESTAMP
-                         THEN 'Expired' ELSE a.account_status END AS display_status
+            "SELECT a.id AS account_id, a.account_status, COALESCE(jp.business_name, 'Unknown') AS business_name,
+                    {$partnershipExpiry} AS partnership_expires_at, {$renewalStatus} AS renewal_status,
+                    CASE WHEN {$partnershipExpiry} IS NOT NULL
+                            AND {$partnershipExpiry} <= CURRENT_TIMESTAMP
+                         THEN 'Expired' ELSE COALESCE(a.account_status, 'inactive') END AS display_status
              FROM accounts a
              JOIN junkshop_profiles jp ON jp.account_id = a.id
              WHERE jp.approval_status = 'approved'
@@ -169,9 +181,25 @@ class AdminFeatureController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Payment is already confirmed.'];
             }
+            $updateFields = [
+                'payment_status = :payment_status',
+                'paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP)',
+                "confirmed_at = IF(:confirmed_status = 'Confirmed', CURRENT_TIMESTAMP, confirmed_at)",
+                'recorded_by_account_id = :admin_id',
+            ];
+            $updateParameters = [
+                'payment_status' => $status,
+                'confirmed_status' => $status,
+                'admin_id' => Auth::userId(),
+                'id' => $paymentId,
+            ];
+            if ($this->hasColumn('junkshop_partnership_payments', 'payment_reference')) {
+                $updateFields[] = 'payment_reference = :reference';
+                $updateParameters['reference'] = trim($reference) !== '' ? trim($reference) : null;
+            }
             $this->db->query(
-                'UPDATE junkshop_partnership_payments SET payment_status = :payment_status, payment_reference = :reference, paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP), confirmed_at = IF(:confirmed_status = \'Confirmed\', CURRENT_TIMESTAMP, confirmed_at), recorded_by_account_id = :admin_id WHERE id = :id',
-                ['payment_status' => $status, 'confirmed_status' => $status, 'reference' => trim($reference) !== '' ? trim($reference) : null, 'admin_id' => Auth::userId(), 'id' => $paymentId]
+                'UPDATE junkshop_partnership_payments SET ' . implode(', ', $updateFields) . ' WHERE id = :id',
+                $updateParameters
             );
             if ($status === 'Confirmed') {
                 $this->db->query(
@@ -227,13 +255,17 @@ class AdminFeatureController
         try {
             $this->db->beginTransaction();
             $statement = $this->db->query(
-                'UPDATE junkshop_profiles SET partnership_expires_at = :expiry_date, renewal_status = CASE WHEN :expiry_date_status <= CURRENT_TIMESTAMP THEN \'Expired\' WHEN :expiry_date_due <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) THEN \'Due\' ELSE \'Current\' END WHERE account_id = :account_id AND approval_status = \'approved\'',
+                'UPDATE junkshop_profiles SET partnership_expires_at = :expiry_date, last_expiration_notice_sent = NULL, renewal_status = CASE WHEN :expiry_date_status <= CURRENT_TIMESTAMP THEN \'Expired\' WHEN :expiry_date_due <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) THEN \'Due\' ELSE \'Current\' END WHERE account_id = :account_id AND approval_status = \'approved\'',
                 ['expiry_date' => $expiryDateTime, 'expiry_date_status' => $expiryDateTime, 'expiry_date_due' => $expiryDateTime, 'account_id' => $junkshopAccountId]
             );
             $this->db->query(
                 "UPDATE accounts SET account_status = 'active', updated_at = CURRENT_TIMESTAMP
                  WHERE id = :account_id AND EXISTS (SELECT 1 FROM junkshop_profiles WHERE account_id = :profile_account_id AND approval_status = 'approved')",
                 ['account_id' => $junkshopAccountId, 'profile_account_id' => $junkshopAccountId]
+            );
+            $this->db->query(
+                'DELETE FROM renewal_notification_log WHERE junkshop_account_id = :account_id',
+                ['account_id' => $junkshopAccountId]
             );
             $saved = $this->db->query('SELECT partnership_expires_at FROM junkshop_profiles WHERE account_id = :account_id', ['account_id' => $junkshopAccountId])->fetchColumn();
             if ($statement->rowCount() !== 1 && $saved !== $expiryDateTime) {
@@ -253,7 +285,7 @@ class AdminFeatureController
         }
     }
 
-    public function createRenewalPayment(int $junkshopAccountId, string $method, string $reference = ''): array
+    public function createRenewalPayment(int $junkshopAccountId, string $method, string $planKey = 'renewal_fee_1_month'): array
     {
         if (!Auth::check() || Auth::userRole() !== 'junkshop' || Auth::userId() !== $junkshopAccountId) {
             return ['success' => false, 'message' => 'You cannot create this payment record.'];
@@ -261,8 +293,33 @@ class AdminFeatureController
         if (!in_array($method, ['Cash', 'GCash'], true)) {
             return ['success' => false, 'message' => 'Select a valid payment method.'];
         }
-        $fee = $this->db->query('SELECT config_value FROM fee_configurations WHERE config_key = :key LIMIT 1', ['key' => 'junkshop_renewal_fee'])->fetchColumn();
-        $statement = $this->db->query('INSERT INTO junkshop_partnership_payments (junkshop_account_id, payment_type, amount, payment_method, payment_status, payment_reference, due_at) VALUES (:account_id, \'Renewal\', :amount, :method, \'Paid\', :reference, CURRENT_TIMESTAMP)', ['account_id' => $junkshopAccountId, 'amount' => (float) $fee, 'method' => $method, 'reference' => trim($reference) !== '' ? trim($reference) : null]);
+        $plans = [
+            'renewal_fee_1_month' => 'Renewal - 1 Month',
+            'renewal_fee_6_months' => 'Renewal - 6 Months',
+            'renewal_fee_1_year' => 'Renewal - 1 Year',
+        ];
+        if (!isset($plans[$planKey])) {
+            return ['success' => false, 'message' => 'Select a valid renewal plan.'];
+        }
+
+        $fee = $this->db->query(
+            'SELECT config_value FROM fee_configurations WHERE config_key = :key LIMIT 1',
+            ['key' => $planKey]
+        )->fetchColumn();
+        if ($fee === false) {
+            return ['success' => false, 'message' => 'The selected renewal plan is unavailable.'];
+        }
+
+        $statement = $this->db->query(
+            'INSERT INTO junkshop_partnership_payments (junkshop_account_id, payment_type, amount, payment_method, payment_status, due_at)
+             VALUES (:account_id, :payment_type, :amount, :method, \'Paid\', CURRENT_TIMESTAMP)',
+            [
+                'account_id' => $junkshopAccountId,
+                'payment_type' => $plans[$planKey],
+                'amount' => (float) $fee,
+                'method' => $method,
+            ]
+        );
         if ($statement->rowCount() !== 1) {
             return ['success' => false, 'message' => 'Renewal payment could not be recorded.'];
         }

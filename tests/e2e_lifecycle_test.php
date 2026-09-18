@@ -181,7 +181,7 @@ try {
     assertTrue((int) ($auditActorRows[5]['user_id'] ?? 0) === $junkshopId, 'Completed transition should record the acting junkshop');
 
     $registrationFee = $pdo->query("SELECT config_value FROM fee_configurations WHERE config_key = 'junkshop_registration_fee'")->fetchColumn();
-    $renewalFee = $pdo->query("SELECT config_value FROM fee_configurations WHERE config_key = 'junkshop_renewal_fee'")->fetchColumn();
+    $renewalFee = $pdo->query("SELECT config_value FROM fee_configurations WHERE config_key = 'renewal_fee_1_month'")->fetchColumn();
     assertTrue($registrationFee !== false && $renewalFee !== false, 'Registration and renewal fee configurations should exist');
 
     $analytics = new PlatformAnalytics();

@@ -102,7 +102,7 @@ class DashboardController
                     a.account_status, a.created_at
              FROM accounts a
              JOIN roles r ON r.id = a.role_id
-             LEFT JOIN seller_profiles sp ON sp.account_id = a.id
+             LEFT JOIN sellers sp ON sp.account_id = a.id
              WHERE r.name = 'seller'
              ORDER BY a.full_name ASC"
         )->fetchAll();
@@ -178,12 +178,8 @@ class DashboardController
             }
             $expiryDate = null;
             if ($status === 'approved') {
-                $defaultDays = (int) $this->db->query(
-                    "SELECT config_value FROM fee_configurations WHERE config_key = 'default_junkshop_expiry_days' LIMIT 1"
-                )->fetchColumn();
-                $defaultDays = in_array($defaultDays, [21, 30], true) ? $defaultDays : 30;
                 $expiryDate = (new DateTimeImmutable('now', new DateTimeZone(APP_TIMEZONE)))
-                    ->modify('+' . $defaultDays . ' days')
+                    ->modify('+21 days')
                     ->setTime(23, 59, 59)
                     ->format('Y-m-d H:i:s');
             }
@@ -213,7 +209,7 @@ class DashboardController
             "SELECT a.id AS account_id, a.username, a.full_name, a.email, a.mobile_number, a.account_status,
                     sp.address, sp.barangay, a.created_at, NULLIF(sp.updated_at, sp.created_at) AS profile_updated_at
              FROM accounts a
-             LEFT JOIN seller_profiles sp ON sp.account_id = a.id
+                 LEFT JOIN sellers sp ON sp.account_id = a.id
              WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'seller')",
             ['account_id' => (int) $accountId]
         )->fetch() ?: null;
@@ -224,9 +220,9 @@ class DashboardController
         try {
             $this->db->beginTransaction();
             $account = $this->db->query(
-                "SELECT a.id, sp.created_at, sp.updated_at
+                "SELECT a.id, sp.last_profile_edit
                  FROM accounts a
-                 LEFT JOIN seller_profiles sp ON sp.account_id = a.id
+                 LEFT JOIN sellers sp ON sp.account_id = a.id
                  WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'seller')
                  LIMIT 1 FOR UPDATE",
                 ['account_id' => (int) $accountId]
@@ -235,9 +231,8 @@ class DashboardController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Seller account not found'];
             }
-            if ($account['created_at'] !== null && $account['updated_at'] !== null
-                && strtotime((string) $account['updated_at']) > strtotime((string) $account['created_at'])
-                && strtotime((string) $account['updated_at']) > strtotime('-7 days')) {
+            if ($account['last_profile_edit'] !== null
+                && strtotime((string) $account['last_profile_edit']) > strtotime('-7 days')) {
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Profile edits are locked for 7 days after an update.'];
             }
@@ -246,8 +241,8 @@ class DashboardController
                 ['full_name' => $fullName, 'mobile_number' => $mobileNumber, 'account_id' => (int) $accountId]
             );
             $this->db->query(
-                'INSERT INTO seller_profiles (account_id, address, barangay) VALUES (:account_id, :address, :barangay)
-                 ON DUPLICATE KEY UPDATE address = VALUES(address), barangay = VALUES(barangay), updated_at = CURRENT_TIMESTAMP',
+                'INSERT INTO sellers (account_id, address, barangay, last_profile_edit) VALUES (:account_id, :address, :barangay, CURRENT_TIMESTAMP)
+                 ON DUPLICATE KEY UPDATE address = VALUES(address), barangay = VALUES(barangay), last_profile_edit = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP',
                 ['account_id' => (int) $accountId, 'address' => $address, 'barangay' => $barangay]
             );
             $this->db->commit();
@@ -266,7 +261,7 @@ class DashboardController
                 "SELECT a.id AS account_id, a.username, a.email, a.full_name AS owner_name, a.mobile_number,
                         a.account_status, jp.business_name, jp.complete_address, jp.latitude, jp.longitude, jp.operating_schedule,
                         jp.business_permit_reference, jp.gcash_account_name, jp.gcash_account_number, jp.is_available,
-                        jp.approval_status, jp.created_at, NULLIF(jp.updated_at, jp.created_at) AS profile_updated_at
+                        jp.approval_status, jp.last_profile_edit AS profile_updated_at
                  FROM accounts a
                  JOIN junkshop_profiles jp ON jp.account_id = a.id
                  WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
@@ -283,7 +278,7 @@ class DashboardController
         try {
             $this->db->beginTransaction();
             $account = $this->db->query(
-                "SELECT a.id, jp.created_at, jp.updated_at
+                "SELECT a.id, jp.last_profile_edit
                  FROM accounts a
                  JOIN junkshop_profiles jp ON jp.account_id = a.id
                  WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')
@@ -294,9 +289,8 @@ class DashboardController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop account not found'];
             }
-            if ($account['created_at'] !== null && $account['updated_at'] !== null
-                && strtotime((string) $account['updated_at']) > strtotime((string) $account['created_at'])
-                && strtotime((string) $account['updated_at']) > strtotime('-7 days')) {
+            if ($account['last_profile_edit'] !== null
+                && strtotime((string) $account['last_profile_edit']) > strtotime('-7 days')) {
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Profile edits are locked for 7 days after an update.'];
             }
@@ -310,6 +304,7 @@ class DashboardController
                      latitude = :latitude, longitude = :longitude,
                      operating_schedule = :operating_schedule, business_permit_reference = :permit_reference,
                      gcash_account_name = NULLIF(TRIM(:gcash_name), ''), gcash_account_number = NULLIF(TRIM(:gcash_number), ''),
+                     last_profile_edit = CURRENT_TIMESTAMP,
                      updated_at = CURRENT_TIMESTAMP
                  WHERE account_id = :account_id",
                 [
@@ -439,7 +434,7 @@ class DashboardController
                 END AS assignment_status
             FROM pickup_requests pr
             JOIN accounts seller ON seller.id = pr.seller_account_id
-            JOIN seller_profiles sp ON sp.account_id = seller.id
+            JOIN sellers sp ON sp.account_id = seller.id
             LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
             LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
             LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1

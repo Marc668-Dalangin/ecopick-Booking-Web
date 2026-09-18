@@ -1,4 +1,6 @@
 <?php
+require_once dirname(__DIR__, 2) . '/config/mail.php';
+
 /**
  * Environment-configured email delivery for booking notifications.
  *
@@ -39,6 +41,15 @@ class MailerService
                 ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
                 : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mailer->Port = (int) $config['smtp_port'];
+            if (self::isLocalEnvironment()) {
+                $mailer->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ],
+                ];
+            }
             $mailer->setFrom($config['smtp_username'], $config['from_name']);
             $mailer->addAddress($recipientEmail, trim($recipientName) !== '' ? trim($recipientName) : 'EcoPick member');
             $mailer->isHTML(true);
@@ -93,26 +104,43 @@ class MailerService
         }
     }
 
-    public static function sendRenewalNotice(string $recipientEmail, string $recipientName, string $expirationDate): bool
+    public static function sendRenewalNotice(string $recipientEmail, string $recipientName, string $expirationDate): array
     {
         $recipientEmail = strtolower(trim($recipientEmail));
+        $subject = '[EcoPick] Partnership renewal reminder';
         if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
-            return false;
+            self::logEmail($recipientEmail ?: 'invalid-recipient', $subject, 'Renewal notice was not sent.', 'Failed', 'Invalid recipient email address.');
+            return ['sent' => false, 'error' => 'Invalid recipient email address.'];
         }
 
         $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
         if (!is_file($autoload)) {
+            self::logEmail($recipientEmail, $subject, 'Renewal notice was not sent.', 'Failed', 'Composer autoloader not found.');
             error_log('Renewal notice email error: Composer autoloader not found.');
-            return false;
+            return ['sent' => false, 'error' => 'Composer autoloader not found.'];
         }
         require_once $autoload;
 
-        try {
-            $config = self::config();
-            if (!$config['enabled'] || $config['smtp_host'] === '' || $config['smtp_username'] === '' || $config['smtp_password'] === '') {
-                return false;
-            }
+        $config = self::config();
+        $subject = $config['subject_prefix'] . ' Partnership renewal reminder';
+        $safeName = htmlspecialchars(trim($recipientName) !== '' ? trim($recipientName) : 'Junkshop partner', ENT_QUOTES, 'UTF-8');
+        $safeExpiry = htmlspecialchars($expirationDate, ENT_QUOTES, 'UTF-8');
+        $renewalUrl = htmlspecialchars(APP_URL . '/user-junkshop/renewal.php', ENT_QUOTES, 'UTF-8');
+        $body = '<p>Hello ' . $safeName . ',</p>'
+                . '<p>Your EcoPick junkshop subscription will expire on <strong>' . $safeExpiry . '</strong>.</p>'
+                . '<p>Please log in to your EcoPick account and open the Partnership Renewal page to submit your renewal payment before this date:</p>'
+                . '<p><a href="' . $renewalUrl . '">' . $renewalUrl . '</a></p>'
+                . '<p>EcoPick Team</p>';
+        $plainBody = "Hello {$recipientName},\n\nYour EcoPick junkshop subscription will expire on {$expirationDate}. Please log in to your EcoPick account and open {$renewalUrl} to submit your renewal payment before this date.\n\nEcoPick Team";
 
+        if (!$config['enabled'] || $config['smtp_host'] === '' || $config['smtp_username'] === '' || $config['smtp_password'] === '') {
+            $message = 'SMTP is not enabled or is missing host, username, or app password.';
+            self::logEmail($recipientEmail, $subject, $plainBody, 'Failed', $message);
+            error_log('Renewal notice email error: ' . $message);
+            return ['sent' => false, 'error' => $message];
+        }
+
+        try {
             $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
             $mailer->isSMTP();
             $mailer->Host = $config['smtp_host'];
@@ -123,40 +151,102 @@ class MailerService
                 ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
                 : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mailer->Port = (int) $config['smtp_port'];
+            if (self::isLocalEnvironment()) {
+                $mailer->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ],
+                ];
+            }
             $mailer->setFrom($config['smtp_username'], $config['from_name']);
             $mailer->addAddress($recipientEmail, trim($recipientName) !== '' ? trim($recipientName) : 'Junkshop partner');
             $mailer->isHTML(true);
-            $mailer->Subject = $config['subject_prefix'] . ' Partnership renewal reminder';
-            $safeName = htmlspecialchars(trim($recipientName) !== '' ? trim($recipientName) : 'Junkshop partner', ENT_QUOTES, 'UTF-8');
-            $safeExpiry = htmlspecialchars($expirationDate, ENT_QUOTES, 'UTF-8');
-            $renewalUrl = htmlspecialchars(APP_URL . '/user-junkshop/renewal.php', ENT_QUOTES, 'UTF-8');
-            $mailer->Body = '<p>Hello ' . $safeName . ',</p>'
-                . '<p>Your EcoPick junkshop subscription will expire on <strong>' . $safeExpiry . '</strong>.</p>'
-                . '<p>Please log in to your EcoPick account and open the Partnership Renewal page to submit your renewal payment before this date:</p>'
-                . '<p><a href="' . $renewalUrl . '">' . $renewalUrl . '</a></p>'
-                . '<p>EcoPick Team</p>';
-            $mailer->AltBody = "Hello {$recipientName},\n\nYour EcoPick junkshop subscription will expire on {$expirationDate}. Please log in to your EcoPick account and open {$renewalUrl} to submit your renewal payment before this date.\n\nEcoPick Team";
-            return $mailer->send();
+            $mailer->Subject = $subject;
+            $mailer->Body = $body;
+            $mailer->AltBody = $plainBody;
+            $sent = $mailer->send();
+            self::logEmail($recipientEmail, $subject, $plainBody, $sent ? 'Sent' : 'Failed', $sent ? null : 'SMTP server did not accept the message.');
+            return ['sent' => $sent, 'error' => $sent ? null : 'SMTP server did not accept the message.'];
         } catch (Throwable $exception) {
-            error_log('Renewal notice email error: ' . $exception->getMessage());
-            return false;
+            $errorMessage = (isset($mailer) && $mailer->ErrorInfo)
+                ? $mailer->ErrorInfo
+                : $exception->getMessage();
+            error_log('Renewal notice email error: ' . $errorMessage);
+            self::logEmail($recipientEmail, $subject, $plainBody, 'Failed', $errorMessage);
+            return ['sent' => false, 'error' => $errorMessage];
+        }
+    }
+
+    private static function logEmail(string $recipientEmail, string $subject, string $body, string $status, ?string $errorMessage = null): void
+    {
+        try {
+            Database::getInstance()->query(
+                'INSERT INTO email_logs (recipient_email, subject, body, status, error_message)
+                 VALUES (:recipient_email, :subject, :body, :status, :error_message)',
+                [
+                    'recipient_email' => $recipientEmail,
+                    'subject' => $subject,
+                    'body' => $body,
+                    'status' => $status,
+                    'error_message' => $errorMessage,
+                ]
+            );
+        } catch (Throwable $exception) {
+            error_log('Email audit log error: ' . $exception->getMessage());
         }
     }
 
     private static function config(): array
     {
         $env = self::loadEnv();
+        $databaseSettings = self::databaseSettings();
         return [
-            'enabled' => filter_var($env['MAIL_ENABLED'] ?? getenv('MAIL_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+            'enabled' => filter_var($env['MAIL_ENABLED'] ?? getenv('MAIL_ENABLED') ?: 'true', FILTER_VALIDATE_BOOLEAN),
             'from_address' => self::headerValue($env['MAIL_FROM_ADDRESS'] ?? getenv('MAIL_FROM_ADDRESS') ?: 'no-reply@localhost', 'no-reply@localhost'),
             'from_name' => self::headerValue($env['MAIL_FROM_NAME'] ?? getenv('MAIL_FROM_NAME') ?: 'EcoPick', 'EcoPick'),
             'subject_prefix' => self::headerValue($env['MAIL_SUBJECT_PREFIX'] ?? getenv('MAIL_SUBJECT_PREFIX') ?: '[EcoPick]', '[EcoPick]'),
-            'smtp_host' => $env['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com',
-            'smtp_port' => $env['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: '587',
-            'smtp_username' => $env['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: 'ecopicklipacity@gmail.com',
-            'smtp_password' => $env['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD') ?: 'zemkqmunllofeicq',
-            'smtp_encryption' => $env['SMTP_ENCRYPTION'] ?? getenv('SMTP_ENCRYPTION') ?: 'tls',
+            'smtp_host' => self::configuredValue($env, 'SMTP_HOST', $databaseSettings['smtp_host'] ?? null, SMTP_HOST),
+            'smtp_port' => self::configuredValue($env, 'SMTP_PORT', $databaseSettings['smtp_port'] ?? null, (string) SMTP_PORT),
+            'smtp_username' => self::configuredValue($env, 'SMTP_USERNAME', $databaseSettings['smtp_user'] ?? null, SMTP_USER),
+            'smtp_password' => self::configuredValue($env, 'SMTP_PASSWORD', $databaseSettings['smtp_pass'] ?? null, SMTP_APP_PASSWORD),
+            'smtp_encryption' => self::configuredValue($env, 'SMTP_ENCRYPTION', $databaseSettings['smtp_encryption'] ?? null, SMTP_ENCRYPTION),
         ];
+    }
+
+    private static function configuredValue(array $env, string $environmentKey, mixed $databaseValue, string $fallback): string
+    {
+        $environmentValue = trim((string) ($env[$environmentKey] ?? getenv($environmentKey) ?: ''));
+        if ($environmentValue !== '') {
+            return $environmentValue;
+        }
+
+        $databaseValue = trim((string) ($databaseValue ?? ''));
+        return $databaseValue !== '' ? $databaseValue : $fallback;
+    }
+
+    private static function databaseSettings(): array
+    {
+        try {
+            $settings = Database::getInstance()->query(
+                'SELECT smtp_host, smtp_port, smtp_user, smtp_pass, smtp_encryption
+                 FROM fee_settings
+                 WHERE id = 1
+                 LIMIT 1'
+            )->fetch();
+            return is_array($settings) ? $settings : [];
+        } catch (Throwable $exception) {
+            error_log('SMTP settings lookup error: ' . $exception->getMessage());
+            return [];
+        }
+    }
+
+    private static function isLocalEnvironment(): bool
+    {
+        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? parse_url(APP_URL, PHP_URL_HOST) ?? ''));
+        $host = preg_replace('/:\d+$/', '', $host) ?: $host;
+        return in_array($host, ['localhost', '127.0.0.1', '::1'], true);
     }
 
     private static function loadEnv(): array

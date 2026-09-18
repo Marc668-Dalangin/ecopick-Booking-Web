@@ -1,21 +1,9 @@
 <?php
 require_once __DIR__ . '/../app/bootstrap.php';
+require_once __DIR__ . '/../config/mail.php';
 
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
-
-if (!defined('SMTP_HOST')) {
-    define('SMTP_HOST', 'smtp.gmail.com');
-}
-if (!defined('SMTP_USER')) {
-    define('SMTP_USER', 'ecopicklipacity@gmail.com');
-}
-if (!defined('SMTP_APP_PASSWORD')) {
-    define('SMTP_APP_PASSWORD', 'zemkqmunllofeicq');
-}
-if (!defined('SMTP_PORT')) {
-    define('SMTP_PORT', 587);
-}
 
 function recoveryRedirect(string $message, string $type = 'info')
 {
@@ -66,8 +54,17 @@ try {
     $mailer->SMTPAuth = true;
     $mailer->Username = SMTP_USER;
     $mailer->Password = SMTP_APP_PASSWORD;
-    $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mailer->SMTPSecure = strtolower(SMTP_ENCRYPTION) === 'ssl'
+        ? PHPMailer::ENCRYPTION_SMTPS
+        : PHPMailer::ENCRYPTION_STARTTLS;
     $mailer->Port = SMTP_PORT;
+    $mailer->SMTPOptions = [
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true,
+        ],
+    ];
     $mailer->setFrom(SMTP_USER, 'EcoPick');
     $mailer->addAddress($account['email'], $account['full_name']);
     $mailer->isHTML(true);

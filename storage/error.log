@@ -1323,3 +1323,198 @@
 [17-Sep-2026 18:39:47 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'junkshop.mobile_number' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\admin-private-dnstl\reports.php:19
 [17-Sep-2026 18:39:47 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'junkshop.mobile_number' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\admin-private-dnstl\reports.php:19
 [17-Sep-2026 18:39:54 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'junkshop.mobile_number' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\admin-private-dnstl\reports.php:19
+[17-Sep-2026 19:25:34 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:36 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:39 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:41 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:44 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:46 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:49 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:51 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:51 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 19:25:54 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
+[17-Sep-2026 19:25:54 Asia/Manila] Authentication status check failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
+[17-Sep-2026 19:25:56 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
+[17-Sep-2026 19:25:56 Asia/Manila] Authentication status check failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
+[17-Sep-2026 20:14:39 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:40 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:44 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:45 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:49 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:50 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:54 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[17-Sep-2026 20:14:55 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
+[17-Sep-2026 20:14:55 Asia/Manila] Authentication status check failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.partnership_expires_at' in 'field list'
+[18-Sep-2026 08:05:10 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.system_settings' doesn't exist
+[18-Sep-2026 08:05:10 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.system_settings' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 08:05:11 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.system_settings' doesn't exist
+[18-Sep-2026 08:05:11 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.system_settings' doesn't exist in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_month" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_6_months" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_year" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_month" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_6_months" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_year" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:27 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:35 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_month" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:35 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:35 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_6_months" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:35 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:35 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_year" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:35 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:36 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_month" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:36 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:36 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_6_months" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:36 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:36 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_year" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:36 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:44 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_month" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:44 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:44 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_6_months" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:44 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:44 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_year" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:05:44 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:06:48 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_month" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:06:48 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:06:48 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_6_months" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:06:48 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:06:48 Asia/Manila] PHP Warning:  Undefined array key "renewal_fee_1_year" in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 08:06:48 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\renewal.php on line 67
+[18-Sep-2026 11:32:33 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:32:33 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 11:32:34 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:32:34 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 11:32:35 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:32:35 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 11:32:35 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:32:35 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 11:32:47 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:32:47 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 11:33:18 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:33:18 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 11:35:20 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:20 Asia/Manila] Renewals & Payments Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:36 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:36 Asia/Manila] Renewals & Payments Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:37 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:37 Asia/Manila] Renewals & Payments Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:37 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:37 Asia/Manila] Renewals & Payments Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:37 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 11:35:37 Asia/Manila] Renewals & Payments Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.payment_reference' in 'field list'
+[18-Sep-2026 12:35:13 Asia/Manila] PHP Warning:  mail(): Failed to connect to mailserver at &quot;localhost&quot; port 25, verify your &quot;SMTP&quot; and &quot;smtp_port&quot; setting in php.ini or use ini_set() in C:\xampp\htdocs\booking-website-lipacity\config\mail.php on line 87
+[18-Sep-2026 12:35:20 Asia/Manila] PHP Warning:  mail(): Failed to connect to mailserver at &quot;localhost&quot; port 25, verify your &quot;SMTP&quot; and &quot;smtp_port&quot; setting in php.ini or use ini_set() in C:\xampp\htdocs\booking-website-lipacity\config\mail.php on line 87
+[18-Sep-2026 12:35:27 Asia/Manila] PHP Warning:  mail(): Failed to connect to mailserver at &quot;localhost&quot; port 25, verify your &quot;SMTP&quot; and &quot;smtp_port&quot; setting in php.ini or use ini_set() in C:\xampp\htdocs\booking-website-lipacity\config\mail.php on line 87
+[18-Sep-2026 12:35:32 Asia/Manila] PHP Warning:  mail(): Failed to connect to mailserver at &quot;localhost&quot; port 25, verify your &quot;SMTP&quot; and &quot;smtp_port&quot; setting in php.ini or use ini_set() in C:\xampp\htdocs\booking-website-lipacity\config\mail.php on line 87
+[18-Sep-2026 12:35:48 Asia/Manila] PHP Warning:  mail(): Failed to connect to mailserver at &quot;localhost&quot; port 25, verify your &quot;SMTP&quot; and &quot;smtp_port&quot; setting in php.ini or use ini_set() in C:\xampp\htdocs\booking-website-lipacity\config\mail.php on line 87
+[18-Sep-2026 12:47:14 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.email_logs' doesn't exist
+[18-Sep-2026 12:47:14 Asia/Manila] Email audit log error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ecopickdb.email_logs' doesn't exist
+[18-Sep-2026 12:47:14 Asia/Manila] Renewal notice logged locally for jaeson6628@gmail.com; SMTP delivery is not configured.
+[18-Sep-2026 13:04:51 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:04:51 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:05:50 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:05:50 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:05:51 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:05:51 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:07:57 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:07:57 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:08:58 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:08:58 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:09 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:09 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:10 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:10 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:11 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:11 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:14 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:14 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:33 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:33 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:35 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:09:35 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:39 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:39 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:53 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:53 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:55 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:10:55 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:11:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:11:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:12:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:12:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:13:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:13:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:14:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:14:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:15:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:15:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:16:00 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:16:00 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:16:28 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:16:28 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:17:03 Asia/Manila] Database error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:17:03 Asia/Manila] Renewal reminder error: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '3-2026-09-19 00:00:00' for key 'uq_renewal_notice_account_expiry'
+[18-Sep-2026 13:19:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:19:54 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:19:55 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:19:57 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:19:59 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:20:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:21:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:22:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:23:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:24:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:25:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:26:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:27:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:28:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:29:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:30:00 Asia/Manila] Renewal notice email error: SMTP is not enabled or is missing host, username, or app password.
+[18-Sep-2026 13:31:03 Asia/Manila] Renewal notice email error: SMTP Error: Could not authenticate.
+[18-Sep-2026 13:32:02 Asia/Manila] Renewal notice email error: SMTP Error: Could not authenticate.
+[18-Sep-2026 14:08:42 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5a50c9fasm1433307a91.8 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:08:42 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:08:47 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dcfda1b2sm287164b3a.32 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:08:47 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:08:55 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5bc987e59sm358744a12.4 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:08:55 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:09:15 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5a3e3fc9sm1388021a91.3 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:09:15 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:09:15 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dd3ed2f5sm290303b3a.40 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:09:15 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:10:33 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50aa983sm343870a12.12 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:10:33 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:10:50 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb760d679sm2617465ad.76 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:10:50 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:10:52 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5679c25csm684841a91.1 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:10:52 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:11:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb7549682sm2638875ad.31 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:11:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:17:27 Asia/Manila] PHP Warning:  Undefined variable $throttleSeconds in C:\xampp\htdocs\booking-website-lipacity\app\services\NotificationService.php on line 36
+[18-Sep-2026 14:18:00 Asia/Manila] PHP Warning:  Undefined variable $throttleSeconds in C:\xampp\htdocs\booking-website-lipacity\app\services\NotificationService.php on line 36
+[18-Sep-2026 14:18:00 Asia/Manila] PHP Warning:  Undefined variable $throttleSeconds in C:\xampp\htdocs\booking-website-lipacity\app\services\NotificationService.php on line 36

@@ -30,7 +30,9 @@ $feeLabels = [
     'ecopick_service_fee_pct' => 'Ecopick Service Fee %',
     'junkshop_commission_pct' => 'Junkshop Commission %',
     'junkshop_registration_fee' => 'Junkshop Registration Fee',
-    'junkshop_renewal_fee' => 'Junkshop Renewal Fee',
+    'renewal_fee_1_month' => 'Junkshop Renewal Fee - 1 month',
+    'renewal_fee_6_months' => 'Junkshop Renewal Fee - 6 months',
+    'renewal_fee_1_year' => 'Junkshop Renewal Fee - 1 year',
 ];
 $feeMap = [];
 foreach ($feeConfigs as $config) {
@@ -62,7 +64,9 @@ ob_start();
                             <option value="default_pickup_fee"><?php echo $feeLabels['default_pickup_fee']; ?></option>
                             <option value="junkshop_commission_pct"><?php echo $feeLabels['junkshop_commission_pct']; ?></option>
                             <option value="junkshop_registration_fee"><?php echo $feeLabels['junkshop_registration_fee']; ?></option>
-                            <option value="junkshop_renewal_fee"><?php echo $feeLabels['junkshop_renewal_fee']; ?></option>
+                            <option value="renewal_fee_1_month"><?php echo $feeLabels['renewal_fee_1_month']; ?></option>
+                            <option value="renewal_fee_6_months"><?php echo $feeLabels['renewal_fee_6_months']; ?></option>
+                            <option value="renewal_fee_1_year"><?php echo $feeLabels['renewal_fee_1_year']; ?></option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -90,9 +94,10 @@ ob_start();
                         </thead>
                         <tbody>
                             <?php foreach ($feeConfigs as $config): ?>
+                                <?php $configKey = (string) ($config['config_key'] ?? ''); ?>
                                 <tr>
-                                    <td class="fw-semibold"><?php echo Validator::escape($feeLabels[(string)($config['config_key'] ?? '')] ?? (string)($config['config_key'] ?? '')); ?></td>
-                                    <td><?php echo (string)($config['config_key'] ?? '') === 'default_pickup_fee' ? '₱' : ''; ?><?php echo number_format((float)($config['config_value'] ?? 0), 2); ?><?php echo (string)($config['config_key'] ?? '') === 'ecopick_service_fee_pct' || (string)($config['config_key'] ?? '') === 'junkshop_commission_pct' ? '%' : ''; ?></td>
+                                    <td class="fw-semibold"><?php echo Validator::escape($feeLabels[$configKey] ?? $configKey); ?></td>
+                                    <td><?php echo $configKey === 'ecopick_service_fee_pct' || $configKey === 'junkshop_commission_pct' ? '' : '₱'; ?><?php echo number_format((float)($config['config_value'] ?? 0), 2); ?><?php echo $configKey === 'ecopick_service_fee_pct' || $configKey === 'junkshop_commission_pct' ? '%' : ''; ?></td>
                                     <td class="small text-muted"><?php echo Validator::escape(date('M d, Y', strtotime($config['updated_at'] ?? date('Y-m-d')))); ?></td>
                                 </tr>
                             <?php endforeach; ?>

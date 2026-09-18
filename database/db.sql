@@ -53,11 +53,12 @@ CREATE TABLE IF NOT EXISTS password_resets (
     INDEX idx_password_reset_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS seller_profiles (
+CREATE TABLE IF NOT EXISTS sellers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     account_id INT NOT NULL UNIQUE,
     address VARCHAR(255),
     barangay VARCHAR(100),
+    last_profile_edit DATETIME NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
@@ -76,12 +77,20 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     business_permit_reference VARCHAR(100),
     is_available TINYINT(1) NOT NULL DEFAULT 1,
     approval_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    last_expiration_notice_sent DATETIME NULL DEFAULT NULL,
+    last_profile_edit DATETIME NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     INDEX idx_account_id (account_id),
     INDEX idx_approval_status (approval_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_expiration_notice_sent DATETIME NULL DEFAULT NULL;
+ALTER TABLE sellers MODIFY COLUMN last_profile_edit DATETIME NULL DEFAULT NULL;
+ALTER TABLE junkshop_profiles MODIFY COLUMN last_profile_edit DATETIME NULL DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS preferred_junkshops (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -356,6 +365,41 @@ CREATE TABLE IF NOT EXISTS fee_configurations (
     INDEX idx_fee_config_key (config_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS fee_settings (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    pickup_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    service_fee_percent DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    commission_percent DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    registration_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    renewal_fee_1_month DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    renewal_fee_6_months DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    renewal_fee_1_year DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    expiration_notice_lead_days INT(11) NOT NULL DEFAULT 1,
+    smtp_host VARCHAR(255) NOT NULL DEFAULT 'smtp.gmail.com',
+    smtp_port INT(11) NOT NULL DEFAULT 587,
+    smtp_user VARCHAR(255) NULL DEFAULT NULL,
+    smtp_pass VARCHAR(255) NULL DEFAULT NULL,
+    smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS expiration_notice_lead_days INT(11) NOT NULL DEFAULT 1;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_host VARCHAR(255) NOT NULL DEFAULT 'smtp.gmail.com';
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_port INT(11) NOT NULL DEFAULT 587;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_user VARCHAR(255) NULL DEFAULT NULL;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_pass VARCHAR(255) NULL DEFAULT NULL;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls';
+
+INSERT INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, smtp_host, smtp_port, smtp_encryption)
+VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 'smtp.gmail.com', 587, 'tls')
+ON DUPLICATE KEY UPDATE
+    expiration_notice_lead_days = VALUES(expiration_notice_lead_days),
+    smtp_host = VALUES(smtp_host),
+    smtp_port = VALUES(smtp_port),
+    smtp_encryption = VALUES(smtp_encryption);
+
 CREATE TABLE IF NOT EXISTS transactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     pickup_request_id INT NOT NULL,
@@ -385,12 +429,19 @@ VALUES
     ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
     ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
     ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.'),
-    ('default_junkshop_expiry_days', 30.00, 'Default partnership expiration period for newly approved junkshops.'),
-    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
+    ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
+    ('renewal_fee_1_month', 0.00, 'Junkshop partnership renewal fee for 1 month.'),
+    ('renewal_fee_6_months', 0.00, 'Junkshop partnership renewal fee for 6 months.'),
+    ('renewal_fee_1_year', 0.00, 'Junkshop partnership renewal fee for 1 year.'),
+    ('renewal_notice_days', 1.00, 'Legacy number of days before expiry to email junkshops a renewal reminder.'),
+    ('expiration_notice_lead_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
 ON DUPLICATE KEY UPDATE
     config_value = VALUES(config_value),
     description = VALUES(description),
     updated_at = CURRENT_TIMESTAMP;
+
+DELETE FROM fee_configurations
+WHERE config_key = 'default_junkshop_expiry_days';
 
 -- EcoPick Migration 007: Booking Status Audit Trail
 -- Safe to import into an existing ecopickdb database.
@@ -420,7 +471,6 @@ CREATE TABLE IF NOT EXISTS booking_status_history (
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES
     ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('junkshop_renewal_fee', 0.00, 'Configurable renewal fee for an existing junkshop partnership.'),
     ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),
@@ -454,11 +504,21 @@ ALTER TABLE transactions
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES
     ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('junkshop_renewal_fee', 0.00, 'Configurable renewal fee for an existing junkshop partnership.'),
     ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     updated_at = CURRENT_TIMESTAMP;
+
+DELETE FROM fee_configurations
+WHERE config_key IN (
+    'junkshop_renewal_fee',
+    'renewal_1_month',
+    'renewal_6_months',
+    'renewal_1_year',
+    'fee_1_month',
+    'fee_6_months',
+    'fee_1_year'
+);
 
 CREATE TABLE IF NOT EXISTS transaction_materials (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -690,6 +750,22 @@ CREATE TABLE IF NOT EXISTS renewal_notification_log (
     UNIQUE KEY uq_renewal_notice_account_expiry (junkshop_account_id, partnership_expires_at),
     CONSTRAINT fk_renewal_notice_account FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS email_logs (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    recipient_email VARCHAR(255) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    status ENUM('Sent', 'Failed') NOT NULL DEFAULT 'Sent',
+    error_message TEXT NULL DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_email_logs_recipient_created (recipient_email, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE email_logs
+    MODIFY COLUMN status ENUM('Sent', 'Failed') NOT NULL DEFAULT 'Sent',
+    ADD COLUMN IF NOT EXISTS error_message TEXT NULL DEFAULT NULL;
 
 ALTER TABLE notifications
     ADD COLUMN IF NOT EXISTS link_url VARCHAR(255) NULL AFTER message,
