@@ -132,15 +132,16 @@ class PickupRequestController
             $this->db->query(
                 "INSERT INTO pickup_requests
                     (booking_reference, seller_account_id, junkshop_id, current_status, pickup_address,
-                     preferred_pickup_date, preferred_pickup_time, photo_path, notes,
+                     contact_number, preferred_pickup_date, preferred_pickup_time, photo_path, notes,
                      approximate_distance_km, calculated_distance, pickup_fee, total_estimated_amount, seller_lat, seller_lng)
                  VALUES ('', :seller_id, :junkshop_id, 'Pending Request', :pickup_address,
-                         :pickup_date, :pickup_time, :photo_path, :notes,
+                         :contact_number, :pickup_date, :pickup_time, :photo_path, :notes,
                          :distance_km, :calculated_distance, :pickup_fee, :total_estimated_amount, :seller_lat, :seller_lng)",
                 [
                     'seller_id' => (int) $sellerAccountId,
                     'junkshop_id' => (int) $normalized['junkshop_id'],
                     'pickup_address' => $normalized['pickup_address'],
+                    'contact_number' => $normalized['contact_number'],
                     'pickup_date' => $normalized['preferred_pickup_date'],
                     'pickup_time' => $normalized['preferred_pickup_time'],
                     'photo_path' => $photoPath,
@@ -197,7 +198,7 @@ class PickupRequestController
     public function listSellerRequests($sellerAccountId)
     {
         return $this->db->query(
-            "SELECT pr.id, pr.booking_reference, pr.current_status, pr.pickup_address,
+            "SELECT pr.id, pr.booking_reference, pr.current_status, pr.contact_number, pr.pickup_address,
                 pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
                 pr.confirmed_pickup_time, DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                 TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path,
@@ -234,7 +235,7 @@ class PickupRequestController
     {
         $rows = $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.seller_account_id, a.full_name AS seller_name, a.email AS seller_email,
-                    pr.current_status, pr.pickup_address, pr.approximate_distance_km, pr.seller_lat, pr.seller_lng,
+                    pr.current_status, pr.contact_number, pr.pickup_address, pr.approximate_distance_km, pr.seller_lat, pr.seller_lng,
                     pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date, pr.confirmed_pickup_time,
                       DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                       TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,
@@ -446,7 +447,7 @@ class PickupRequestController
         return $this->db->query(
                 "SELECT pr.id, pr.booking_reference, pr.current_status, a.full_name AS seller_name, a.email AS seller_email,
                     jp.business_name AS junkshop_name,
-                    pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time,
+                    pr.contact_number, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time,
                     pr.photo_path, pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
                     GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
@@ -478,6 +479,9 @@ class PickupRequestController
 
         if ((int) ($data['junkshop_id'] ?? 0) <= 0) {
             $errors[] = 'Please select a partner junkshop.';
+        }
+        if (!preg_match('/^\d{1,9}$/', (string) ($data['contact_number'] ?? ''))) {
+            $errors[] = 'Mobile number must contain digits only and be at most 9 digits.';
         }
         if (trim($data['pickup_address'] ?? '') === '') {
             $errors[] = 'Pickup address/location is required.';
@@ -515,6 +519,7 @@ class PickupRequestController
         return [
             'items' => $items,
             'junkshop_id' => (int) ($data['junkshop_id'] ?? 0),
+            'contact_number' => trim((string) ($data['contact_number'] ?? '')),
             'pickup_address' => trim((string) ($data['pickup_address'] ?? '')),
             'approximate_distance_km' => number_format(max(0.0, (float) ($data['approximate_distance_km'] ?? 0)), 2, '.', ''),
             'seller_lat' => number_format((float) ($data['seller_lat'] ?? 0), 8, '.', ''),

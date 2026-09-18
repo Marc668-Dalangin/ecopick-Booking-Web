@@ -24,6 +24,12 @@ $serviceFeePct = (float)($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculato
 $pageTitle = 'Partner Junkshops and Buying Prices';
 $currentPage = 'partner-prices';
 $userDisplayName = Auth::userName();
+$sellerMobileNumber = (string) (Database::getInstance()->query(
+    'SELECT mobile_number FROM accounts WHERE id = :account_id LIMIT 1',
+    ['account_id' => (int) Auth::userId()]
+)->fetchColumn() ?: '');
+$sellerContactSuffix = preg_replace('/^09/', '', preg_replace('/\D+/', '', $sellerMobileNumber));
+$sellerContactSuffix = preg_match('/^\d{1,9}$/', $sellerContactSuffix) ? $sellerContactSuffix : '';
 
 $materialMap = [];
 foreach ($materials as $material) {
@@ -210,6 +216,7 @@ ob_start();
                     </div>
 
                     <div class="row g-3 mb-4">
+                        <div class="col-md-4"><label class="form-label" for="contact_number">Mobile Number <span class="text-danger">*</span></label><div class="input-group"><span class="input-group-text fw-bold">+63 9</span><input type="text" class="form-control" id="contact_number" name="contact_number" value="<?php echo Validator::escape($sellerContactSuffix); ?>" maxlength="9" pattern="[0-9]{1,9}" inputmode="numeric" required></div><div class="form-text">Note: The junkshop collector will use this mobile number to notify you once your request status is updated to For Pickup.</div></div>
                         <div class="col-md-4"><label class="form-label" for="pickup_address">Address <span class="text-danger">*</span></label><div class="input-group"><input class="form-control" id="pickup_address" name="pickup_address" required maxlength="255" readonly placeholder="Use Get Current Location"><button type="button" class="btn btn-primary" id="btn-get-location">Get Current Location</button></div><input type="hidden" id="seller_lat" name="seller_lat"><input type="hidden" id="seller_lng" name="seller_lng"><div id="location-error-note" class="alert alert-warning d-none mt-2" role="alert"></div><div id="junkshop-location-info" class="mt-2 text-muted"></div><div id="approx-distance-container" class="fw-bold text-primary mt-1"></div></div>
                         <div class="col-12"><div id="pickup-map" style="height: 250px; width: 100%; display: none; margin-bottom: 15px; z-index: 1; touch-action: none;"></div></div>
                         <div class="col-md-4"><label class="form-label fw-bold" for="approximate_distance_km">Approximate Distance</label><div class="input-group"><input type="text" class="form-control bg-light" id="approximate_distance_km" name="approximate_distance_km" readonly tabindex="-1" required placeholder="Calculated automatically..."><span class="input-group-text">km</span></div><small class="text-muted">Distance is calculated automatically based on your address and the selected junkshop location.</small></div>
@@ -296,11 +303,16 @@ ob_start();
         const junkshopLocationInfo = document.getElementById('junkshop-location-info');
         const approximateDistanceInfo = document.getElementById('approx-distance-container');
         const approximateDistanceInput = document.getElementById('approximate_distance_km');
+        const contactNumberInput = document.getElementById('contact_number');
         const locationErrorNote = document.getElementById('location-error-note');
         const locationErrorMessage = '<strong>Location Access Required:</strong> Please ensure your device GPS is turned ON in settings and location permissions are ALLOWED for this website in your browser settings. Once enabled, reload the page to view your location and exact distance.';
         let rowIndex = 0;
         let selectedPrices = {};
         let distanceInKm = 0;
+
+        contactNumberInput?.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 9);
+        });
 
         function showLocationError() {
             if (!locationErrorNote) return;

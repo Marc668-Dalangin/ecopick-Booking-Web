@@ -285,6 +285,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     final_amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     payment_method ENUM('Cash') NULL,
     payment_status ENUM('Unpaid', 'Paid') NULL,
+    contact_number VARCHAR(20) NOT NULL DEFAULT '',
     pickup_address VARCHAR(255) NOT NULL,
     seller_lat DECIMAL(11,8) NULL,
     seller_lng DECIMAL(11,8) NULL,
@@ -306,6 +307,8 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     CONSTRAINT fk_pickup_request_seller FOREIGN KEY (seller_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     CONSTRAINT fk_pickup_request_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) NOT NULL DEFAULT '' AFTER payment_status;
 
 CREATE TABLE IF NOT EXISTS pickup_request_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
