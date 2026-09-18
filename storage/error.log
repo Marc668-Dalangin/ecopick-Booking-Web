@@ -1784,3 +1784,66 @@
 530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
 530 5.7.0 specifications. d9443c01a7336-2ddb757adb9sm5216785ad.47 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
 [18-Sep-2026 17:55:10 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 20:42:53 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[18-Sep-2026 20:42:57 Asia/Manila] PHP Warning:  session_destroy(): Trying to destroy uninitialized session in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 77
+[18-Sep-2026 20:45:05 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[18-Sep-2026 20:48:00 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine
+[18-Sep-2026 20:48:00 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 20:48:01 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine
+[18-Sep-2026 20:48:01 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 20:48:01 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine
+[18-Sep-2026 20:48:01 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 20:48:01 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine
+[18-Sep-2026 20:48:01 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 20:48:03 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine
+[18-Sep-2026 20:48:03 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 20:48:10 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:10 Asia/Manila] Login database error [42S02]: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:15 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:15 Asia/Manila] Login database error [42S02]: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:34 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine
+[18-Sep-2026 20:48:34 Asia/Manila] Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.junkshop_profiles' doesn't exist in engine in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51
+[18-Sep-2026 20:48:36 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:36 Asia/Manila] Login database error [42S02]: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:40 Asia/Manila] Database error: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 20:48:40 Asia/Manila] Login database error [42S02]: SQLSTATE[42S02]: Base table or view not found: 1932 Table 'ecopickdb.accounts' doesn't exist in engine
+[18-Sep-2026 21:31:05 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb7548f3dsm7934375ad.37 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:31:05 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:31:10 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dceddba4sm841860b3a.26 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:31:10 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:31:19 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e362ea35asm10941671a91.16 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:31:19 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:31:22 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb757a656sm8028865ad.49 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:31:22 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:32:11 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50ea3c3sm990248a12.31 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:32:11 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:32:16 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddba7f31a9sm5737065ad.22 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:32:16 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:32:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e59abb3dbsm3557869a91.11 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:32:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:32:39 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb7527600sm8024235ad.26 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:32:39 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:34:22 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e50a4bc22sm5734624a91.17 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:34:22 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 21:34:24 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dd9e08ecsm836860b3a.53 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 21:34:24 Asia/Manila] Booking notification email was not accepted by the configured mail transport.

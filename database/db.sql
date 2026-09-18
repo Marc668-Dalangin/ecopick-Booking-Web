@@ -1,45 +1,73 @@
--- EcoPick consolidated database schema and seed data
--- This file is the complete schema and seed-data master. No stored routines are required.
-CREATE DATABASE IF NOT EXISTS ecopickdb CHARACTER SET utf8mb4 COLLATE=utf8mb4_unicode_ci;
+﻿SET FOREIGN_KEY_CHECKS = 0;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+
+CREATE DATABASE IF NOT EXISTS ecopickdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE ecopickdb;
 SET NAMES utf8mb4;
+
+DROP TABLE IF EXISTS email_logs;
+DROP TABLE IF EXISTS renewal_notification_log;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS concern_status_history;
+DROP TABLE IF EXISTS concerns;
+DROP TABLE IF EXISTS payment_status_history;
+DROP TABLE IF EXISTS payment_proofs;
+DROP TABLE IF EXISTS transaction_payments;
+DROP TABLE IF EXISTS junkshop_partnership_payments;
+DROP TABLE IF EXISTS transaction_materials;
+DROP TABLE IF EXISTS junkshop_assignments;
+DROP TABLE IF EXISTS booking_status_history;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS fee_settings;
+DROP TABLE IF EXISTS fee_configurations;
+DROP TABLE IF EXISTS pickup_request_status_history;
+DROP TABLE IF EXISTS pickup_request_items;
+DROP TABLE IF EXISTS pickup_requests;
+DROP TABLE IF EXISTS junkshop_material_prices;
+DROP TABLE IF EXISTS recyclable_materials;
+DROP TABLE IF EXISTS preferred_junkshops;
+DROP TABLE IF EXISTS junkshop_profiles;
+DROP TABLE IF EXISTS sellers;
+DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS rejected_emails;
+DROP TABLE IF EXISTS accounts;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS junkshops;
+DROP TABLE IF EXISTS partnership_renewals;
+DROP TABLE IF EXISTS schema_migrations;
 
 CREATE TABLE IF NOT EXISTS roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL UNIQUE,
-    description VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    description VARCHAR(255) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS accounts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     role_id INT NOT NULL,
-    account_role ENUM('admin', 'seller', 'junkshop') NULL,
+    account_role ENUM('admin', 'seller', 'junkshop') NOT NULL DEFAULT 'seller',
     email VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(100) NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    mobile_number VARCHAR(20),
-    account_status ENUM('active', 'inactive', 'pending', 'rejected') DEFAULT 'active',
+    mobile_number VARCHAR(20) NULL,
+    account_status ENUM('active', 'inactive', 'pending', 'rejected') NOT NULL DEFAULT 'active',
     otp_code VARCHAR(6) NULL DEFAULT NULL,
     otp_expires_at DATETIME NULL DEFAULT NULL,
     is_email_verified TINYINT(1) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_accounts_role FOREIGN KEY (role_id) REFERENCES roles(id),
     INDEX idx_email (email),
     INDEX idx_role_id (role_id),
     INDEX idx_account_role (account_role),
     INDEX idx_account_role_status (account_role, account_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS otp_code VARCHAR(6) NULL DEFAULT NULL;
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS otp_expires_at DATETIME NULL DEFAULT NULL;
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_email_verified TINYINT(1) NOT NULL DEFAULT 0;
-
 CREATE TABLE IF NOT EXISTS rejected_emails (
     email VARCHAR(255) PRIMARY KEY,
-    rejected_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    rejected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS password_resets (
@@ -47,7 +75,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
     email VARCHAR(255) NOT NULL,
     token VARCHAR(255) NOT NULL,
     expires_at DATETIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_password_reset_email (email),
     UNIQUE KEY uq_password_reset_token (token),
     INDEX idx_password_reset_expires_at (expires_at)
@@ -56,12 +84,12 @@ CREATE TABLE IF NOT EXISTS password_resets (
 CREATE TABLE IF NOT EXISTS sellers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     account_id INT NOT NULL UNIQUE,
-    address VARCHAR(255),
-    barangay VARCHAR(100),
+    address VARCHAR(255) NULL,
+    barangay VARCHAR(100) NULL,
     last_profile_edit DATETIME NULL DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sellers_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     INDEX idx_account_id (account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -73,145 +101,35 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     complete_address VARCHAR(255) NOT NULL,
     latitude DECIMAL(11,8) NULL,
     longitude DECIMAL(11,8) NULL,
-    operating_schedule VARCHAR(255),
-    business_permit_reference VARCHAR(100),
+    operating_schedule VARCHAR(255) NULL,
+    business_permit_reference VARCHAR(100) NULL,
+    gcash_account_name VARCHAR(120) NULL,
+    gcash_account_number VARCHAR(32) NULL,
     is_available TINYINT(1) NOT NULL DEFAULT 1,
-    approval_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    partnership_expires_at DATETIME NULL DEFAULT NULL,
+    renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current',
     last_expiration_notice_sent DATETIME NULL DEFAULT NULL,
     last_profile_edit DATETIME NULL DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_junkshop_profiles_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     INDEX idx_account_id (account_id),
-    INDEX idx_approval_status (approval_status)
+    INDEX idx_approval_status (approval_status),
+    INDEX idx_junkshop_approval_expiry (approval_status, partnership_expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL;
-ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL;
-ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_expiration_notice_sent DATETIME NULL DEFAULT NULL;
-ALTER TABLE sellers MODIFY COLUMN last_profile_edit DATETIME NULL DEFAULT NULL;
-ALTER TABLE junkshop_profiles MODIFY COLUMN last_profile_edit DATETIME NULL DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS preferred_junkshops (
     id INT PRIMARY KEY AUTO_INCREMENT,
     seller_id INT NOT NULL,
     junkshop_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_preferred_junkshop (seller_id, junkshop_id),
-    FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_preferred_seller FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_preferred_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
     INDEX idx_preferred_seller_id (seller_id),
     INDEX idx_preferred_junkshop_id (junkshop_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Partner-prices listing rule:
--- Approved junkshops must remain visible even when they have not added any prices yet.
--- Use LEFT JOIN against junkshop_material_prices so the junkshop row is retained when the
--- pricing table has no matching entries. The only strict filters are the approval and status checks.
--- Example:
--- SELECT ...
--- FROM junkshop_profiles jp
--- JOIN accounts a ON a.id = jp.account_id
--- LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = jp.account_id AND jmp.available = 1
--- LEFT JOIN recyclable_materials rm ON rm.id = jmp.material_id AND rm.is_active = 1
--- WHERE a.account_status = 'active'
---   AND jp.approval_status = 'approved';
-
-INSERT INTO roles (name, description) VALUES
-('seller', 'Recyclable material seller'),
-('junkshop', 'Registered junkshop'),
-('admin', 'EcoPick administrator')
-ON DUPLICATE KEY UPDATE description = VALUES(description);
-
-
-
-
-
-
-ALTER TABLE accounts
-    ADD COLUMN IF NOT EXISTS account_role ENUM('admin', 'seller', 'junkshop') NULL AFTER role_id;
-
-UPDATE accounts a
-JOIN roles r ON r.id = a.role_id
-SET a.account_role = r.name
-WHERE a.account_role IS NULL OR a.account_role <> r.name;
-
-ALTER TABLE accounts
-    MODIFY account_role ENUM('admin', 'seller', 'junkshop') NOT NULL DEFAULT 'seller';
-
-INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, account_status)
-VALUES ((SELECT id FROM roles WHERE name = 'admin'), 'admin', 'ecopicklipacity@gmail.com', '$2y$10$2f9fpGIE/3t/Vmu0KBvn1OBozvRWajPHBx6UMYEfq67WZS1QzCpyu', 'EcoPick Administrator', 'active')
-ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), account_status = VALUES(account_status), account_role = VALUES(account_role);
--- EcoPick Migration 001: baseline marker.
--- The initial schema is included in this consolidated file.
-
-
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    version VARCHAR(20) PRIMARY KEY,
-    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO schema_migrations (version)
-VALUES ('001')
-ON DUPLICATE KEY UPDATE version = VALUES(version);
--- EcoPick Phase 2 Dashboard Foundation Migration
--- Non-destructive and safe to import after the Phase 1 schema.
-
-
-
-
-
-
-
-
-
-
-
--- EcoPick Migration 003: Add a readable role column to accounts
--- Safe to import only once.
---
--- Run:
---   C:\xampp\mysql\bin\mysql.exe -uroot ecopickdb < database\migrations\003_add_visible_account_role.sql
---
--- This migration is non-destructive:
---   - adds account_role to the accounts table without deleting data
---   - backfills each existing account using the matching roles table row
---   - preserves all current accounts, passwords, status values, and FK relationships
---   - updates the registration procedures so new accounts store both role_id and account_role
-
-
-
-ALTER TABLE accounts
-    ADD COLUMN IF NOT EXISTS account_role ENUM('admin', 'seller', 'junkshop') NULL AFTER role_id;
-
-UPDATE accounts a
-JOIN roles r ON r.id = a.role_id
-SET a.account_role = r.name
-WHERE a.account_role IS NULL OR a.account_role <> r.name;
-
-ALTER TABLE accounts
-    MODIFY account_role ENUM('admin', 'seller', 'junkshop') NOT NULL DEFAULT 'seller';
-
-
-
-
-
-
-DROP VIEW IF EXISTS vw_accounts_overview;
-
--- EcoPick Migration 004: Materials and Buying Prices
--- Safe to import into an existing ecopickdb database.
---
--- Run:
---   C:\xampp\mysql\bin\mysql.exe --user=root ecopickdb < database\migrations\004_materials_and_prices.sql
---
--- This migration is non-destructive:
---   - adds a reusable material catalog
---   - adds a junkshop price table with one-price-per-material per junkshop
---   - preserves existing accounts, registrations, and approval records
---   - does not delete existing data
-
-
 
 CREATE TABLE IF NOT EXISTS recyclable_materials (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -219,8 +137,8 @@ CREATE TABLE IF NOT EXISTS recyclable_materials (
     category VARCHAR(80) NOT NULL,
     unit_of_measure VARCHAR(20) NOT NULL DEFAULT 'kg',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_material_name (material_name),
     INDEX idx_category (category),
     INDEX idx_active (is_active)
@@ -232,65 +150,42 @@ CREATE TABLE IF NOT EXISTS junkshop_material_prices (
     material_id INT NOT NULL,
     buying_price DECIMAL(10,2) NOT NULL,
     available TINYINT(1) NOT NULL DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_junkshop_material_price (junkshop_account_id, material_id),
-    FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_material_price_junkshop FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_material_price_material FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE RESTRICT,
     INDEX idx_junkshop_account_id (junkshop_account_id),
     INDEX idx_material_id (material_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO recyclable_materials (id, material_name, category, unit_of_measure, is_active, created_at, updated_at)
-VALUES
-    (1, 'Plastic', 'Plastic', 'kg', 1, NOW(), NOW()),
-    (2, 'Paper', 'Paper', 'kg', 1, NOW(), NOW()),
-    (3, 'Cardboard', 'Paper', 'kg', 1, NOW(), NOW()),
-    (4, 'Aluminum Cans', 'Metal', 'kg', 1, NOW(), NOW()),
-    (5, 'Metal', 'Metal', 'kg', 1, NOW(), NOW()),
-    (6, 'Glass', 'Glass', 'kg', 1, NOW(), NOW()),
-    (7, 'E-waste', 'Electronics', 'kg', 1, NOW(), NOW())
-ON DUPLICATE KEY UPDATE
-    material_name = VALUES(material_name),
-    category = VALUES(category),
-    unit_of_measure = VALUES(unit_of_measure),
-    is_active = VALUES(is_active),
-    updated_at = CURRENT_TIMESTAMP;
-
-
-
-
-
-
-
-
--- EcoPick Migration 005: Phase 4A Pickup Request Foundation
--- Safe to import into an existing ecopickdb database.
--- Creates seller-owned pickup requests, request items, and status history.
--- No matching, fees, payments, scheduling confirmation, or junkshop actions.
-
-
 
 CREATE TABLE IF NOT EXISTS pickup_requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
     booking_reference VARCHAR(24) NOT NULL,
     seller_account_id INT NOT NULL,
     junkshop_id INT NULL,
-    current_status ENUM('Pending Request', 'Cancelled') NOT NULL DEFAULT 'Pending Request',
+    current_status ENUM('Pending Request', 'Matched', 'Accepted', 'Declined', 'Rematched', 'Scheduled', 'For Pickup', 'Completed', 'Cancelled', 'Cancelled by Seller', 'Cancelled by Junkshop') NOT NULL DEFAULT 'Pending Request',
     cancellation_reason VARCHAR(255) NULL,
     admin_viewed_report TINYINT(1) NOT NULL DEFAULT 0,
     final_recyclable_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     pickup_collection_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     ecopick_service_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     final_amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    payment_method ENUM('Cash') NULL,
-    payment_status ENUM('Unpaid', 'Paid') NULL,
+    payment_method ENUM('Cash', 'GCash') NULL,
+    payment_status ENUM('Unpaid', 'Paid', 'Confirmed') NULL,
     contact_number VARCHAR(20) NULL DEFAULT NULL,
+    collector_name VARCHAR(255) NULL DEFAULT NULL,
+    sms_status ENUM('Pending', 'Sent', 'Failed') NOT NULL DEFAULT 'Pending',
+    sms_error_message TEXT NULL DEFAULT NULL,
     pickup_address VARCHAR(255) NOT NULL,
+    approximate_distance_km DECIMAL(6,2) NULL,
     seller_lat DECIMAL(11,8) NULL,
     seller_lng DECIMAL(11,8) NULL,
     junkshop_lat DECIMAL(11,8) NULL,
     junkshop_lng DECIMAL(11,8) NULL,
+    calculated_distance DECIMAL(6,2) NULL,
+    pickup_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_estimated_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     preferred_pickup_date DATE NOT NULL,
     preferred_pickup_time VARCHAR(40) NOT NULL,
     confirmed_pickup_date DATE NULL,
@@ -308,17 +203,14 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     CONSTRAINT fk_pickup_request_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) NULL DEFAULT NULL AFTER payment_status;
-ALTER TABLE pickup_requests MODIFY COLUMN contact_number VARCHAR(20) NULL DEFAULT NULL;
-ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL AFTER contact_number;
-ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed') NOT NULL DEFAULT 'Pending' AFTER collector_name;
-ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_error_message TEXT NULL DEFAULT NULL AFTER sms_status;
-
 CREATE TABLE IF NOT EXISTS pickup_request_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
     pickup_request_id INT NOT NULL,
     material_id INT NOT NULL,
     estimated_weight DECIMAL(10,2) NOT NULL,
+    estimated_buying_price_per_kg DECIMAL(10,2) NULL,
+    estimated_material_value DECIMAL(10,2) NULL,
+    estimate_snapshot_at DATETIME NULL,
     actual_weight DECIMAL(10,2) NULL,
     material_condition VARCHAR(120) NULL,
     is_removed TINYINT(1) NOT NULL DEFAULT 0,
@@ -333,39 +225,13 @@ CREATE TABLE IF NOT EXISTS pickup_request_items (
 CREATE TABLE IF NOT EXISTS pickup_request_status_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     pickup_request_id INT NOT NULL,
-    status ENUM('Pending Request', 'Cancelled') NOT NULL,
+    status ENUM('Pending Request', 'Matched', 'Accepted', 'Declined', 'Rematched', 'Scheduled', 'For Pickup', 'Completed', 'Cancelled', 'Cancelled by Seller', 'Cancelled by Junkshop') NOT NULL,
     changed_by_account_id INT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_pickup_history_request_created (pickup_request_id, created_at),
     CONSTRAINT fk_pickup_history_request FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
     CONSTRAINT fk_pickup_history_account FOREIGN KEY (changed_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-
-
-
-
-
-
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS cancellation_reason VARCHAR(255) NULL AFTER current_status;
-
-ALTER TABLE pickup_requests
-    MODIFY current_status ENUM(
-        'Pending Request',
-        'Matched',
-        'Accepted',
-        'Declined',
-        'Scheduled',
-        'For Pickup',
-        'Completed',
-        'Cancelled'
-    ) NOT NULL DEFAULT 'Pending Request';
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS admin_viewed_report TINYINT(1) NOT NULL DEFAULT 0 AFTER current_status;
 
 CREATE TABLE IF NOT EXISTS fee_configurations (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -377,7 +243,7 @@ CREATE TABLE IF NOT EXISTS fee_configurations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS fee_settings (
-    id INT(11) NOT NULL AUTO_INCREMENT,
+    id INT NOT NULL AUTO_INCREMENT,
     pickup_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     service_fee_percent DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     commission_percent DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -385,34 +251,19 @@ CREATE TABLE IF NOT EXISTS fee_settings (
     renewal_fee_1_month DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     renewal_fee_6_months DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     renewal_fee_1_year DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    expiration_notice_lead_days INT(11) NOT NULL DEFAULT 1,
+    expiration_notice_lead_days INT NOT NULL DEFAULT 1,
     smtp_host VARCHAR(255) NOT NULL DEFAULT 'smtp.gmail.com',
-    smtp_port INT(11) NOT NULL DEFAULT 587,
+    smtp_port INT NOT NULL DEFAULT 587,
     smtp_user VARCHAR(255) NULL DEFAULT NULL,
     smtp_pass VARCHAR(255) NULL DEFAULT NULL,
     smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls',
+    philsms_api_token TEXT NULL DEFAULT NULL,
+    philsms_endpoint VARCHAR(255) NULL DEFAULT 'https://dashboard.philsms.com/api/v3/sms/send',
+    philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS expiration_notice_lead_days INT(11) NOT NULL DEFAULT 1;
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_host VARCHAR(255) NOT NULL DEFAULT 'smtp.gmail.com';
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_port INT(11) NOT NULL DEFAULT 587;
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_user VARCHAR(255) NULL DEFAULT NULL;
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_pass VARCHAR(255) NULL DEFAULT NULL;
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls';
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_api_token TEXT NULL DEFAULT NULL;
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_endpoint VARCHAR(255) NULL DEFAULT 'https://dashboard.philsms.com/api/v3/sms/send';
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS';
-
-INSERT INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, smtp_host, smtp_port, smtp_encryption)
-VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 'smtp.gmail.com', 587, 'tls')
-ON DUPLICATE KEY UPDATE
-    expiration_notice_lead_days = VALUES(expiration_notice_lead_days),
-    smtp_host = VALUES(smtp_host),
-    smtp_port = VALUES(smtp_port),
-    smtp_encryption = VALUES(smtp_encryption);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS transactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -426,113 +277,21 @@ CREATE TABLE IF NOT EXISTS transactions (
     ecopick_service_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     final_seller_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     transaction_commission DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    payment_method ENUM('Cash', 'GCash') NULL,
+    payment_status ENUM('Unpaid', 'Paid', 'Confirmed') NOT NULL DEFAULT 'Unpaid',
+    payment_reference VARCHAR(100) NULL,
+    payment_confirmed_at DATETIME NULL,
+    payment_confirmed_by_account_id INT NULL,
     completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_transaction_pickup_request (pickup_request_id),
     INDEX idx_transaction_junkshop (junkshop_id),
     INDEX idx_transaction_seller (seller_id),
-    CONSTRAINT fk_transaction_pickup_request
-        FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
-    CONSTRAINT fk_transaction_junkshop
-        FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_transaction_seller
-        FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE
+    UNIQUE KEY uq_transaction_pickup_request (pickup_request_id),
+    CONSTRAINT fk_transaction_pickup_request FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
+    CONSTRAINT fk_transaction_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_transaction_seller FOREIGN KEY (seller_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_transaction_payment_confirmer FOREIGN KEY (payment_confirmed_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO fee_configurations (config_key, config_value, description)
-VALUES
-    ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
-    ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
-    ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.'),
-    ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('renewal_fee_1_month', 0.00, 'Junkshop partnership renewal fee for 1 month.'),
-    ('renewal_fee_6_months', 0.00, 'Junkshop partnership renewal fee for 6 months.'),
-    ('renewal_fee_1_year', 0.00, 'Junkshop partnership renewal fee for 1 year.'),
-    ('renewal_notice_days', 1.00, 'Legacy number of days before expiry to email junkshops a renewal reminder.'),
-    ('expiration_notice_lead_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
-ON DUPLICATE KEY UPDATE
-    config_value = VALUES(config_value),
-    description = VALUES(description),
-    updated_at = CURRENT_TIMESTAMP;
-
-DELETE FROM fee_configurations
-WHERE config_key = 'default_junkshop_expiry_days';
-
--- EcoPick Migration 007: Booking Status Audit Trail
--- Safe to import into an existing ecopickdb database.
-
-
-CREATE TABLE IF NOT EXISTS booking_status_history (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    pickup_request_id INT NOT NULL,
-    previous_status VARCHAR(50) NULL,
-    new_status VARCHAR(50) NOT NULL,
-    responsible_party VARCHAR(50) NOT NULL,
-    user_id INT NULL,
-    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_booking_history_request_changed (pickup_request_id, changed_at),
-    INDEX idx_booking_history_user (user_id),
-    CONSTRAINT fk_booking_history_request
-        FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
-    CONSTRAINT fk_booking_history_user
-        FOREIGN KEY (user_id) REFERENCES accounts(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
--- EcoPick Migration 008: Foundation integrity and configurable partnership fees
--- Import after migrations 001-007.
-
-
-
-
-INSERT INTO fee_configurations (config_key, config_value, description)
-VALUES
-    ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
-ON DUPLICATE KEY UPDATE
-    description = VALUES(description),
-    updated_at = CURRENT_TIMESTAMP;
-
--- EcoPick Migration 009: normalized settlement, status, and payment foundation
--- Import after migrations 001-008.
-
-
-ALTER TABLE pickup_requests
-    MODIFY current_status ENUM(
-        'Pending Request',
-        'Matched',
-        'Accepted',
-        'Declined',
-        'Rematched',
-        'Scheduled',
-        'For Pickup',
-        'Completed',
-        'Cancelled',
-        'Cancelled by Seller',
-        'Cancelled by Junkshop'
-    ) NOT NULL DEFAULT 'Pending Request';
-
-ALTER TABLE transactions
-    ADD COLUMN IF NOT EXISTS payment_method ENUM('Cash', 'GCash') NULL AFTER transaction_commission,
-    ADD COLUMN IF NOT EXISTS payment_status ENUM('Unpaid', 'Paid', 'Confirmed') NOT NULL DEFAULT 'Unpaid' AFTER payment_method,
-    ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100) NULL AFTER payment_status,
-    ADD UNIQUE INDEX IF NOT EXISTS uq_transaction_pickup_request (pickup_request_id);
-
-INSERT INTO fee_configurations (config_key, config_value, description)
-VALUES
-    ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
-    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
-ON DUPLICATE KEY UPDATE
-    description = VALUES(description),
-    updated_at = CURRENT_TIMESTAMP;
-
-DELETE FROM fee_configurations
-WHERE config_key IN (
-    'junkshop_renewal_fee',
-    'renewal_1_month',
-    'renewal_6_months',
-    'renewal_1_year',
-    'fee_1_month',
-    'fee_6_months',
-    'fee_1_year'
-);
 
 CREATE TABLE IF NOT EXISTS transaction_materials (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -548,35 +307,38 @@ CREATE TABLE IF NOT EXISTS transaction_materials (
     UNIQUE KEY uq_transaction_request_item (transaction_id, pickup_request_item_id),
     INDEX idx_transaction_material_request_item (pickup_request_item_id),
     INDEX idx_transaction_material_material (material_id),
-    CONSTRAINT fk_transaction_material_transaction
-        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
-    CONSTRAINT fk_transaction_material_request_item
-        FOREIGN KEY (pickup_request_item_id) REFERENCES pickup_request_items(id) ON DELETE CASCADE,
-    CONSTRAINT fk_transaction_material_material
-        FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE RESTRICT
+    CONSTRAINT fk_transaction_material_transaction FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_transaction_material_request_item FOREIGN KEY (pickup_request_item_id) REFERENCES pickup_request_items(id) ON DELETE CASCADE,
+    CONSTRAINT fk_transaction_material_material FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-SET @transaction_material_item_fk_sql = (
-    SELECT CASE
-        WHEN COUNT(*) = 0 THEN
-            'ALTER TABLE transaction_materials ADD CONSTRAINT fk_transaction_material_request_item_cascade FOREIGN KEY (pickup_request_item_id) REFERENCES pickup_request_items(id) ON DELETE CASCADE'
-        WHEN MAX(rc.DELETE_RULE) <> 'CASCADE' THEN
-            CONCAT('ALTER TABLE transaction_materials DROP FOREIGN KEY `', MAX(kcu.CONSTRAINT_NAME), '`, ADD CONSTRAINT fk_transaction_material_request_item_cascade FOREIGN KEY (pickup_request_item_id) REFERENCES pickup_request_items(id) ON DELETE CASCADE')
-        ELSE 'SELECT 1'
-    END
-    FROM information_schema.KEY_COLUMN_USAGE kcu
-    LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
-        ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
-       AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
-       AND rc.TABLE_NAME = kcu.TABLE_NAME
-    WHERE kcu.CONSTRAINT_SCHEMA = DATABASE()
-      AND kcu.TABLE_NAME = 'transaction_materials'
-      AND kcu.COLUMN_NAME = 'pickup_request_item_id'
-      AND kcu.REFERENCED_TABLE_NAME = 'pickup_request_items'
-);
-PREPARE transaction_material_item_fk_statement FROM @transaction_material_item_fk_sql;
-EXECUTE transaction_material_item_fk_statement;
-DEALLOCATE PREPARE transaction_material_item_fk_statement;
+CREATE TABLE IF NOT EXISTS junkshop_assignments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    pickup_request_id INT NOT NULL,
+    junkshop_id INT NOT NULL,
+    status ENUM('Pending', 'Accepted', 'Declined', 'Matched', 'Scheduled', 'For Pickup', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Pending',
+    distance_km DECIMAL(6,2) NULL,
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    responded_at DATETIME NULL,
+    CONSTRAINT fk_junkshop_assignment_pickup FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
+    CONSTRAINT fk_junkshop_assignment_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    INDEX idx_assignment_pickup_request (pickup_request_id),
+    INDEX idx_assignment_junkshop (junkshop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS booking_status_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    pickup_request_id INT NOT NULL,
+    previous_status VARCHAR(50) NULL,
+    new_status VARCHAR(50) NOT NULL,
+    responsible_party VARCHAR(50) NOT NULL,
+    user_id INT NULL,
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_booking_history_request_changed (pickup_request_id, changed_at),
+    INDEX idx_booking_history_user (user_id),
+    CONSTRAINT fk_booking_history_request FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
+    CONSTRAINT fk_booking_history_user FOREIGN KEY (user_id) REFERENCES accounts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS junkshop_partnership_payments (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -593,10 +355,8 @@ CREATE TABLE IF NOT EXISTS junkshop_partnership_payments (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_partnership_payment_junkshop (junkshop_account_id),
     INDEX idx_partnership_payment_status (payment_status),
-    CONSTRAINT fk_partnership_payment_junkshop
-        FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_partnership_payment_recorder
-        FOREIGN KEY (recorded_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+    CONSTRAINT fk_partnership_payment_junkshop FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_partnership_payment_recorder FOREIGN KEY (recorded_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS transaction_payments (
@@ -613,30 +373,9 @@ CREATE TABLE IF NOT EXISTS transaction_payments (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_transaction_payment_transaction (transaction_id),
     INDEX idx_transaction_payment_status (payment_status),
-    CONSTRAINT fk_transaction_payment_transaction
-        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
-    CONSTRAINT fk_transaction_payment_recorder
-        FOREIGN KEY (recorded_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+    CONSTRAINT fk_transaction_payment_transaction FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_transaction_payment_recorder FOREIGN KEY (recorded_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
--- EcoPick Migration 010: manual payment verification, GCash profile data, and text-only location.
--- Import after migrations 001-009.
-
-
-ALTER TABLE junkshop_profiles
-    ADD COLUMN IF NOT EXISTS gcash_account_name VARCHAR(120) NULL AFTER business_permit_reference,
-    ADD COLUMN IF NOT EXISTS gcash_account_number VARCHAR(32) NULL AFTER gcash_account_name;
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS seller_lat DECIMAL(11,8) NULL AFTER pickup_address,
-    ADD COLUMN IF NOT EXISTS seller_lng DECIMAL(11,8) NULL AFTER seller_lat,
-    ADD COLUMN IF NOT EXISTS junkshop_lat DECIMAL(11,8) NULL AFTER seller_lng,
-    ADD COLUMN IF NOT EXISTS junkshop_lng DECIMAL(11,8) NULL AFTER junkshop_lat,
-    ADD COLUMN IF NOT EXISTS approximate_distance_km DECIMAL(6,2) NULL AFTER pickup_address;
-
-ALTER TABLE pickup_requests
-    ADD COLUMN IF NOT EXISTS calculated_distance DECIMAL(6,2) NULL AFTER approximate_distance_km,
-    ADD COLUMN IF NOT EXISTS pickup_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER calculated_distance,
-    ADD COLUMN IF NOT EXISTS total_estimated_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER pickup_fee;
 
 CREATE TABLE IF NOT EXISTS payment_proofs (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -649,7 +388,7 @@ CREATE TABLE IF NOT EXISTS payment_proofs (
     proof_status ENUM('Submitted', 'Approved', 'Rejected') NOT NULL DEFAULT 'Submitted',
     review_note VARCHAR(500) NULL,
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    reviewed_at TIMESTAMP NULL,
+    reviewed_at DATETIME NULL,
     reviewed_by_account_id INT NULL,
     INDEX idx_payment_proof_transaction (transaction_id),
     INDEX idx_payment_proof_seller (seller_account_id),
@@ -658,25 +397,6 @@ CREATE TABLE IF NOT EXISTS payment_proofs (
     CONSTRAINT fk_payment_proof_seller FOREIGN KEY (seller_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     CONSTRAINT fk_payment_proof_reviewer FOREIGN KEY (reviewed_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-ALTER TABLE transactions
-    ADD COLUMN IF NOT EXISTS payment_confirmed_at DATETIME NULL AFTER payment_reference,
-    ADD COLUMN IF NOT EXISTS payment_confirmed_by_account_id INT NULL AFTER payment_confirmed_at;
-
-SET @payment_confirmer_fk_sql = (
-    SELECT IF(
-        COUNT(*) = 0,
-        'ALTER TABLE transactions ADD CONSTRAINT fk_transaction_payment_confirmer FOREIGN KEY (payment_confirmed_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL',
-        'SELECT 1'
-    )
-    FROM information_schema.TABLE_CONSTRAINTS
-    WHERE CONSTRAINT_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'transactions'
-      AND CONSTRAINT_NAME = 'fk_transaction_payment_confirmer'
-);
-PREPARE payment_confirmer_fk_statement FROM @payment_confirmer_fk_sql;
-EXECUTE payment_confirmer_fk_statement;
-DEALLOCATE PREPARE payment_confirmer_fk_statement;
 
 CREATE TABLE IF NOT EXISTS payment_status_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -693,33 +413,6 @@ CREATE TABLE IF NOT EXISTS payment_status_history (
     CONSTRAINT fk_payment_history_proof FOREIGN KEY (proof_id) REFERENCES payment_proofs(id) ON DELETE SET NULL,
     CONSTRAINT fk_payment_history_actor FOREIGN KEY (acting_account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-
-
-
--- EcoPick Migration 011: matched-junkshop estimate price snapshots
--- Import after migrations 001-010.
-
-
-ALTER TABLE pickup_request_items
-    ADD COLUMN IF NOT EXISTS estimated_buying_price_per_kg DECIMAL(10,2) NULL AFTER estimated_weight,
-    ADD COLUMN IF NOT EXISTS estimated_material_value DECIMAL(10,2) NULL AFTER estimated_buying_price_per_kg,
-    ADD COLUMN IF NOT EXISTS estimate_snapshot_at DATETIME NULL AFTER estimated_material_value;
--- EcoPick Migration 012: partnership renewals, admin support, and durable notifications.
--- Import after migrations 001-011.
-
-
-ALTER TABLE junkshop_profiles
-    ADD COLUMN IF NOT EXISTS partnership_expires_at DATE NULL AFTER approval_status,
-    ADD COLUMN IF NOT EXISTS is_available TINYINT(1) NOT NULL DEFAULT 1 AFTER business_permit_reference,
-    ADD COLUMN IF NOT EXISTS renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current' AFTER partnership_expires_at;
-
-ALTER TABLE junkshop_profiles
-    ADD INDEX IF NOT EXISTS idx_junkshop_approval_expiry (approval_status, partnership_expires_at);
-
-ALTER TABLE junkshop_profiles
-    MODIFY COLUMN partnership_expires_at DATETIME NULL DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS concerns (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -740,6 +433,19 @@ CREATE TABLE IF NOT EXISTS concerns (
     CONSTRAINT fk_concern_resolver FOREIGN KEY (resolved_by_account_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS concern_status_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    concern_id INT NOT NULL,
+    previous_status ENUM('Open', 'In Review', 'Resolved', 'Closed') NULL,
+    new_status ENUM('Open', 'In Review', 'Resolved', 'Closed') NOT NULL,
+    note TEXT NULL,
+    acting_account_id INT NOT NULL,
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_concern_history_concern (concern_id, changed_at),
+    CONSTRAINT fk_concern_history_concern FOREIGN KEY (concern_id) REFERENCES concerns(id) ON DELETE CASCADE,
+    CONSTRAINT fk_concern_history_actor FOREIGN KEY (acting_account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     recipient_account_id INT NOT NULL,
@@ -757,6 +463,18 @@ CREATE TABLE IF NOT EXISTS notifications (
     INDEX idx_notification_booking (related_pickup_request_id),
     CONSTRAINT fk_notification_recipient FOREIGN KEY (recipient_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     CONSTRAINT fk_notification_booking FOREIGN KEY (related_pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS partnership_renewals (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    junkshop_account_id INT NOT NULL,
+    renewal_type ENUM('Registration', 'Renewal') NOT NULL DEFAULT 'Renewal',
+    expiry_date DATETIME NULL,
+    status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_partnership_renewal_junkshop (junkshop_account_id),
+    CONSTRAINT fk_partnership_renewal_junkshop FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS renewal_notification_log (
@@ -780,53 +498,73 @@ CREATE TABLE IF NOT EXISTS email_logs (
     INDEX idx_email_logs_recipient_created (recipient_email, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE email_logs
-    MODIFY COLUMN status ENUM('Sent', 'Failed') NOT NULL DEFAULT 'Sent',
-    ADD COLUMN IF NOT EXISTS error_message TEXT NULL DEFAULT NULL;
-
-ALTER TABLE notifications
-    ADD COLUMN IF NOT EXISTS link_url VARCHAR(255) NULL AFTER message,
-    ADD COLUMN IF NOT EXISTS related_pickup_request_id INT NULL AFTER link_url,
-    ADD COLUMN IF NOT EXISTS related_booking_id INT NULL AFTER related_pickup_request_id,
-    ADD COLUMN IF NOT EXISTS related_payment_id INT NULL AFTER related_booking_id,
-    ADD COLUMN IF NOT EXISTS is_read TINYINT(1) NOT NULL DEFAULT 0 AFTER related_payment_id;
-
-ALTER TABLE concerns
-    ADD COLUMN IF NOT EXISTS reporter_account_id INT NULL AFTER id,
-    ADD COLUMN IF NOT EXISTS submitted_by_account_id INT NULL AFTER reporter_account_id,
-    ADD COLUMN IF NOT EXISTS status ENUM('Open', 'In Review', 'Resolved', 'Closed') NULL AFTER description,
-    ADD COLUMN IF NOT EXISTS concern_status ENUM('Open', 'In Review', 'Resolved', 'Closed') NULL AFTER status;
-
-UPDATE notifications
-SET related_pickup_request_id = related_booking_id
-WHERE related_pickup_request_id IS NULL AND related_booking_id IS NOT NULL;
-
-UPDATE concerns
-SET reporter_account_id = submitted_by_account_id
-WHERE reporter_account_id IS NULL AND submitted_by_account_id IS NOT NULL;
-
-UPDATE concerns
-SET status = concern_status
-WHERE status IS NULL AND concern_status IS NOT NULL;
-
-CREATE TABLE IF NOT EXISTS concern_status_history (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    concern_id INT NOT NULL,
-    previous_status ENUM('Open', 'In Review', 'Resolved', 'Closed') NULL,
-    new_status ENUM('Open', 'In Review', 'Resolved', 'Closed') NOT NULL,
-    note TEXT NULL,
-    acting_account_id INT NOT NULL,
-    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_concern_history_concern (concern_id, changed_at),
-    CONSTRAINT fk_concern_history_concern FOREIGN KEY (concern_id) REFERENCES concerns(id) ON DELETE CASCADE,
-    CONSTRAINT fk_concern_history_actor FOREIGN KEY (acting_account_id) REFERENCES accounts(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version VARCHAR(20) PRIMARY KEY,
+    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Existing approved partners become current until an administrator assigns an expiry date.
-UPDATE junkshop_profiles
-SET renewal_status = CASE
-    WHEN partnership_expires_at IS NULL THEN 'Current'
-    WHEN partnership_expires_at <= CURRENT_TIMESTAMP THEN 'Expired'
-    WHEN partnership_expires_at <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) THEN 'Due'
-    ELSE 'Current'
-END;
+INSERT INTO roles (name, description) VALUES
+('seller', 'Recyclable material seller'),
+('junkshop', 'Registered junkshop'),
+('admin', 'EcoPick administrator')
+ON DUPLICATE KEY UPDATE description = VALUES(description);
+
+INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, account_status)
+VALUES (
+    (SELECT id FROM roles WHERE name = 'admin'),
+    'admin',
+    'ecopicklipacity@gmail.com',
+    '$2y$10$2f9fpGIE/3t/Vmu0KBvn1OBozvRWajPHBx6UMYEfq67WZS1QzCpyu',
+    'EcoPick Administrator',
+    'active'
+)
+ON DUPLICATE KEY UPDATE
+    password_hash = VALUES(password_hash),
+    full_name = VALUES(full_name),
+    account_status = VALUES(account_status),
+    account_role = VALUES(account_role);
+
+INSERT INTO recyclable_materials (id, material_name, category, unit_of_measure, is_active, created_at, updated_at)
+VALUES
+    (1, 'Plastic', 'Plastic', 'kg', 1, NOW(), NOW()),
+    (2, 'Paper', 'Paper', 'kg', 1, NOW(), NOW()),
+    (3, 'Cardboard', 'Paper', 'kg', 1, NOW(), NOW()),
+    (4, 'Aluminum Cans', 'Metal', 'kg', 1, NOW(), NOW()),
+    (5, 'Metal', 'Metal', 'kg', 1, NOW(), NOW()),
+    (6, 'Glass', 'Glass', 'kg', 1, NOW(), NOW()),
+    (7, 'E-waste', 'Electronics', 'kg', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    material_name = VALUES(material_name),
+    category = VALUES(category),
+    unit_of_measure = VALUES(unit_of_measure),
+    is_active = VALUES(is_active),
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, smtp_host, smtp_port, smtp_encryption)
+VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 'smtp.gmail.com', 587, 'tls')
+ON DUPLICATE KEY UPDATE
+    expiration_notice_lead_days = VALUES(expiration_notice_lead_days),
+    smtp_host = VALUES(smtp_host),
+    smtp_port = VALUES(smtp_port),
+    smtp_encryption = VALUES(smtp_encryption);
+
+INSERT INTO fee_configurations (config_key, config_value, description)
+VALUES
+    ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
+    ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
+    ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.'),
+    ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
+    ('renewal_fee_1_month', 0.00, 'Junkshop partnership renewal fee for 1 month.'),
+    ('renewal_fee_6_months', 0.00, 'Junkshop partnership renewal fee for 6 months.'),
+    ('renewal_fee_1_year', 0.00, 'Junkshop partnership renewal fee for 1 year.'),
+    ('renewal_notice_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.'),
+    ('expiration_notice_lead_days', 1.00, 'Number of days before expiry to email junkshops a renewal reminder.')
+ON DUPLICATE KEY UPDATE
+    config_value = VALUES(config_value),
+    description = VALUES(description),
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO schema_migrations (version) VALUES ('001')
+ON DUPLICATE KEY UPDATE version = VALUES(version);
+
+SET FOREIGN_KEY_CHECKS = 1;

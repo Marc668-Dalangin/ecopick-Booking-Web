@@ -33,6 +33,18 @@ function formatPhilippineMobileNumber(string $rawNumber): ?string
     return null;
 }
 
+function buildPickupSmsMessage(string $bookingReference, string $collectorName, string $junkshopBusinessName, float $netAmount): string
+{
+    $bookingReference = trim(preg_replace('/\s+/', ' ', $bookingReference) ?: '');
+    $collectorName = trim(preg_replace('/\s+/', ' ', $collectorName) ?: '');
+    $junkshopBusinessName = trim(preg_replace('/\s+/', ' ', $junkshopBusinessName) ?: '');
+
+    return "EcoPick: Your booking {$bookingReference} is now For Pickup. Your recyclable materials will be collected by {$collectorName} from {$junkshopBusinessName}.\n"
+        . 'Estimated Amount to receive: ₱' . number_format($netAmount, 2, '.', '') . ".\n"
+        . "Note: The estimated amount may change. The final amount will be determined after the actual assessment and weighing of your recyclable materials. Please have your materials ready for collection.\n"
+        . 'Thank you for using EcoPick!';
+}
+
 function sendPhilSMS(string $mobileNumber, string $messageText, PDO $pdo): array
 {
     $recipient = formatPhilippineMobileNumber($mobileNumber);

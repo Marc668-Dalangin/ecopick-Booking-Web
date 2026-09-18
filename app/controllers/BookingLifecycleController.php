@@ -117,7 +117,12 @@ class BookingLifecycleController
             $netAmount = $this->getEstimatedNetAmount($pickupRequestId);
             $smsResult = sendPhilSMS(
                 (string) ($pickupRequest['seller_mobile'] ?? $pickupRequest['contact_number'] ?? ''),
-                'ECOPICK: Hello! Your pickup request has been accepted. Collector: ' . $collectorName . '. Net amount to receive: PHP ' . number_format($netAmount, 2, '.', '') . '. Please prepare your recyclable items.',
+                buildPickupSmsMessage(
+                    (string) ($pickupRequest['booking_reference'] ?? ('ECP-' . $pickupRequestId)),
+                    $collectorName,
+                    (string) ($pickupRequest['junkshop_business_name'] ?? 'EcoPick Partner Junkshop'),
+                    $netAmount
+                ),
                 $this->db->getPDO()
             );
             $this->db->query(
@@ -366,7 +371,7 @@ class BookingLifecycleController
     private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array
     {
         $row = $this->db->query(
-            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.contact_number, COALESCE(NULLIF(pr.contact_number, \'\'), NULLIF(seller.mobile_number, \'\'), \'\') AS seller_mobile, pr.pickup_fee, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr JOIN accounts seller ON seller.id = pr.seller_account_id WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
+            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.contact_number, COALESCE(NULLIF(pr.contact_number, \'\'), NULLIF(seller.mobile_number, \'\'), \'\') AS seller_mobile, COALESCE(NULLIF(junkshop.business_name, \'\'), NULLIF(junkshop_account.full_name, \'\'), \'EcoPick Partner Junkshop\') AS junkshop_business_name, pr.pickup_fee, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr JOIN accounts seller ON seller.id = pr.seller_account_id LEFT JOIN junkshop_profiles junkshop ON junkshop.account_id = pr.junkshop_id LEFT JOIN accounts junkshop_account ON junkshop_account.id = pr.junkshop_id WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,
