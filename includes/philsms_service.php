@@ -53,7 +53,12 @@ function sendPhilSMS(string $mobileNumber, string $messageText, PDO $pdo): array
         return ['success' => false, 'status' => 'Failed', 'message' => 'The seller mobile number is not a valid Philippine mobile number.', 'recipient' => is_string($digits) ? $digits : ''];
     }
 
-    $settings = $pdo->query('SELECT philsms_api_token, philsms_endpoint, philsms_sender_id FROM fee_settings ORDER BY id ASC LIMIT 1')->fetch(PDO::FETCH_ASSOC) ?: [];
+    $settings = $pdo->query('SELECT sms_enabled, philsms_api_token, philsms_endpoint, philsms_sender_id FROM fee_settings ORDER BY id ASC LIMIT 1')->fetch(PDO::FETCH_ASSOC) ?: [];
+    $smsEnabled = isset($settings['sms_enabled']) ? (int) $settings['sms_enabled'] : 1;
+    if ($smsEnabled === 0) {
+        return ['success' => true, 'status' => 'Disabled', 'message' => 'SMS dispatch disabled by Admin', 'recipient' => $recipient, 'http_code' => 0, 'curl_error' => '', 'raw_response' => '', 'bypassed' => true];
+    }
+
     $apiToken = trim((string) ($settings['philsms_api_token'] ?? '')) ?: PHILSMS_API_TOKEN;
     $endpoint = trim((string) ($settings['philsms_endpoint'] ?? '')) ?: PHILSMS_ENDPOINT;
     $senderId = trim((string) ($settings['philsms_sender_id'] ?? '')) ?: PHILSMS_SENDER_ID;
@@ -65,10 +70,10 @@ function sendPhilSMS(string $mobileNumber, string $messageText, PDO $pdo): array
     }
 
     if ($apiToken === '') {
-        return ['success' => false, 'status' => 'Failed', 'message' => 'PhilSMS API token is not configured.', 'recipient' => $recipient, 'http_code' => 0, 'curl_error' => '', 'raw_response' => ''];
+        return ['success' => false, 'status' => 'Failed', 'message' => 'PhilSMS API token is not configured.', 'recipient' => $recipient, 'http_code' => 0, 'curl_error' => '', 'raw_response' => '', 'bypassed' => false];
     }
     if (!function_exists('curl_init')) {
-        return ['success' => false, 'status' => 'Failed', 'message' => 'PHP cURL is not available.', 'recipient' => $recipient, 'http_code' => 0, 'curl_error' => '', 'raw_response' => ''];
+        return ['success' => false, 'status' => 'Failed', 'message' => 'PHP cURL is not available.', 'recipient' => $recipient, 'http_code' => 0, 'curl_error' => '', 'raw_response' => '', 'bypassed' => false];
     }
 
     $curl = curl_init($endpoint);
@@ -127,5 +132,5 @@ function sendPhilSMS(string $mobileNumber, string $messageText, PDO $pdo): array
         $message = 'SMS sent successfully.';
     }
 
-    return ['success' => $success, 'status' => $success ? 'Sent' : 'Failed', 'message' => $message, 'recipient' => $recipient, 'http_code' => $httpCode, 'curl_error' => $curlError, 'raw_response' => $rawResponse, 'response' => $response];
+    return ['success' => $success, 'status' => $success ? 'Sent' : 'Failed', 'message' => $message, 'recipient' => $recipient, 'http_code' => $httpCode, 'curl_error' => $curlError, 'raw_response' => $rawResponse, 'response' => $response, 'bypassed' => false];
 }

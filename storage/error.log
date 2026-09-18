@@ -1847,3 +1847,165 @@
 530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
 530 5.7.0 specifications. d2e1a72fcca58-875dd9e08ecsm836860b3a.53 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
 [18-Sep-2026 21:34:24 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:00:33 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[18-Sep-2026 23:00:37 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[18-Sep-2026 23:12:12 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5bfbb4db4sm1226653a12.8 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:12 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:17 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875cf02d686sm1079919b3a.6 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:17 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:25 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50c9e98sm1202165a12.23 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:25 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:27 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50c81bcsm1193484a12.21 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:27 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:39 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5a50cd09sm3710867a91.7 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:39 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:40 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5a3e3fd4sm3976390a91.6 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:40 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:55 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50c7df7sm1183315a12.19 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:55 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:12:59 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb75b6552sm10165225ad.61 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:12:59 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:13:47 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb756482fsm10359845ad.43 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:13:47 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:13:48 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dc8fd8d3sm1048428b3a.9 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:13:48 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:14:36 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50cb301sm1217308a12.25 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:14:36 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:14:37 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50e7a0csm1205884a12.26 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:14:37 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:14:53 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5ccf8634sm1371063a91.2 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:14:53 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:14:54 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dd9e08ecsm1052746b3a.53 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:14:54 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:15:04 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dc8fa41dsm1063046b3a.19 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:15:04 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:15:05 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5a53fb02sm3812218a91.14 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:15:05 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:15:17 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb76025afsm10182965ad.73 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:15:17 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:15:19 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddc0e50c5dsm178025ad.76 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:15:19 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:15:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5a3e3fd4sm3980382a91.6 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:15:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:15:36 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875ddcdf0b7sm1040780b3a.56 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:15:36 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:16:54 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5ccf8634sm1373633a91.2 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:16:54 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:16:55 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50e7a0csm1208628a12.26 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:16:55 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:17:02 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50b0c93sm1187207a12.14 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:17:02 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:17:03 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5bc988662sm1244723a12.3 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:17:03 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:17:11 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb7548b60sm9977895ad.30 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:17:11 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:17:12 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50aa983sm1190481a12.12 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:17:12 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:17:23 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e56368a86sm1465062a91.2 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:17:23 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:17:24 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e55f124d5sm1908213a91.4 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:17:24 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:18:00 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb75dcf5dsm10055075ad.70 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:18:00 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:18:01 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dc8fd8c3sm1061508b3a.16 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:18:01 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:20:04 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e362e9402sm11303986a91.15 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:20:04 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:20:06 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb757adb9sm10210915ad.47 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:20:06 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:20:12 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875ddecbb5dsm1081981b3a.57 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:20:12 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:20:14 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50aabaasm1192229a12.16 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:20:14 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:23:50 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e5547a04dsm1702212a91.3 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:23:50 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:23:50 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dd3ed26esm1053591b3a.42 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:23:50 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:24:12 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb73db302sm10373895ad.2 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:24:12 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:24:13 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb760b35bsm10209575ad.77 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:24:13 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:25:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e6c6dd585sm7a91.0 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:25:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 23:25:36 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-875dded2ca5sm1041467b3a.61 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 23:25:36 Asia/Manila] Booking notification email was not accepted by the configured mail transport.

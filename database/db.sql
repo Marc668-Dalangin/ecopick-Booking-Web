@@ -1,40 +1,6 @@
 ﻿SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-
-CREATE DATABASE IF NOT EXISTS ecopickdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE ecopickdb;
 SET NAMES utf8mb4;
-
-DROP TABLE IF EXISTS email_logs;
-DROP TABLE IF EXISTS renewal_notification_log;
-DROP TABLE IF EXISTS notifications;
-DROP TABLE IF EXISTS concern_status_history;
-DROP TABLE IF EXISTS concerns;
-DROP TABLE IF EXISTS payment_status_history;
-DROP TABLE IF EXISTS payment_proofs;
-DROP TABLE IF EXISTS transaction_payments;
-DROP TABLE IF EXISTS junkshop_partnership_payments;
-DROP TABLE IF EXISTS transaction_materials;
-DROP TABLE IF EXISTS junkshop_assignments;
-DROP TABLE IF EXISTS booking_status_history;
-DROP TABLE IF EXISTS transactions;
-DROP TABLE IF EXISTS fee_settings;
-DROP TABLE IF EXISTS fee_configurations;
-DROP TABLE IF EXISTS pickup_request_status_history;
-DROP TABLE IF EXISTS pickup_request_items;
-DROP TABLE IF EXISTS pickup_requests;
-DROP TABLE IF EXISTS junkshop_material_prices;
-DROP TABLE IF EXISTS recyclable_materials;
-DROP TABLE IF EXISTS preferred_junkshops;
-DROP TABLE IF EXISTS junkshop_profiles;
-DROP TABLE IF EXISTS sellers;
-DROP TABLE IF EXISTS password_resets;
-DROP TABLE IF EXISTS rejected_emails;
-DROP TABLE IF EXISTS accounts;
-DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS junkshops;
-DROP TABLE IF EXISTS partnership_renewals;
-DROP TABLE IF EXISTS schema_migrations;
 
 CREATE TABLE IF NOT EXISTS roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -175,7 +141,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     payment_status ENUM('Unpaid', 'Paid', 'Confirmed') NULL,
     contact_number VARCHAR(20) NULL DEFAULT NULL,
     collector_name VARCHAR(255) NULL DEFAULT NULL,
-    sms_status ENUM('Pending', 'Sent', 'Failed') NOT NULL DEFAULT 'Pending',
+    sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending',
     sms_error_message TEXT NULL DEFAULT NULL,
     pickup_address VARCHAR(255) NOT NULL,
     approximate_distance_km DECIMAL(6,2) NULL,
@@ -260,6 +226,7 @@ CREATE TABLE IF NOT EXISTS fee_settings (
     philsms_api_token TEXT NULL DEFAULT NULL,
     philsms_endpoint VARCHAR(255) NULL DEFAULT 'https://dashboard.philsms.com/api/v3/sms/send',
     philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS',
+    sms_enabled TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
@@ -503,6 +470,22 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS username VARCHAR(100) NULL AFTER email;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(20) NULL AFTER full_name;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS otp_code VARCHAR(6) NULL DEFAULT NULL AFTER account_status;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS otp_expires_at DATETIME NULL DEFAULT NULL AFTER otp_code;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER otp_expires_at;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL AFTER barangay;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS partnership_expires_at DATETIME NULL DEFAULT NULL AFTER approval_status;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current' AFTER partnership_expires_at;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_expiration_notice_sent DATETIME NULL DEFAULT NULL AFTER renewal_status;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL AFTER last_expiration_notice_sent;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) NULL DEFAULT NULL AFTER payment_status;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL AFTER contact_number;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending' AFTER collector_name;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_error_message TEXT NULL DEFAULT NULL AFTER sms_status;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS sms_enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER philsms_sender_id;
+
 INSERT INTO roles (name, description) VALUES
 ('seller', 'Recyclable material seller'),
 ('junkshop', 'Registered junkshop'),
@@ -540,13 +523,17 @@ ON DUPLICATE KEY UPDATE
     is_active = VALUES(is_active),
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, smtp_host, smtp_port, smtp_encryption)
-VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 'smtp.gmail.com', 587, 'tls')
+INSERT INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, smtp_host, smtp_port, smtp_encryption, philsms_api_token, philsms_endpoint, philsms_sender_id, sms_enabled)
+VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 'smtp.gmail.com', 587, 'tls', NULL, 'https://dashboard.philsms.com/api/v3/sms/send', 'PhilSMS', 1)
 ON DUPLICATE KEY UPDATE
     expiration_notice_lead_days = VALUES(expiration_notice_lead_days),
     smtp_host = VALUES(smtp_host),
     smtp_port = VALUES(smtp_port),
-    smtp_encryption = VALUES(smtp_encryption);
+    smtp_encryption = VALUES(smtp_encryption),
+    philsms_api_token = VALUES(philsms_api_token),
+    philsms_endpoint = VALUES(philsms_endpoint),
+    philsms_sender_id = VALUES(philsms_sender_id),
+    sms_enabled = VALUES(sms_enabled);
 
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES

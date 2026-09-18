@@ -566,7 +566,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const netAmount = getEstimatedNetAmount(request);
             const secondModal = document.createElement('div');
             secondModal.className = 'modal fade';
-            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and automatically send an SMS notification to the seller via ECOPICK.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
+            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an SMS notification when the platform SMS setting is enabled.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
             firstModal.dataset.keepOpen = 'true';
             firstInstance.hide();
             document.body.appendChild(secondModal);
@@ -588,7 +588,8 @@ window.addEventListener('DOMContentLoaded', function () {
                 }
                 firstModal.dataset.keepOpen = 'false';
                 secondInstance.hide();
-                showFeedback(resultPayload.message || 'Pickup marked as For Pickup.', resultPayload.sms_status === 'Sent');
+                const smsDispatchState = ['Sent', 'Disabled', 'Bypassed'].includes(resultPayload.sms_status);
+                showFeedback(resultPayload.message || 'Pickup marked as For Pickup.', resultPayload.success && smsDispatchState);
                 if (resultPayload.sms_status === 'Sent') {
                     window.setTimeout(function () { window.location.reload(); }, 1800);
                 }

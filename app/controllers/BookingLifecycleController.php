@@ -125,21 +125,34 @@ class BookingLifecycleController
                 ),
                 $this->db->getPDO()
             );
+            $smsStatus = (string) ($smsResult['status'] ?? 'Failed');
+            $smsErrorMessage = $smsResult['success'] ? null : $this->formatSmsDiagnostics($smsResult);
+            if (!empty($smsResult['bypassed'])) {
+                $smsStatus = 'Disabled';
+                $smsErrorMessage = 'SMS dispatch disabled by Admin';
+            }
             $this->db->query(
                 'UPDATE pickup_requests SET sms_status = :sms_status, sms_error_message = :sms_error_message WHERE id = :pickup_request_id',
                 [
-                    'sms_status' => $smsResult['status'],
-                    'sms_error_message' => $smsResult['success'] ? null : $this->formatSmsDiagnostics($smsResult),
+                    'sms_status' => $smsStatus,
+                    'sms_error_message' => $smsErrorMessage,
                     'pickup_request_id' => $pickupRequestId,
                 ]
             );
 
+            $message = 'Status updated to For Pickup.';
+            if (!empty($smsResult['bypassed'])) {
+                $message = 'Status updated to For Pickup. SMS notification was bypassed because SMS is disabled in Admin Settings.';
+            } elseif ($smsResult['success']) {
+                $message .= ' SMS notification sent successfully to +' . $smsResult['recipient'] . ' via PhilSMS!';
+            } else {
+                $message .= ' SMS delivery failed: ' . $smsResult['message'];
+            }
+
             return [
                 'success' => true,
-                'message' => $smsResult['success']
-                    ? 'Status updated to For Pickup and SMS notification sent successfully to +' . $smsResult['recipient'] . ' via PhilSMS!'
-                    : 'Status updated to For Pickup, but SMS delivery failed: ' . $smsResult['message'],
-                'sms_status' => $smsResult['status'],
+                'message' => $message,
+                'sms_status' => $smsStatus,
                 'sms_message' => $smsResult['message'],
                 'sms_recipient' => $smsResult['recipient'],
                 'seller_lat' => isset($pickupRequest['seller_lat']) ? (float) $pickupRequest['seller_lat'] : null,
