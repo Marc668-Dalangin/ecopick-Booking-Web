@@ -266,8 +266,7 @@ ob_start();
         const status = document.getElementById('pickup-request-form-status');
         const submitButton = document.getElementById('submit-pickup-request');
         const resetSubmitButton = function () {
-            submitButton.disabled = false;
-            submitButton.innerHTML = 'Submit pickup request';
+            clearActionButtonLoading(submitButton);
         };
         const hiddenJunkshopId = document.getElementById('selected-junkshop-id');
         const junkshopSelect = document.getElementById('junkshop_id');
@@ -276,6 +275,50 @@ ob_start();
         const submitConfirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('submitPickupConfirmModal'));
         let pickupSubmissionConfirmed = false;
         const successToast = bootstrap.Toast.getOrCreateInstance(document.getElementById('pickupRequestToast'));
+        const actionLoadingOverlayId = 'pickup-action-loading-overlay';
+        let actionLoadingOverlayStyleInjected = false;
+
+        function ensureActionLoadingOverlay() {
+            let overlay = document.getElementById(actionLoadingOverlayId);
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = actionLoadingOverlayId;
+                overlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 opacity-0 pe-none';
+                overlay.style.zIndex = '1999';
+                overlay.style.transition = 'opacity 0.2s ease-in-out';
+                overlay.innerHTML = '<div class="spinner-border text-light" role="status" aria-hidden="true"><span class="visually-hidden">Loading...</span></div>';
+                document.body.appendChild(overlay);
+            }
+            if (!actionLoadingOverlayStyleInjected) {
+                const overlayStyle = document.createElement('style');
+                overlayStyle.textContent = '#' + actionLoadingOverlayId + '.show { opacity: 1; }';
+                document.head.appendChild(overlayStyle);
+                actionLoadingOverlayStyleInjected = true;
+            }
+            return overlay;
+        }
+
+        function setActionButtonLoading(button, labelText) {
+            if (!button) return;
+            const originalMarkup = button.dataset.originalMarkup || button.innerHTML;
+            button.dataset.originalMarkup = originalMarkup;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + (labelText || 'Processing...');
+            ensureActionLoadingOverlay().classList.add('show');
+        }
+
+        function clearActionButtonLoading(button) {
+            if (!button) return;
+            const originalMarkup = button.dataset.originalMarkup || '';
+            button.disabled = false;
+            if (originalMarkup) {
+                button.innerHTML = originalMarkup;
+            }
+            delete button.dataset.originalMarkup;
+            const overlay = document.getElementById(actionLoadingOverlayId);
+            overlay?.classList.remove('show');
+        }
+
         const materialOptions = <?php echo json_encode($materials, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         const pricesByJunkshop = <?php
             $pricesByJunkshop = [];
@@ -752,12 +795,25 @@ ob_start();
                 return;
             }
             pickupSubmissionConfirmed = false;
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Submitting...';
+            const confirmButton = document.getElementById('btn-confirm-submit-pickup');
+            const controller = new AbortController();
+            const safetyTimeout = window.setTimeout(function () {
+                controller.abort();
+                clearActionButtonLoading(submitButton);
+                clearActionButtonLoading(confirmButton);
+                showStatus('Submission timed out. Please try again.', false, []);
+            }, 10000);
+            setActionButtonLoading(submitButton, 'Submitting...');
+            setActionButtonLoading(confirmButton, 'Processing...');
 
             try {
                 const submittedJunkshopId = hiddenJunkshopId.value;
-                const response = await fetch(apiUrl, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                    signal: controller.signal
+                });
                 const payload = await response.json();
                 if (payload.session_expired && payload.redirect) {
                     window.location.href = payload.redirect;
@@ -766,6 +822,7 @@ ob_start();
                 if (!response.ok || !payload.success) {
                     showStatus(payload.message || 'Please correct the form.', false, payload.validation_errors || []);
                     resetSubmitButton();
+                    clearActionButtonLoading(confirmButton);
                     return;
                 }
 
@@ -777,30 +834,23 @@ ob_start();
                 rows.innerHTML = '';
                 addMaterialRow();
                 resetSubmitButton();
+                clearActionButtonLoading(confirmButton);
                 pickupModal.hide();
             } catch (error) {
-                showStatus('Unable to submit the pickup request right now.', false, []);
-				resetSubmitButton();
+                if (error?.name !== 'AbortError') {
+                    showStatus('Unable to submit the pickup request right now.', false, []);
+                }
+                resetSubmitButton();
+                clearActionButtonLoading(confirmButton);
+            } finally {
+                window.clearTimeout(safetyTimeout);
             }
         });
 
-        function setConfirmPickupLoadingState(isLoading) {
-            const confirmButton = document.getElementById('btn-confirm-submit-pickup');
-            const editButton = document.querySelector('#submitPickupConfirmModal [data-bs-dismiss="modal"]');
-            const closeButton = document.querySelector('#submitPickupConfirmModal .btn-close');
-            if (!confirmButton) return;
-
-            confirmButton.disabled = isLoading;
-            if (editButton) editButton.disabled = isLoading;
-            if (closeButton) closeButton.disabled = isLoading;
-            confirmButton.innerHTML = isLoading
-                ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting Request...'
-                : 'Yes, Submit Request';
-        }
-
         document.getElementById('btn-confirm-submit-pickup').addEventListener('click', function () {
             pickupSubmissionConfirmed = true;
-            setConfirmPickupLoadingState(true);
+            setActionButtonLoading(this, 'Processing...');
+            submitConfirmModal.hide();
             form.requestSubmit();
         });
 

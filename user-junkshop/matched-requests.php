@@ -432,10 +432,10 @@ window.addEventListener('DOMContentLoaded', function () {
         feedback.classList.remove('d-none');
     }
 
-    function sendFormData(payload) {
+    function sendFormData(payload, signal) {
         const formData = new FormData();
         Object.entries(payload).forEach(([key, value]) => formData.append(key, value));
-        return fetch(apiUrl, { method: 'POST', body: formData, credentials: 'same-origin' });
+        return fetch(apiUrl, { method: 'POST', body: formData, credentials: 'same-origin', signal: signal || undefined });
     }
 
     function showSuccessAndReload(message) {
@@ -535,6 +535,50 @@ window.addEventListener('DOMContentLoaded', function () {
         return 'Not provided';
     }
 
+    const modalActionLoadingOverlayId = 'matched-requests-loading-overlay';
+    let modalActionLoadingOverlayStyleInjected = false;
+
+    function ensureModalActionLoadingOverlay() {
+        let overlay = document.getElementById(modalActionLoadingOverlayId);
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = modalActionLoadingOverlayId;
+            overlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 opacity-0 pe-none';
+            overlay.style.zIndex = '2000';
+            overlay.style.transition = 'opacity 0.2s ease-in-out';
+            overlay.innerHTML = '<div class="spinner-border text-light" role="status" aria-hidden="true"><span class="visually-hidden">Loading...</span></div>';
+            document.body.appendChild(overlay);
+        }
+        if (!modalActionLoadingOverlayStyleInjected) {
+            const overlayStyle = document.createElement('style');
+            overlayStyle.textContent = '#' + modalActionLoadingOverlayId + '.show { opacity: 1; }';
+            document.head.appendChild(overlayStyle);
+            modalActionLoadingOverlayStyleInjected = true;
+        }
+        return overlay;
+    }
+
+    function setModalActionLoading(button, labelText) {
+        if (!button) return;
+        const originalMarkup = button.dataset.originalMarkup || button.innerHTML;
+        button.dataset.originalMarkup = originalMarkup;
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + (labelText || 'Processing...');
+        ensureModalActionLoadingOverlay().classList.add('show');
+    }
+
+    function clearModalActionLoading(button) {
+        if (!button) return;
+        const originalMarkup = button.dataset.originalMarkup || '';
+        button.disabled = false;
+        if (originalMarkup) {
+            button.innerHTML = originalMarkup;
+        }
+        delete button.dataset.originalMarkup;
+        const overlay = document.getElementById(modalActionLoadingOverlayId);
+        overlay?.classList.remove('show');
+    }
+
     async function openPickupModal(requestId) {
         const response = await fetch(matchedRequestsApiUrl + '?action=list-matched', { credentials: 'same-origin' });
         const payload = await response.json();
@@ -566,46 +610,31 @@ window.addEventListener('DOMContentLoaded', function () {
             const netAmount = getEstimatedNetAmount(request);
             const secondModal = document.createElement('div');
             secondModal.className = 'modal fade';
-            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content position-relative"><form id="confirm-pickup-form"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body position-relative"><div class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-50 d-none d-flex align-items-center justify-content-center" data-loading-overlay><div class="spinner-border text-primary" role="status" aria-hidden="true"><span class="visually-hidden">Loading...</span></div></div><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an SMS notification when the platform SMS setting is enabled.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="submit" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></form></div></div>';
+            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an SMS notification when the platform SMS setting is enabled.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
             firstModal.dataset.keepOpen = 'true';
             firstInstance.hide();
             document.body.appendChild(secondModal);
             const secondInstance = bootstrap.Modal.getOrCreateInstance(secondModal);
             secondInstance.show();
-            const secondForm = secondModal.querySelector('form');
-            const secondConfirmButton = secondModal.querySelector('[data-confirm-pickup]');
-            const secondEditButton = secondModal.querySelector('[data-back-to-edit]');
-            const secondOverlay = secondModal.querySelector('[data-loading-overlay]');
-            const setPickupDispatchLoadingState = function (isLoading) {
-                if (secondConfirmButton) {
-                    secondConfirmButton.disabled = isLoading;
-                    secondConfirmButton.innerHTML = isLoading
-                        ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Sending SMS & Updating...'
-                        : 'Confirm & Send SMS';
-                }
-                if (secondEditButton) secondEditButton.disabled = isLoading;
-                if (secondOverlay) secondOverlay.classList.toggle('d-none', !isLoading);
-                if (!secondForm) return;
-                Array.from(secondForm.elements).forEach(function (element) {
-                    if (element === secondConfirmButton || element === secondEditButton) return;
-                    element.disabled = isLoading;
-                });
-            };
-            secondEditButton.addEventListener('click', function () {
-                if (secondConfirmButton.disabled) return;
+            secondModal.querySelector('[data-back-to-edit]').addEventListener('click', function () {
                 secondInstance.hide();
                 firstInstance.show();
             });
-            secondForm.addEventListener('submit', async function (event) {
-                event.preventDefault();
-                if (secondConfirmButton.disabled) return;
-                setPickupDispatchLoadingState(true);
+            secondModal.querySelector('[data-confirm-pickup]').addEventListener('click', async function () {
+                const confirmButton = secondModal.querySelector('[data-confirm-pickup]');
+                const controller = new AbortController();
+                const safetyTimeout = window.setTimeout(function () {
+                    controller.abort();
+                    clearModalActionLoading(confirmButton);
+                    showFeedback('The pickup assignment request timed out. Please try again.', false);
+                }, 10000);
+                setModalActionLoading(confirmButton, 'Processing...');
                 try {
-                    const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'mark-for-pickup', pickup_request_id: requestId, collector_first_name: inputs[0].value, collector_last_name: inputs[1].value });
+                    const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'mark-for-pickup', pickup_request_id: requestId, collector_first_name: inputs[0].value, collector_last_name: inputs[1].value }, controller.signal);
                     const resultPayload = await result.json();
                     if (!resultPayload.success) {
                         showFeedback(resultPayload.message || 'Unable to mark this pickup.', false);
-                        setPickupDispatchLoadingState(false);
+                        clearModalActionLoading(confirmButton);
                         return;
                     }
                     firstModal.dataset.keepOpen = 'false';
@@ -616,8 +645,13 @@ window.addEventListener('DOMContentLoaded', function () {
                         window.setTimeout(function () { window.location.reload(); }, 1800);
                     }
                 } catch (error) {
-                    showFeedback('Unable to send the SMS update right now.', false);
-                    setPickupDispatchLoadingState(false);
+                    if (error?.name !== 'AbortError') {
+                        showFeedback('Unable to mark this pickup right now. Please try again.', false);
+                    }
+                    clearModalActionLoading(confirmButton);
+                } finally {
+                    window.clearTimeout(safetyTimeout);
+                    clearModalActionLoading(confirmButton);
                 }
             });
             secondModal.addEventListener('hidden.bs.modal', function () { secondModal.remove(); });
@@ -640,50 +674,35 @@ window.addEventListener('DOMContentLoaded', function () {
         document.body.appendChild(modal);
         const instance = bootstrap.Modal.getOrCreateInstance(modal);
         instance.show();
-        const scheduleForm = modal.querySelector('form');
-        const scheduleSubmitButton = scheduleForm.querySelector('button[type="submit"]');
-        const scheduleCancelButton = scheduleForm.querySelector('[data-bs-dismiss="modal"]');
-        const setScheduleLoadingState = function (isLoading) {
-            if (!scheduleSubmitButton) return;
-            scheduleSubmitButton.disabled = isLoading;
-            if (scheduleCancelButton) scheduleCancelButton.disabled = isLoading;
-            Array.from(scheduleForm.elements).forEach(function (element) {
-                if (element === scheduleSubmitButton) return;
-                if (element === scheduleCancelButton) return;
-                element.disabled = isLoading;
-            });
-            scheduleSubmitButton.innerHTML = isLoading
-                ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving Schedule...'
-                : 'Set Schedule';
-        };
-
-        scheduleForm.addEventListener('submit', async function (event) {
+        modal.querySelector('form').addEventListener('submit', async function (event) {
             event.preventDefault();
             if (!event.target.checkValidity()) { event.target.classList.add('was-validated'); return; }
-            setScheduleLoadingState(true);
-            instance.setBackdrop('static');
-            instance.setKeyboard(false);
-            const form = new FormData(event.target);
-            form.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
-            form.append('action', 'schedule');
-            form.append('pickup_request_id', requestId);
+            const submitButton = modal.querySelector('button[type="submit"]');
+            const controller = new AbortController();
+            const safetyTimeout = window.setTimeout(function () {
+                controller.abort();
+                clearModalActionLoading(submitButton);
+                showFeedback('The schedule request timed out. Please try again.', false);
+            }, 10000);
+            setModalActionLoading(submitButton, 'Setting schedule...');
             try {
-                const response = await fetch(apiUrl, { method: 'POST', body: form, credentials: 'same-origin' });
+                const form = new FormData(event.target);
+                form.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+                form.append('action', 'schedule');
+                form.append('pickup_request_id', requestId);
+                const response = await fetch(apiUrl, { method: 'POST', body: form, credentials: 'same-origin', signal: controller.signal });
                 const payload = await response.json();
-                if (!payload.success) {
-                    showFeedback(payload.message || 'Unable to set the pickup schedule.', false);
-                    setScheduleLoadingState(false);
-                    instance.setBackdrop(true);
-                    instance.setKeyboard(true);
-                    return;
-                }
+                if (!payload.success) { showFeedback(payload.message || 'Unable to set the pickup schedule.', false); clearModalActionLoading(submitButton); return; }
                 instance.hide();
                 showSuccessAndReload(payload.message || 'Pickup schedule confirmed.');
             } catch (error) {
-                showFeedback('Unable to set the pickup schedule right now.', false);
-                setScheduleLoadingState(false);
-                instance.setBackdrop(true);
-                instance.setKeyboard(true);
+                if (error?.name !== 'AbortError') {
+                    showFeedback('Unable to set the pickup schedule right now. Please try again.', false);
+                }
+                clearModalActionLoading(submitButton);
+            } finally {
+                window.clearTimeout(safetyTimeout);
+                clearModalActionLoading(submitButton);
             }
         });
         modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
@@ -774,49 +793,30 @@ window.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             completionConfirmed = false;
-            const primarySubmitButton = event.target.querySelector('button[type="submit"]');
-            if (primarySubmitButton) {
-                primarySubmitButton.disabled = true;
-                primarySubmitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Completing Transaction...';
-            }
-            const reviewButton = confirmModal.querySelector('[data-bs-dismiss="modal"]');
-            const finalConfirmButton = confirmModal.querySelector('#btn-final-complete-submit');
-            if (reviewButton) reviewButton.disabled = true;
-            if (finalConfirmButton) {
-                finalConfirmButton.disabled = true;
-                finalConfirmButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Completing Transaction...';
-            }
-            const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
+            const confirmSubmitButton = confirmModal.querySelector('#btn-final-complete-submit');
+            const controller = new AbortController();
+            const safetyTimeout = window.setTimeout(function () {
+                controller.abort();
+                clearModalActionLoading(confirmSubmitButton);
+                showFeedback('The transaction completion request timed out. Please try again.', false);
+            }, 10000);
+            setModalActionLoading(confirmSubmitButton, 'Processing...');
             try {
-                const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value });
+                const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
+                const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value }, controller.signal);
                 const resultPayload = await result.json();
-                if (!resultPayload.success) {
-                    showFeedback(resultPayload.message || 'Unable to complete this transaction.', false);
-                    if (primarySubmitButton) {
-                        primarySubmitButton.disabled = false;
-                        primarySubmitButton.innerHTML = 'Complete Transaction';
-                    }
-                    if (reviewButton) reviewButton.disabled = false;
-                    if (finalConfirmButton) {
-                        finalConfirmButton.disabled = false;
-                        finalConfirmButton.innerHTML = 'Yes, Complete Transaction';
-                    }
-                    return;
-                }
+                if (!resultPayload.success) { showFeedback(resultPayload.message || 'Unable to complete this transaction.', false); clearModalActionLoading(confirmSubmitButton); return; }
                 removeSellerMap(requestId);
                 instance.hide();
                 showSuccessAndReload(resultPayload.message);
             } catch (error) {
-                showFeedback('Unable to complete this transaction right now.', false);
-                if (primarySubmitButton) {
-                    primarySubmitButton.disabled = false;
-                    primarySubmitButton.innerHTML = 'Complete Transaction';
+                if (error?.name !== 'AbortError') {
+                    showFeedback('Unable to complete this transaction right now. Please try again.', false);
                 }
-                if (reviewButton) reviewButton.disabled = false;
-                if (finalConfirmButton) {
-                    finalConfirmButton.disabled = false;
-                    finalConfirmButton.innerHTML = 'Yes, Complete Transaction';
-                }
+                clearModalActionLoading(confirmSubmitButton);
+            } finally {
+                window.clearTimeout(safetyTimeout);
+                clearModalActionLoading(confirmSubmitButton);
             }
         });
         confirmModal.querySelector('#btn-final-complete-submit').addEventListener('click', function () {
