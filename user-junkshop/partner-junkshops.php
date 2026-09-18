@@ -784,9 +784,23 @@ ob_start();
             }
         });
 
+        function setConfirmPickupLoadingState(isLoading) {
+            const confirmButton = document.getElementById('btn-confirm-submit-pickup');
+            const editButton = document.querySelector('#submitPickupConfirmModal [data-bs-dismiss="modal"]');
+            const closeButton = document.querySelector('#submitPickupConfirmModal .btn-close');
+            if (!confirmButton) return;
+
+            confirmButton.disabled = isLoading;
+            if (editButton) editButton.disabled = isLoading;
+            if (closeButton) closeButton.disabled = isLoading;
+            confirmButton.innerHTML = isLoading
+                ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting Request...'
+                : 'Yes, Submit Request';
+        }
+
         document.getElementById('btn-confirm-submit-pickup').addEventListener('click', function () {
             pickupSubmissionConfirmed = true;
-            submitConfirmModal.hide();
+            setConfirmPickupLoadingState(true);
             form.requestSubmit();
         });
 
