@@ -702,6 +702,9 @@ ALTER TABLE junkshop_profiles
     ADD COLUMN IF NOT EXISTS renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current' AFTER partnership_expires_at;
 
 ALTER TABLE junkshop_profiles
+    ADD INDEX IF NOT EXISTS idx_junkshop_approval_expiry (approval_status, partnership_expires_at);
+
+ALTER TABLE junkshop_profiles
     MODIFY COLUMN partnership_expires_at DATETIME NULL DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS concerns (

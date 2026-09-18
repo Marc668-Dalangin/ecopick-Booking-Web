@@ -221,7 +221,7 @@ ob_start();
 
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Submit pickup request</button>
+                        <button type="submit" class="btn btn-primary" id="submit-pickup-request">Submit pickup request</button>
                     </div>
                 </form>
             </div>
@@ -257,6 +257,11 @@ ob_start();
         const form = document.getElementById('pickup-request-form');
         const rows = document.getElementById('material-rows');
         const status = document.getElementById('pickup-request-form-status');
+        const submitButton = document.getElementById('submit-pickup-request');
+        const resetSubmitButton = function () {
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Submit pickup request';
+        };
         const hiddenJunkshopId = document.getElementById('selected-junkshop-id');
         const junkshopSelect = document.getElementById('junkshop_id');
         const modalEl = document.getElementById('sellerPickupRequestModal');
@@ -699,6 +704,7 @@ ob_start();
 
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
+            if (submitButton.disabled) return;
             status.classList.add('d-none');
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
@@ -734,6 +740,8 @@ ob_start();
                 return;
             }
             pickupSubmissionConfirmed = false;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Submitting...';
 
             try {
                 const submittedJunkshopId = hiddenJunkshopId.value;
@@ -745,6 +753,7 @@ ob_start();
                 }
                 if (!response.ok || !payload.success) {
                     showStatus(payload.message || 'Please correct the form.', false, payload.validation_errors || []);
+                    resetSubmitButton();
                     return;
                 }
 
@@ -755,9 +764,11 @@ ob_start();
                 form.reset();
                 rows.innerHTML = '';
                 addMaterialRow();
+                resetSubmitButton();
                 pickupModal.hide();
             } catch (error) {
                 showStatus('Unable to submit the pickup request right now.', false, []);
+				resetSubmitButton();
             }
         });
 

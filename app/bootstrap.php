@@ -57,10 +57,25 @@ require_once __DIR__ . '/services/NotificationService.php';
 require_once __DIR__ . '/services/MailerService.php';
 require_once __DIR__ . '/controllers/FeeCalculator.php';
 
+if (!function_exists('defer_after_response')) {
+	function defer_after_response(callable $task): void
+	{
+		register_shutdown_function(static function () use ($task): void {
+			if (session_status() === PHP_SESSION_ACTIVE) {
+				session_write_close();
+			}
+			if (function_exists('fastcgi_finish_request')) {
+				fastcgi_finish_request();
+			}
+			try {
+				$task();
+			} catch (Throwable $exception) {
+				error_log('Deferred task failed: ' . $exception->getMessage());
+			}
+		});
+	}
+}
+
 // Start session
 Session::start();
-
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
-	NotificationService::dispatchIfDue();
-}
 

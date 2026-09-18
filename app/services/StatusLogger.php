@@ -28,7 +28,9 @@ class StatusLogger
         );
 
         try {
-            NotificationService::notifyBookingStatus($pickupRequestId, $newStatus, $responsibleParty);
+            defer_after_response(static function () use ($pickupRequestId, $newStatus, $responsibleParty): void {
+                NotificationService::notifyBookingStatus($pickupRequestId, $newStatus, $responsibleParty);
+            });
         } catch (Throwable $exception) {
             error_log('Booking notification error: ' . $exception->getMessage());
         }

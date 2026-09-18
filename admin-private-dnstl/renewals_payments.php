@@ -13,12 +13,9 @@ if (Auth::userRole() !== 'admin') {
 
 $automaticDispatch = null;
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    try {
-        $automaticDispatch = NotificationService::sendRenewalReminders();
-    } catch (Throwable $exception) {
-        error_log('Admin renewal notification dispatch error: ' . $exception->getMessage());
-        $automaticDispatch = ['sent' => 0, 'failed' => 1, 'details' => [$exception->getMessage()]];
-    }
+    defer_after_response(static function (): void {
+        NotificationService::sendRenewalReminders();
+    });
 }
 
 $controller = new AdminFeatureController();
@@ -29,12 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
     if ($action === 'renewal_notice') {
         $feedback = $controller->updateRenewalNoticeDays((int) ($_POST['renewal_notice_days'] ?? 0));
         if ($feedback['success']) {
-            $dispatch = NotificationService::sendRenewalReminders();
-            $feedback['message'] .= sprintf(' Notification dispatch: %d sent, %d failed.', $dispatch['sent'], $dispatch['failed']);
-            if ($dispatch['failed'] > 0 && $dispatch['details']) {
-                $feedback['success'] = false;
-                $feedback['message'] .= ' ' . implode(' ', $dispatch['details']);
-            }
+            defer_after_response(static function (): void {
+                NotificationService::sendRenewalReminders();
+            });
+            $feedback['message'] .= ' Renewal notifications queued for background delivery.';
         }
     } elseif ($action === 'expiry') {
         $customExpiryDate = trim((string) ($_POST['custom_expiry_date'] ?? ''));
@@ -47,12 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
             $enableExpiryTime
         );
         if ($feedback['success']) {
-            $dispatch = NotificationService::sendRenewalReminders();
-            $feedback['message'] .= sprintf(' Notification dispatch: %d sent, %d failed.', $dispatch['sent'], $dispatch['failed']);
-            if ($dispatch['failed'] > 0 && $dispatch['details']) {
-                $feedback['success'] = false;
-                $feedback['message'] .= ' ' . implode(' ', $dispatch['details']);
-            }
+            defer_after_response(static function (): void {
+                NotificationService::sendRenewalReminders();
+            });
+            $feedback['message'] .= ' Renewal notifications queued for background delivery.';
         }
     } elseif ($action === 'reconcile') {
         $feedback = $controller->reconcilePartnershipPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''));
@@ -112,7 +105,7 @@ ob_start();
         <div class="border rounded p-3 mb-4">
             <h4 class="h5 fw-bold mb-1">Renewal Email Notifications</h4>
             <p class="text-muted small mb-3">Approved junkshops receive one email reminder for each subscription expiration.</p>
-            <form method="post">
+            <form method="post" class="js-loading-form">
                 <?php echo CSRF::field(); ?>
                 <input type="hidden" name="action" value="renewal_notice">
                 <div class="mb-3">
@@ -160,7 +153,7 @@ ob_start();
 
 <div class="modal fade" id="expiryModal" tabindex="-1" aria-labelledby="expiryModalLabel" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
-        <form method="post" id="modifyExpirationForm" onsubmit="return validateExpirationForm(event)">
+        <form method="post" id="modifyExpirationForm" class="js-loading-form" onsubmit="return validateExpirationForm(event)">
             <div class="modal-header"><h5 class="modal-title" id="expiryModalLabel">Modify expiration</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <div class="modal-body">
                 <?php echo CSRF::field(); ?><input type="hidden" name="action" value="expiry"><input type="hidden" name="junkshop_account_id" id="expiry_account_id">
@@ -196,6 +189,16 @@ ob_start();
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-loading-form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            if (!form.checkValidity()) return;
+            const button = form.querySelector('button[type="submit"]');
+            if (!button || button.disabled) return;
+            button.disabled = true;
+            button.dataset.originalHtml = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Processing...';
+        });
+    });
     const modal = document.getElementById('expiryModal');
     const preset = document.getElementById('expiration_preset');
     const dateInput = document.getElementById('custom_expiry_date');

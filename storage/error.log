@@ -1518,3 +1518,16 @@
 [18-Sep-2026 14:17:27 Asia/Manila] PHP Warning:  Undefined variable $throttleSeconds in C:\xampp\htdocs\booking-website-lipacity\app\services\NotificationService.php on line 36
 [18-Sep-2026 14:18:00 Asia/Manila] PHP Warning:  Undefined variable $throttleSeconds in C:\xampp\htdocs\booking-website-lipacity\app\services\NotificationService.php on line 36
 [18-Sep-2026 14:18:00 Asia/Manila] PHP Warning:  Undefined variable $throttleSeconds in C:\xampp\htdocs\booking-website-lipacity\app\services\NotificationService.php on line 36
+[18-Sep-2026 14:28:12 Asia/Manila] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:105
+[18-Sep-2026 14:32:39 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb75b53fesm2917425ad.59 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:32:39 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:32:40 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc5c50c9e98sm378836a12.23 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:32:40 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[18-Sep-2026 14:32:45 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddb75b2b56sm2924085ad.58 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[18-Sep-2026 14:32:45 Asia/Manila] Booking notification email was not accepted by the configured mail transport.

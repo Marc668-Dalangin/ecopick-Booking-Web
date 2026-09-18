@@ -59,7 +59,7 @@ if ($method === 'POST') {
         ], $_FILES['photo'] ?? null);
 
         if (!empty($result['success'])) {
-            $result['data'] = ['requests' => $controller->listSellerRequests($sellerId), 'request' => $result['request']];
+            $result['data'] = ['requests' => [], 'request' => $result['request']];
             unset($result['request']);
         }
         echo json_encode($result, JSON_UNESCAPED_UNICODE);

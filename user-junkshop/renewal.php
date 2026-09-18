@@ -110,7 +110,7 @@ ob_start();
                     <dt>Expiry date</dt>
                     <dd><?php echo Validator::escape($profile['partnership_expires_at'] ?? 'Not assigned'); ?></dd>
                 </dl>
-                <form method="post">
+                <form method="post" id="renewalForm">
                     <?php echo CSRF::field(); ?>
                     <input type="hidden" name="selected_plan" id="selected_plan_input" required>
                     <fieldset>
@@ -187,6 +187,13 @@ ob_start();
             card.setAttribute('aria-pressed', 'true');
             document.getElementById('selected_plan_input').value = card.dataset.planKey;
         });
+    });
+
+    document.getElementById('renewalForm').addEventListener('submit', function (event) {
+        const submitButton = event.submitter;
+        if (!submitButton || submitButton.disabled) return;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Processing...';
     });
 </script>
 <?php
