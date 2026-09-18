@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../app/bootstrap.php';
+require_once __DIR__ . '/../../app/controllers/DashboardController.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -30,13 +31,7 @@ if (!empty($_SESSION['is_expired'])) {
     exit;
 }
 
-$count = Database::getInstance()->query(
-    'SELECT COUNT(*) FROM pickup_requests WHERE junkshop_id = :junkshop_id AND current_status = :status',
-    [
-        'junkshop_id' => Auth::userId(),
-        'status' => 'Pending Request',
-    ]
-)->fetchColumn();
+$count = (new DashboardController())->getJunkshopRequestCount(Auth::userId());
 
 echo json_encode([
     'success' => true,

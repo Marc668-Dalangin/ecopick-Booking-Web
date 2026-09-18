@@ -332,26 +332,75 @@ class DashboardController
     public function updateJunkshopAvailability(int $accountId, bool $isAvailable): array
     {
         try {
-            $statement = $this->db->query(
-                "UPDATE junkshop_profiles jp
-                 JOIN accounts a ON a.id = jp.account_id
-                 SET jp.is_available = :is_available, jp.updated_at = CURRENT_TIMESTAMP
-                 WHERE jp.account_id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')",
-                ['is_available' => $isAvailable ? 1 : 0, 'account_id' => $accountId]
-            );
-            $saved = $this->db->query(
+            $this->db->beginTransaction();
+            $profile = $this->db->query(
                 "SELECT jp.is_available
                  FROM junkshop_profiles jp
                  JOIN accounts a ON a.id = jp.account_id
                  WHERE jp.account_id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'junkshop')
-                 LIMIT 1",
+                 LIMIT 1 FOR UPDATE",
                 ['account_id' => $accountId]
-            )->fetchColumn();
-            if ($saved === false) {
+            )->fetch();
+            if (!$profile) {
+                $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop account not found.'];
             }
-            return ['success' => true, 'message' => $isAvailable ? 'Your junkshop is now available.' : 'Your junkshop is now unavailable.', 'is_available' => $isAvailable];
+
+            $this->db->query(
+                "UPDATE junkshop_profiles
+                 SET is_available = :is_available, updated_at = CURRENT_TIMESTAMP
+                 WHERE account_id = :account_id",
+                ['is_available' => $isAvailable ? 1 : 0, 'account_id' => $accountId]
+            );
+
+            $cancelledCount = 0;
+            if (!$isAvailable) {
+                $pendingRequests = $this->db->query(
+                    "SELECT id, current_status
+                     FROM pickup_requests
+                     WHERE junkshop_id = :junkshop_id
+                       AND current_status IN ('Pending Request', 'Pending', 'Matched')
+                     FOR UPDATE",
+                    ['junkshop_id' => $accountId]
+                )->fetchAll();
+
+                $cancelStatement = $this->db->query(
+                    "UPDATE pickup_requests
+                     SET current_status = 'Cancelled',
+                         cancellation_reason = :cancellation_reason,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE junkshop_id = :junkshop_id
+                       AND current_status IN ('Pending Request', 'Pending', 'Matched')",
+                    [
+                        'cancellation_reason' => 'Shop changed operational status to Unavailable',
+                        'junkshop_id' => $accountId,
+                    ]
+                );
+                $cancelledCount = $cancelStatement->rowCount();
+
+                foreach ($pendingRequests as $request) {
+                    StatusLogger::logChange(
+                        (int) $request['id'],
+                        (string) $request['current_status'],
+                        'Cancelled',
+                        'Junkshop',
+                        $accountId
+                    );
+                }
+            }
+
+            $this->db->commit();
+            $message = $isAvailable
+                ? 'Your junkshop is now available.'
+                : 'Your shop status is now Unavailable, and ' . $cancelledCount . ' pending pickup request' . ($cancelledCount === 1 ? '' : 's') . ' were automatically cancelled.';
+            return [
+                'success' => true,
+                'message' => $message,
+                'is_available' => $isAvailable,
+                'cancelled_count' => $cancelledCount,
+            ];
         } catch (Throwable $exception) {
+            $this->db->rollBack();
             error_log('Junkshop availability update error: ' . $exception->getMessage());
             return ['success' => false, 'message' => 'Unable to update shop availability.'];
         }
@@ -389,8 +438,40 @@ class DashboardController
         }
     }
 
+    private function getJunkshopRequestStatuses(): array
+    {
+        return [
+            'Pending Request',
+            'Pending',
+            'Requested',
+            'Matched',
+            'Accepted',
+            'Scheduled',
+            'For Pickup',
+            'Completed',
+            'Cancelled',
+            'Cancelled by Seller',
+        ];
+    }
+
+    public function getJunkshopRequestCount(int $junkshopId): int
+    {
+        $statuses = ['Pending Request', 'Pending', 'Requested', 'Matched'];
+        $placeholders = implode(',', array_fill(0, count($statuses), '?'));
+        $params = array_merge([$junkshopId], $statuses);
+
+        return (int) $this->db->query(
+            'SELECT COUNT(*)
+             FROM pickup_requests pr
+             WHERE pr.junkshop_id = ? AND pr.current_status IN (' . $placeholders . ')',
+            $params
+        )->fetchColumn();
+    }
+
     public function getPendingJunkshopRequests(int $junkshopId): array
     {
+        $statuses = $this->getJunkshopRequestStatuses();
+        $statusPlaceholders = implode(',', array_fill(0, count($statuses), '?'));
         return $this->db->query(
             'SELECT
                 pr.id AS pickup_request_id,
@@ -426,6 +507,8 @@ class DashboardController
                 COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct,
                 CASE pr.current_status
                     WHEN \'Pending Request\' THEN \'Pending\'
+                    WHEN \'Pending\' THEN \'Pending\'
+                    WHEN \'Requested\' THEN \'Pending\'
                     WHEN \'Accepted\' THEN \'Accepted\'
                     WHEN \'Scheduled\' THEN \'Scheduled\'
                     WHEN \'For Pickup\' THEN \'For Pickup\'
@@ -433,25 +516,16 @@ class DashboardController
                     ELSE pr.current_status
                 END AS assignment_status
             FROM pickup_requests pr
-            JOIN accounts seller ON seller.id = pr.seller_account_id
-            JOIN sellers sp ON sp.account_id = seller.id
+            LEFT JOIN accounts seller ON seller.id = pr.seller_account_id
+            LEFT JOIN sellers sp ON sp.account_id = seller.id
             LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
             LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
             LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1
-            WHERE pr.junkshop_id = :junkshop_id
-                        AND pr.current_status IN (:pending_status, :accepted_status, :scheduled_status, :for_pickup_status, :completed_status, :cancelled_status, :cancelled_by_seller_status)
+                WHERE pr.junkshop_id = ?
+                        AND pr.current_status IN (' . $statusPlaceholders . ')
                 GROUP BY pr.id, seller.id, sp.id
                     ORDER BY pr.created_at DESC, pr.id DESC',
-            [
-                'junkshop_id' => $junkshopId,
-                'pending_status' => 'Pending Request',
-                'accepted_status' => 'Accepted',
-                                'scheduled_status' => 'Scheduled',
-                                'for_pickup_status' => 'For Pickup',
-                                'completed_status' => 'Completed',
-                                'cancelled_status' => 'Cancelled',
-                                'cancelled_by_seller_status' => 'Cancelled by Seller',
-            ]
+            array_merge([$junkshopId], $statuses)
         )->fetchAll();
     }
 

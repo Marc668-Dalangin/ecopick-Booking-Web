@@ -277,6 +277,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     seller_account_id INT NOT NULL,
     junkshop_id INT NULL,
     current_status ENUM('Pending Request', 'Cancelled') NOT NULL DEFAULT 'Pending Request',
+    cancellation_reason VARCHAR(255) NULL,
     admin_viewed_report TINYINT(1) NOT NULL DEFAULT 0,
     final_recyclable_value DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     pickup_collection_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -340,6 +341,9 @@ CREATE TABLE IF NOT EXISTS pickup_request_status_history (
 
 
 
+
+ALTER TABLE pickup_requests
+    ADD COLUMN IF NOT EXISTS cancellation_reason VARCHAR(255) NULL AFTER current_status;
 
 ALTER TABLE pickup_requests
     MODIFY current_status ENUM(

@@ -1,6 +1,6 @@
 (function () {
     const badges = document.querySelectorAll('#matched-requests-badge, [data-matched-requests-badge]');
-    const endpoint = window.ecopickPendingRequestsCountUrl;
+    const endpoint = window.ecopickMatchedRequestsApiUrl || window.ecopickPendingRequestsCountUrl;
 
     if (!badges.length || !endpoint) {
         return;
@@ -32,7 +32,7 @@
                 }
 
                 if (result.response.ok && result.payload.success) {
-                    updateBadges(result.payload.count);
+                    updateBadges(result.payload.data?.count ?? result.payload.count);
                 }
             })
             .catch(function () {

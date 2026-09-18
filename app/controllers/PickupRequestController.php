@@ -454,7 +454,7 @@ class PickupRequestController
              LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
              JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
              JOIN recyclable_materials rm ON rm.id = pri.material_id
-             WHERE pr.current_status = 'Pending Request'
+             WHERE pr.current_status IN ('Pending Request', 'Pending', 'Matched')
              GROUP BY pr.id ORDER BY pr.created_at ASC"
         )->fetchAll();
     }

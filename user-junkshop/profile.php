@@ -218,6 +218,7 @@ ob_start();
                                 </div>
                             </div>
                         </div>
+                        <div id="availability-feedback" class="alert d-none mb-3" role="alert" aria-live="polite"></div>
                     <fieldset <?php echo $profileFormLocked ? 'disabled' : ''; ?>>
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -636,6 +637,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('toggleAvailability');
     const statusText = document.getElementById('availability-status-text');
     const label = document.getElementById('toggleLabel');
+    const feedback = document.getElementById('availability-feedback');
     const csrfToken = document.querySelector('input[name="_csrf_token"]')?.value || '';
     if (!toggle) return;
 
@@ -653,9 +655,16 @@ document.addEventListener('DOMContentLoaded', function () {
             toggle.checked = Boolean(result.is_available);
             label.textContent = toggle.checked ? 'Available' : 'Unavailable';
             statusText.textContent = toggle.checked ? 'Status: Available (Accepting pickup requests)' : 'Status: Unavailable (Not accepting pickup requests)';
+            if (feedback) {
+                feedback.className = 'alert alert-success mb-3';
+                feedback.textContent = result.message || 'Shop operational status updated.';
+            }
         } catch (error) {
             toggle.checked = !requestedValue;
-            window.alert(error.message);
+            if (feedback) {
+                feedback.className = 'alert alert-danger mb-3';
+                feedback.textContent = error.message || 'Unable to update availability.';
+            }
         } finally {
             toggle.disabled = false;
         }

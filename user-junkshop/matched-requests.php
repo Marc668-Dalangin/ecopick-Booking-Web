@@ -115,7 +115,7 @@ ob_start();
                                     <div id="seller-map-<?php echo $booking['id']; ?>" class="seller-location-map" data-lat="<?php echo Validator::escape($booking['seller_lat']); ?>" data-lng="<?php echo Validator::escape($booking['seller_lng']); ?>" style="height: 300px; width: 100%; border-radius: 8px; margin-top: 15px;"></div>
                                 <?php endif; ?>
 
-                                <?php if (in_array(($assignment['current_status'] ?? ''), ['Pending Request', 'Matched'], true) || (($assignment['assignment_status'] ?? '') === 'Matched')): ?>
+                                <?php if (in_array(($assignment['current_status'] ?? ''), ['Pending Request', 'Pending', 'Requested', 'Matched'], true) || (($assignment['assignment_status'] ?? '') === 'Matched')): ?>
                                     <div class="d-flex flex-wrap gap-2">
                                         <button type="button" class="btn btn-success accept-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Accept</button>
                                         <button type="button" class="btn btn-outline-danger decline-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Decline</button>
@@ -251,8 +251,10 @@ ob_start();
     </div>
 </div>
 <script>
+window.ecopickMatchedRequestsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_matched_requests.php';
 window.addEventListener('DOMContentLoaded', function () {
     const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/junkshop-operations.php';
+    const matchedRequestsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_matched_requests.php';
     const feedback = document.getElementById('assignment-feedback');
     const assignmentList = document.getElementById('assignment-list');
     const confirmation = window.ecopick.setupActionConfirmation({ modalId: 'confirmMatchedRequestModal' });
@@ -273,6 +275,20 @@ window.addEventListener('DOMContentLoaded', function () {
     };
     let trackingIntervalId = null;
     let trackingRequestId = null;
+    let previousRequestKeys = new Set();
+    let hasLoadedRequests = false;
+
+    function updateMatchedRequestBadges(count, hasNewRequest) {
+        const safeCount = Math.max(0, Number.parseInt(count, 10) || 0);
+        document.querySelectorAll('#matched-requests-badge, [data-matched-requests-badge]').forEach(function (badge) {
+            badge.textContent = String(safeCount);
+            badge.style.display = safeCount > 0 ? 'inline-block' : 'none';
+            if (hasNewRequest) {
+                badge.classList.add('pulse');
+                window.setTimeout(function () { badge.classList.remove('pulse'); }, 2000);
+            }
+        });
+    }
     let locationUpdateInProgress = false;
     let lastGeocodedJunkshopLocation = null;
 
@@ -633,7 +649,7 @@ window.addEventListener('DOMContentLoaded', function () {
         if (status === 'Accepted') {
             return '<button type="button" class="btn btn-primary schedule-request" data-pickup-request-id="' + requestId + '">Set Schedule</button>';
         }
-        if (status === 'Pending Request') {
+        if (status === 'Pending Request' || status === 'Pending' || status === 'Requested' || status === 'Matched') {
             return '<button type="button" class="btn btn-success accept-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Accept</button><button type="button" class="btn btn-outline-danger decline-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Decline</button>';
         }
         if (status === 'Scheduled') {
@@ -661,7 +677,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const requestId = getPickupRequestId(request);
             const status = request.current_status || 'Pending Request';
             const cancelled = status === 'Cancelled' || status === 'Cancelled by Seller';
-            const statusClass = status === 'Completed' ? 'approved' : (status === 'Pending Request' ? 'pending' : 'scheduled');
+            const statusClass = status === 'Completed' ? 'approved' : (['Pending Request', 'Pending', 'Requested', 'Matched'].includes(status) ? 'pending' : 'scheduled');
             const terminalTimestamp = status === 'Completed' ? request.formatted_completed_at : (cancelled ? request.formatted_cancelled_at : '');
             const statusLabel = cancelled ? 'Cancelled by Seller' : status;
             const statusMarkup = '<span class="' + (cancelled ? 'badge bg-danger' : 'status-badge ' + statusClass) + '">' + escapeHtml(statusLabel) + (terminalTimestamp ? '<small class="d-block fw-normal">' + escapeHtml(terminalTimestamp) + '</small>' : '') + '</span>';
@@ -680,7 +696,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
     async function fetchMatchedRequests() {
         try {
-            const response = await fetch(apiUrl + '?action=list-matched', { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const response = await fetch(matchedRequestsApiUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             const payload = await response.json();
             if (payload.session_expired && payload.redirect) {
                 window.location.href = payload.redirect;
@@ -688,7 +704,18 @@ window.addEventListener('DOMContentLoaded', function () {
             }
             if (!response.ok || !payload.success) throw new Error(payload.message || 'Unable to refresh matched requests.');
             const requests = payload.data?.requests || [];
-            renderMatchedRequests(requests);
+            const requestKeys = new Set(requests.map(function (request) {
+                return String(getPickupRequestId(request)) + ':' + String(request.current_status || '') + ':' + String(request.updated_at || '');
+            }));
+            const hasNewRequest = hasLoadedRequests && requests.some(function (request) {
+                return !previousRequestKeys.has(String(getPickupRequestId(request)) + ':' + String(request.current_status || '') + ':' + String(request.updated_at || ''));
+            });
+            if (!hasLoadedRequests || hasNewRequest || requestKeys.size !== previousRequestKeys.size) {
+                renderMatchedRequests(requests);
+            }
+            previousRequestKeys = requestKeys;
+            hasLoadedRequests = true;
+            updateMatchedRequestBadges(payload.data?.count || 0, hasNewRequest);
             requests.forEach(function (request) {
                 if (request.current_status === 'For Pickup') startLiveLocationWatch(getPickupRequestId(request), request.seller_lat, request.seller_lng);
             });
