@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../../app/bootstrap.php';
 require_once __DIR__ . '/FeeCalculator.php';
+require_once __DIR__ . '/../../includes/philsms_service.php';
 
 class BookingLifecycleController
 {
@@ -73,7 +74,7 @@ class BookingLifecycleController
         }
     }
 
-    public function markForPickup(int $pickupRequestId, int $junkshopAccountId): array
+    public function markForPickup(int $pickupRequestId, int $junkshopAccountId, ?string $collectorFirstName = null, ?string $collectorLastName = null): array
     {
         $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'Scheduled');
         if ($pickupRequest === null) {
@@ -84,11 +85,24 @@ class BookingLifecycleController
             return ['success' => false, 'message' => 'Only scheduled pickups can be marked as for pickup.'];
         }
 
+        if ($collectorFirstName === null && $collectorLastName === null) {
+            $collectorName = 'ECOPICK COLLECTOR';
+        } else {
+            $collectorFirstName = trim((string) $collectorFirstName);
+            $collectorLastName = trim((string) $collectorLastName);
+            if (!preg_match('/^[A-Z]+$/', $collectorFirstName) || !preg_match('/^[A-Z]+$/', $collectorLastName)) {
+                return ['success' => false, 'message' => 'Collector first and last names must contain uppercase letters only.'];
+            }
+            $collectorName = $collectorFirstName . ' ' . $collectorLastName;
+        }
+
         try {
             $statement = $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                'UPDATE pickup_requests SET current_status = :status, collector_name = :collector_name, sms_status = :sms_status, sms_error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                 [
                     'status' => 'For Pickup',
+                    'collector_name' => $collectorName,
+                    'sms_status' => 'Pending',
                     'pickup_request_id' => $pickupRequestId,
                     'expected_status' => 'Scheduled',
                 ]
@@ -100,9 +114,29 @@ class BookingLifecycleController
 
             StatusLogger::logChange($pickupRequestId, 'Scheduled', 'For Pickup', 'Junkshop', $junkshopAccountId);
 
+            $netAmount = $this->getEstimatedNetAmount($pickupRequestId);
+            $smsResult = sendPhilSMS(
+                (string) ($pickupRequest['seller_mobile'] ?? $pickupRequest['contact_number'] ?? ''),
+                'ECOPICK: Hello! Your pickup request has been accepted. Collector: ' . $collectorName . '. Net amount to receive: PHP ' . number_format($netAmount, 2, '.', '') . '. Please prepare your recyclable items.',
+                $this->db->getPDO()
+            );
+            $this->db->query(
+                'UPDATE pickup_requests SET sms_status = :sms_status, sms_error_message = :sms_error_message WHERE id = :pickup_request_id',
+                [
+                    'sms_status' => $smsResult['status'],
+                    'sms_error_message' => $smsResult['success'] ? null : $this->formatSmsDiagnostics($smsResult),
+                    'pickup_request_id' => $pickupRequestId,
+                ]
+            );
+
             return [
                 'success' => true,
-                'message' => 'Pickup is now marked as for pickup.',
+                'message' => $smsResult['success']
+                    ? 'Status updated to For Pickup and SMS notification sent successfully to +' . $smsResult['recipient'] . ' via PhilSMS!'
+                    : 'Status updated to For Pickup, but SMS delivery failed: ' . $smsResult['message'],
+                'sms_status' => $smsResult['status'],
+                'sms_message' => $smsResult['message'],
+                'sms_recipient' => $smsResult['recipient'],
                 'seller_lat' => isset($pickupRequest['seller_lat']) ? (float) $pickupRequest['seller_lat'] : null,
                 'seller_lng' => isset($pickupRequest['seller_lng']) ? (float) $pickupRequest['seller_lng'] : null,
                 'seller_address' => (string) ($pickupRequest['pickup_address'] ?? ''),
@@ -111,6 +145,30 @@ class BookingLifecycleController
             error_log('Mark for pickup error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update the pickup status.'];
         }
+    }
+
+    private function formatSmsDiagnostics(array $smsResult): string
+    {
+        $diagnostics = [
+            'message' => (string) ($smsResult['message'] ?? 'PhilSMS request failed.'),
+            'http_code' => (int) ($smsResult['http_code'] ?? 0),
+            'curl_error' => (string) ($smsResult['curl_error'] ?? ''),
+            'raw_response' => (string) ($smsResult['raw_response'] ?? ''),
+        ];
+        return json_encode($diagnostics, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: $diagnostics['message'];
+    }
+
+    private function getEstimatedNetAmount(int $pickupRequestId): float
+    {
+        $row = $this->db->query(
+            'SELECT COALESCE(SUM(pri.estimated_weight * COALESCE(jmp.buying_price, 0)), 0) AS gross_amount, pr.pickup_fee, COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct FROM pickup_requests pr LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0 LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 WHERE pr.id = :pickup_request_id GROUP BY pr.id',
+            ['pickup_request_id' => $pickupRequestId]
+        )->fetch();
+        if (!$row) {
+            return 0.0;
+        }
+        $grossAmount = (float) $row['gross_amount'];
+        return max(0.0, $grossAmount - (float) $row['pickup_fee'] - ($grossAmount * (float) $row['service_fee_pct'] / 100));
     }
 
     public function previewFinalSettlement(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements): array
@@ -308,7 +366,7 @@ class BookingLifecycleController
     private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array
     {
         $row = $this->db->query(
-            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.pickup_fee, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
+            'SELECT pr.id, pr.booking_reference, pr.seller_account_id, pr.current_status, pr.contact_number, COALESCE(NULLIF(pr.contact_number, \'\'), NULLIF(seller.mobile_number, \'\'), \'\') AS seller_mobile, pr.pickup_fee, pr.confirmed_pickup_date, pr.confirmed_pickup_time, pr.pickup_address, pr.seller_lat, pr.seller_lng, pr.preferred_pickup_date, pr.preferred_pickup_time, pr.photo_path, pr.notes, pr.created_at, pr.updated_at FROM pickup_requests pr JOIN accounts seller ON seller.id = pr.seller_account_id WHERE pr.id = :pickup_request_id AND pr.junkshop_id = :junkshop_id AND pr.current_status = :current_status LIMIT 1',
             [
                 'pickup_request_id' => $pickupRequestId,
                 'junkshop_id' => $junkshopAccountId,

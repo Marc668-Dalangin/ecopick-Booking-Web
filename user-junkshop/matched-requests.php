@@ -103,7 +103,7 @@ ob_start();
 
                                 <div class="row g-3 small mb-3">
                                     <div class="col-md-4"><div class="text-muted">Seller</div><strong><?php echo Validator::escape($assignment['seller_name'] ?? ''); ?></strong></div>
-                                    <div class="col-md-4"><div class="text-muted">Mobile Number</div><?php $contactSuffix = preg_replace('/\D+/', '', (string)($assignment['contact_number'] ?? '')); ?><?php if (preg_match('/^\d{1,9}$/', $contactSuffix)): ?><strong><a href="tel:+639<?php echo htmlspecialchars($contactSuffix, ENT_QUOTES, 'UTF-8'); ?>">+639<?php echo htmlspecialchars($contactSuffix, ENT_QUOTES, 'UTF-8'); ?></a></strong> <a href="sms:+639<?php echo htmlspecialchars($contactSuffix, ENT_QUOTES, 'UTF-8'); ?>" class="ms-1" aria-label="SMS seller"><i class="bi bi-chat-dots"></i></a><?php else: ?><span class="text-muted">Not provided</span><?php endif; ?></div>
+                                    <div class="col-md-4"><div class="text-muted">Mobile Number</div><?php $sellerMobile = trim((string)($assignment['seller_mobile'] ?? $assignment['contact_number'] ?? '')); ?><?php if ($sellerMobile !== ''): ?><strong><a href="tel:<?php echo htmlspecialchars($sellerMobile, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($sellerMobile, ENT_QUOTES, 'UTF-8'); ?></a></strong> <a href="sms:<?php echo htmlspecialchars($sellerMobile, ENT_QUOTES, 'UTF-8'); ?>" class="ms-1" aria-label="SMS seller"><i class="bi bi-chat-dots"></i></a><?php else: ?><span class="text-muted">Not provided</span><?php endif; ?></div>
                                     <div class="col-md-4"><div class="text-muted">Pickup</div><strong><?php echo Validator::escape($pickupDate); ?></strong><br><?php echo Validator::escape($pickupTime); ?></div>
                                     <div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong><?php echo isset($assignment['distance_km']) ? number_format((float)$assignment['distance_km'], 2) . ' km' : 'Pending'; ?></strong></div>
                                     <div class="col-md-4"><div class="text-muted">Actual Weight</div><?php if ((float)($assignment['actual_weight'] ?? 0) > 0): ?><span class="badge bg-success font-monospace fs-6"><?php echo number_format((float)$assignment['actual_weight'], 2); ?> kg</span><?php else: ?><span class="badge bg-secondary">Pending Weight</span><?php endif; ?></div>
@@ -427,7 +427,8 @@ window.addEventListener('DOMContentLoaded', function () {
     function showFeedback(message, isSuccess) {
         if (!feedback) return;
         feedback.className = 'alert ' + (isSuccess ? 'alert-success' : 'alert-danger');
-        feedback.textContent = message;
+        feedback.innerHTML = '<span>' + escapeHtml(message) + '</span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+        feedback.classList.add('alert-dismissible', 'fade', 'show');
         feedback.classList.remove('d-none');
     }
 
@@ -465,6 +466,10 @@ window.addEventListener('DOMContentLoaded', function () {
         }
         if (button.classList.contains('complete-transaction')) {
             openCompletionModal(Number(button.dataset.pickupRequestId || 0));
+            return;
+        }
+        if (button.classList.contains('mark-for-pickup')) {
+            openPickupModal(Number(button.dataset.pickupRequestId || 0));
             return;
         }
         const action = button.classList.contains('accept-request') ? 'accept' : (button.classList.contains('decline-request') ? 'decline' : (button.classList.contains('schedule-request') ? 'schedule' : 'mark-for-pickup'));
@@ -510,6 +515,90 @@ window.addEventListener('DOMContentLoaded', function () {
         const suffix = hours >= 12 ? 'PM' : 'AM';
         const displayHour = hours % 12 || 12;
         return displayHour + ':' + minutes + ' ' + suffix;
+    }
+
+    function getEstimatedNetAmount(request) {
+        const grossAmount = String(request?.settlement_items || '').split('|').filter(Boolean).reduce(function (total, item) {
+            const parts = item.split(':');
+            return total + (Number(parts[2] || 0) * Number(parts[3] || 0));
+        }, 0);
+        const pickupFee = Number(request?.pickup_fee || 0);
+        const serviceFee = grossAmount * (Number(request?.service_fee_pct || 5) / 100);
+        return Math.max(0, grossAmount - pickupFee - serviceFee);
+    }
+
+    function formatPhilippineMobile(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        if (/^09\d{9}$/.test(digits)) return '+63' + digits.slice(1);
+        if (/^9\d{9}$/.test(digits)) return '+63' + digits;
+        if (/^63(9\d{9})$/.test(digits)) return '+' + digits;
+        return 'Not provided';
+    }
+
+    async function openPickupModal(requestId) {
+        const response = await fetch(matchedRequestsApiUrl + '?action=list-matched', { credentials: 'same-origin' });
+        const payload = await response.json();
+        const request = (payload.data?.requests || []).find(item => getPickupRequestId(item) === requestId);
+        if (!request || request.current_status !== 'Scheduled') {
+            showFeedback('This pickup is no longer scheduled or could not be loaded.', false);
+            return;
+        }
+        const firstModal = document.createElement('div');
+        firstModal.className = 'modal fade';
+        firstModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form novalidate><div class="modal-header"><h5 class="modal-title">Collector Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="text-muted small">Enter the collector who will handle this pickup.</p><div class="mb-3"><label class="form-label" for="collector-first-name">First Name</label><input type="text" class="form-control" id="collector-first-name" maxlength="50" pattern="[A-Z]+" autocomplete="off" required></div><div><label class="form-label" for="collector-last-name">Last Name</label><input type="text" class="form-control" id="collector-last-name" maxlength="50" pattern="[A-Z]+" autocomplete="off" required></div><div class="invalid-feedback">Use uppercase letters only, without spaces or symbols.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Proceed</button></div></form></div></div>';
+        document.body.appendChild(firstModal);
+        const firstInstance = bootstrap.Modal.getOrCreateInstance(firstModal);
+        const form = firstModal.querySelector('form');
+        const inputs = Array.from(firstModal.querySelectorAll('input'));
+        inputs.forEach(function (input) {
+            input.addEventListener('input', function () {
+                input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '');
+                input.setCustomValidity(/^[A-Z]+$/.test(input.value) ? '' : 'Use uppercase letters only.');
+            });
+        });
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+            const collectorName = inputs[0].value + ' ' + inputs[1].value;
+            const netAmount = getEstimatedNetAmount(request);
+            const secondModal = document.createElement('div');
+            secondModal.className = 'modal fade';
+            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and automatically send an SMS notification to the seller via ECOPICK.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
+            firstModal.dataset.keepOpen = 'true';
+            firstInstance.hide();
+            document.body.appendChild(secondModal);
+            const secondInstance = bootstrap.Modal.getOrCreateInstance(secondModal);
+            secondInstance.show();
+            secondModal.querySelector('[data-back-to-edit]').addEventListener('click', function () {
+                secondInstance.hide();
+                firstInstance.show();
+            });
+            secondModal.querySelector('[data-confirm-pickup]').addEventListener('click', async function () {
+                const confirmButton = secondModal.querySelector('[data-confirm-pickup]');
+                confirmButton.disabled = true;
+                const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'mark-for-pickup', pickup_request_id: requestId, collector_first_name: inputs[0].value, collector_last_name: inputs[1].value });
+                const resultPayload = await result.json();
+                if (!resultPayload.success) {
+                    showFeedback(resultPayload.message || 'Unable to mark this pickup.', false);
+                    confirmButton.disabled = false;
+                    return;
+                }
+                firstModal.dataset.keepOpen = 'false';
+                secondInstance.hide();
+                showFeedback(resultPayload.message || 'Pickup marked as For Pickup.', resultPayload.sms_status === 'Sent');
+                if (resultPayload.sms_status === 'Sent') {
+                    window.setTimeout(function () { window.location.reload(); }, 1800);
+                }
+            });
+            secondModal.addEventListener('hidden.bs.modal', function () { secondModal.remove(); });
+        });
+        firstModal.addEventListener('hidden.bs.modal', function () {
+            if (firstModal.dataset.keepOpen !== 'true') firstModal.remove();
+        });
+        firstInstance.show();
     }
 
     function getPickupRequestId(assignment) {
@@ -690,8 +779,8 @@ window.addEventListener('DOMContentLoaded', function () {
                 : '';
             const actualWeight = Number(request.actual_weight || 0);
             const actualWeightMarkup = actualWeight > 0 ? '<span class="badge bg-success font-monospace fs-6">' + actualWeight.toFixed(2) + ' kg</span>' : '<span class="badge bg-secondary">Pending Weight</span>';
-            const contactDigits = String(request.contact_number || '').replace(/\D/g, '');
-            const contactMarkup = /^\d{1,9}$/.test(contactDigits) ? '<strong><a href="tel:+639' + escapeHtml(contactDigits) + '">+639' + escapeHtml(contactDigits) + '</a></strong> <a href="sms:+639' + escapeHtml(contactDigits) + '" class="ms-1" aria-label="SMS seller"><i class="bi bi-chat-dots"></i></a>' : '<span class="text-muted">Not provided</span>';
+            const sellerMobile = request.seller_mobile || request.contact_number || '';
+            const contactMarkup = formatPhilippineMobile(sellerMobile) !== 'Not provided' ? '<strong><a href="tel:' + escapeHtml(formatPhilippineMobile(sellerMobile)) + '">' + escapeHtml(formatPhilippineMobile(sellerMobile)) + '</a></strong> <a href="sms:' + escapeHtml(formatPhilippineMobile(sellerMobile)) + '" class="ms-1" aria-label="SMS seller"><i class="bi bi-chat-dots"></i></a>' : '<span class="text-muted">Not provided</span>';
             return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Mobile Number</div>' + contactMarkup + '</div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong>' + escapeHtml(distance) + '</strong></div><div class="col-md-4"><div class="text-muted">Actual Weight</div>' + actualWeightMarkup + '</div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
         }).join('');
         initializeSellerMaps();

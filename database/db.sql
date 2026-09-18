@@ -285,7 +285,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     final_amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     payment_method ENUM('Cash') NULL,
     payment_status ENUM('Unpaid', 'Paid') NULL,
-    contact_number VARCHAR(20) NOT NULL DEFAULT '',
+    contact_number VARCHAR(20) NULL DEFAULT NULL,
     pickup_address VARCHAR(255) NOT NULL,
     seller_lat DECIMAL(11,8) NULL,
     seller_lng DECIMAL(11,8) NULL,
@@ -308,7 +308,11 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     CONSTRAINT fk_pickup_request_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) NOT NULL DEFAULT '' AFTER payment_status;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) NULL DEFAULT NULL AFTER payment_status;
+ALTER TABLE pickup_requests MODIFY COLUMN contact_number VARCHAR(20) NULL DEFAULT NULL;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL AFTER contact_number;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed') NOT NULL DEFAULT 'Pending' AFTER collector_name;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_error_message TEXT NULL DEFAULT NULL AFTER sms_status;
 
 CREATE TABLE IF NOT EXISTS pickup_request_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -398,6 +402,9 @@ ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_port INT(11) NOT NULL DEF
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_user VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_pass VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls';
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_api_token TEXT NULL DEFAULT NULL;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_endpoint VARCHAR(255) NULL DEFAULT 'https://dashboard.philsms.com/api/v3/sms/send';
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS';
 
 INSERT INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, smtp_host, smtp_port, smtp_encryption)
 VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 'smtp.gmail.com', 587, 'tls')

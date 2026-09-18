@@ -96,7 +96,12 @@ if ($method === 'POST') {
 
     if ($action === 'mark-for-pickup') {
         $requestId = (int) ($_POST['pickup_request_id'] ?? 0);
-        $result = $bookingLifecycleController->markForPickup($requestId, $junkshopId);
+        $result = $bookingLifecycleController->markForPickup(
+            $requestId,
+            $junkshopId,
+            (string) ($_POST['collector_first_name'] ?? ''),
+            (string) ($_POST['collector_last_name'] ?? '')
+        );
         $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;

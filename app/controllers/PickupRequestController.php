@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
+require_once __DIR__ . '/../../includes/philsms_service.php';
 
 class PickupRequestController
 {
@@ -480,8 +481,8 @@ class PickupRequestController
         if ((int) ($data['junkshop_id'] ?? 0) <= 0) {
             $errors[] = 'Please select a partner junkshop.';
         }
-        if (!preg_match('/^\d{1,9}$/', (string) ($data['contact_number'] ?? ''))) {
-            $errors[] = 'Mobile number must contain digits only and be at most 9 digits.';
+        if (!preg_match('/^639\d{9}$/', (string) ($data['contact_number'] ?? ''))) {
+            $errors[] = 'Enter a valid Philippine mobile number.';
         }
         if (trim($data['pickup_address'] ?? '') === '') {
             $errors[] = 'Pickup address/location is required.';
@@ -519,7 +520,7 @@ class PickupRequestController
         return [
             'items' => $items,
             'junkshop_id' => (int) ($data['junkshop_id'] ?? 0),
-            'contact_number' => trim((string) ($data['contact_number'] ?? '')),
+            'contact_number' => formatPhilippineMobileNumber((string) ($data['contact_number'] ?? '')) ?? '',
             'pickup_address' => trim((string) ($data['pickup_address'] ?? '')),
             'approximate_distance_km' => number_format(max(0.0, (float) ($data['approximate_distance_km'] ?? 0)), 2, '.', ''),
             'seller_lat' => number_format((float) ($data['seller_lat'] ?? 0), 8, '.', ''),
