@@ -9,6 +9,7 @@ $adminUserName = Auth::userName();
 $adminUserEmail = Auth::userEmail();
 $unreadReportCount = 0;
 $unreadConcernCount = 0;
+$siteFavicon = APP_URL . '/assets/images/logo.jpg';
 if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::userRole() === 'admin')) {
     $pdo = Database::getInstance()->getPDO();
     $stmt = $pdo->query("SELECT COUNT(*) FROM pickup_requests WHERE current_status = 'Completed' AND (admin_viewed_report = 0 OR admin_viewed_report IS NULL)");
@@ -24,6 +25,8 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? Validator::escape($pageTitle) . ' - EcoPick Admin' : 'EcoPick Admin'; ?></title>
+    <link rel="icon" type="image/png" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="<?php echo APP_URL; ?>/assets/css/style.css" rel="stylesheet">
