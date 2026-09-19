@@ -17,7 +17,7 @@ class MaterialPriceController
     public function listActiveMaterials()
     {
         return $this->db->query(
-            'SELECT id, material_name, category, unit_of_measure, is_active, created_at, updated_at
+            'SELECT DISTINCT id, COALESCE(NULLIF(name, \'\'), material_name) AS material_name, category, description, examples, preparation_notes, unit_of_measure, is_active, created_at, updated_at
              FROM recyclable_materials WHERE is_active = 1 ORDER BY category ASC, material_name ASC'
         )->fetchAll();
     }
@@ -25,12 +25,12 @@ class MaterialPriceController
     public function getJunkshopMaterialPrices($accountId)
     {
         return $this->db->query(
-            'SELECT jmp.id, jmp.junkshop_account_id, jmp.material_id, rm.material_name, rm.category,
-                    rm.unit_of_measure, jmp.buying_price, jmp.available, jmp.created_at, jmp.updated_at
+            'SELECT jmp.id, jmp.junkshop_account_id, jmp.material_id, COALESCE(rm.name, rm.material_name) AS material_name, rm.category,
+                    rm.description, rm.examples, rm.preparation_notes, rm.unit_of_measure, jmp.buying_price, jmp.available, jmp.created_at, jmp.updated_at
              FROM junkshop_material_prices jmp
              JOIN recyclable_materials rm ON rm.id = jmp.material_id
              WHERE jmp.junkshop_account_id = :account_id
-             ORDER BY rm.category ASC, rm.material_name ASC',
+             ORDER BY rm.category ASC, material_name ASC',
             ['account_id' => (int) $accountId]
         )->fetchAll();
     }
@@ -70,7 +70,7 @@ class MaterialPriceController
     {
         return array_values(array_filter(
             $this->db->query(
-                "SELECT
+                "SELECT DISTINCT
                     a.id AS junkshop_account_id,
                     jp.business_name,
                     jp.is_available,

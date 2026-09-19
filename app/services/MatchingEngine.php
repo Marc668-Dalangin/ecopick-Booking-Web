@@ -61,6 +61,20 @@ class MatchingEngine
 
     public static function onNewPickupRequestCreated(int $sellerRequestId, array $materialIds, float $approximateDistanceKm): array
     {
+        $db = Database::getInstance();
+        $request = $db->query(
+            'SELECT junkshop_id FROM pickup_requests WHERE id = :request_id LIMIT 1',
+            ['request_id' => $sellerRequestId]
+        )->fetch();
+        $selectedJunkshopId = (int) ($request['junkshop_id'] ?? 0);
+        if ($selectedJunkshopId > 0) {
+            $selectedMatch = self::evaluateMatches($selectedJunkshopId, $sellerRequestId);
+            if ($selectedMatch !== null) {
+                self::saveMatch($sellerRequestId, $selectedMatch);
+                return [$selectedMatch];
+            }
+        }
+
         $matches = self::findMatches($sellerRequestId, $materialIds, $approximateDistanceKm);
         if (empty($matches)) {
             return [];
@@ -114,7 +128,7 @@ class MatchingEngine
                     ['request_id' => $pickupRequestId]
                 );
                 $db->query(
-                    'UPDATE pickup_request_items pri JOIN junkshop_material_prices jmp ON jmp.material_id = pri.material_id AND jmp.junkshop_account_id = :junkshop_id AND jmp.available = 1 SET pri.estimated_buying_price_per_kg = jmp.buying_price, pri.estimated_material_value = ROUND(pri.estimated_weight * jmp.buying_price, 2), pri.estimate_snapshot_at = CURRENT_TIMESTAMP WHERE pri.pickup_request_id = :request_id',
+                    'UPDATE pickup_request_items pri JOIN junkshop_material_prices jmp ON jmp.material_id = pri.material_id AND jmp.junkshop_account_id = :junkshop_id AND jmp.available = 1 SET pri.estimated_buying_price_per_kg = jmp.buying_price, pri.estimated_material_value = ROUND(COALESCE(pri.estimated_weight_kg, pri.estimated_weight) * jmp.buying_price, 2), pri.estimate_snapshot_at = CURRENT_TIMESTAMP WHERE pri.pickup_request_id = :request_id',
                     ['junkshop_id' => (int) $match['junkshop_id'], 'request_id' => $pickupRequestId]
                 );
                 StatusLogger::logChange($pickupRequestId, 'Pending Request', 'Matched', 'System');

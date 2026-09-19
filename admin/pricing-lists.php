@@ -57,31 +57,53 @@ ob_start();
                 <p class="text-muted mb-0">Approved junkshops have not added any accepted materials or buying prices yet.</p>
             </div>
         <?php else: ?>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle" id="admin-pricing-table">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Junkshop</th>
-                            <th>Location</th>
-                            <th>Material</th>
-                            <th>Category</th>
-                            <th>Buying Price</th>
-                            <th>Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($rows as $row): ?>
-                            <tr data-junkshop-name="<?php echo Validator::escape(strtolower((string)($row['business_name'] ?? ''))); ?>" data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
-                                <td class="fw-semibold"><?php echo Validator::escape($row['business_name'] ?? ''); ?></td>
-                                <td><?php echo Validator::escape($row['location'] ?? ''); ?></td>
-                                <td><?php echo Validator::escape($row['material_name'] ?? ''); ?></td>
-                                <td><?php echo Validator::escape($row['category'] ?? ''); ?></td>
-                                <td>₱<?php echo number_format((float)($row['buying_price'] ?? 0), 2); ?> / <?php echo Validator::escape($row['unit_of_measure'] ?? 'kg'); ?></td>
-                                <td><?php echo Validator::escape(date('M d, Y', strtotime($row['updated_at'] ?? date('Y-m-d')))); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="accordion accordion-flush" id="adminMaterialsCatalogAccordion">
+                <?php
+                $categories = ['PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'];
+                foreach ($categories as $category):
+                    $categoryRows = array_values(array_filter($rows, static function (array $row) use ($category): bool {
+                        return strtoupper((string)($row['category'] ?? '')) === $category;
+                    }));
+                    $collapseId = 'adminMaterialsCategory-' . strtolower($category);
+                    ?>
+                    <div class="accordion-item border rounded mb-3 overflow-hidden">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo $collapseId; ?>">
+                                <?php echo Validator::escape($category); ?>
+                            </button>
+                        </h2>
+                        <div id="<?php echo $collapseId; ?>" class="accordion-collapse collapse" data-bs-parent="#adminMaterialsCatalogAccordion">
+                            <div class="accordion-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="admin-pricing-table-<?php echo strtolower($category); ?>">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Junkshop</th>
+                                                <th>Location</th>
+                                                <th>Material</th>
+                                                <th>Category</th>
+                                                <th>Buying Price</th>
+                                                <th>Updated</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($categoryRows as $row): ?>
+                                                <tr data-junkshop-name="<?php echo Validator::escape(strtolower((string)($row['business_name'] ?? ''))); ?>" data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
+                                                    <td class="fw-semibold"><?php echo Validator::escape($row['business_name'] ?? ''); ?></td>
+                                                    <td><?php echo Validator::escape($row['location'] ?? ''); ?></td>
+                                                    <td><?php echo Validator::escape($row['material_name'] ?? ''); ?></td>
+                                                    <td><?php echo Validator::escape($row['category'] ?? ''); ?></td>
+                                                    <td>₱<?php echo number_format((float)($row['buying_price'] ?? 0), 2); ?> / <?php echo Validator::escape($row['unit_of_measure'] ?? 'kg'); ?></td>
+                                                    <td><?php echo Validator::escape(date('M d, Y', strtotime($row['updated_at'] ?? date('Y-m-d')))); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         <?php endif; ?>
     </div>

@@ -88,6 +88,51 @@ ob_start();
                             </div>
                             <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i> Add Material Price</button>
                         </form>
+
+                        <div class="mt-4">
+                            <h6 class="fw-bold mb-3">Material Catalog</h6>
+                            <div class="accordion accordion-flush" id="materialsCatalogAccordion">
+                                <?php
+                                $categories = ['PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'];
+                                foreach ($categories as $category):
+                                    $materialsForCategory = array_values(array_filter($materials, static function (array $material) use ($category): bool {
+                                        return strtoupper((string)($material['category'] ?? '')) === $category;
+                                    }));
+                                    $collapseId = 'materials-category-' . strtolower($category);
+                                    ?>
+                                    <div class="accordion-item border rounded mb-2 overflow-hidden">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo $collapseId; ?>">
+                                                <?php echo Validator::escape($category); ?>
+                                            </button>
+                                        </h2>
+                                        <div id="<?php echo $collapseId; ?>" class="accordion-collapse collapse" data-bs-parent="#materialsCatalogAccordion">
+                                            <div class="accordion-body p-0">
+                                                <?php if (empty($materialsForCategory)): ?>
+                                                    <div class="p-3 text-muted small">No materials available in this category.</div>
+                                                <?php else: ?>
+                                                    <?php foreach ($materialsForCategory as $material): ?>
+                                                        <div class="border-bottom p-3">
+                                                            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                                                <div>
+                                                                    <strong><?php echo Validator::escape($material['material_name'] ?? ''); ?></strong>
+                                                                </div>
+                                                                <span class="badge bg-light text-dark"><?php echo Validator::escape($material['category'] ?? ''); ?></span>
+                                                            </div>
+                                                            <div class="mt-2 small text-muted">
+                                                                <div><strong>Description:</strong> <?php echo nl2br(Validator::escape((string)($material['description'] ?? ''))); ?></div>
+                                                                <div class="mt-1"><strong>Examples:</strong> <?php echo nl2br(Validator::escape((string)($material['examples'] ?? ''))); ?></div>
+                                                                <div class="mt-1"><strong>Preparation Notes:</strong> <?php echo nl2br(Validator::escape((string)($material['preparation_notes'] ?? ''))); ?></div>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

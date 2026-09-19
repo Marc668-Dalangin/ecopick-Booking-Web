@@ -31,8 +31,8 @@ if ($junkshopId < 1) {
 try {
     $database = Database::getInstance();
     $materials = $database->query(
-        "SELECT jmp.id AS price_id, jmp.material_id, rm.material_name, rm.category,
-                rm.unit_of_measure, jmp.buying_price
+        "SELECT DISTINCT jmp.id AS price_id, jmp.material_id, COALESCE(NULLIF(rm.name, ''), rm.material_name) AS material_name, rm.category,
+                rm.description, rm.examples, rm.preparation_notes, rm.unit_of_measure, jmp.buying_price
          FROM junkshop_material_prices jmp
          JOIN recyclable_materials rm ON rm.id = jmp.material_id AND rm.is_active = 1
          JOIN junkshop_profiles jp ON jp.account_id = jmp.junkshop_account_id
@@ -41,7 +41,7 @@ try {
            AND jmp.available = 1
            AND jp.approval_status = 'approved'
            AND (jp.partnership_expires_at IS NULL OR jp.partnership_expires_at > CURRENT_TIMESTAMP)
-         ORDER BY rm.category ASC, rm.material_name ASC",
+         ORDER BY rm.category ASC, material_name ASC",
         ['junkshop_id' => $junkshopId]
     )->fetchAll();
 

@@ -29,7 +29,7 @@ function createTestUser(string $email, string $roleName, string $fullName, strin
         throw new RuntimeException("Role not found: $roleName");
     }
 
-    $stmt = $pdo->prepare('INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, mobile_number, account_status) VALUES (:role_id, :account_role, :email, :password_hash, :full_name, :mobile_number, :account_status)');
+    $stmt = $pdo->prepare('INSERT INTO accounts (role_id, account_role, email, password_hash, full_name, mobile_number, account_status) VALUES (:role_id, :account_role, :email, :password_hash, :full_name, :mobile_number, :account_status) ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), mobile_number = VALUES(mobile_number), account_status = VALUES(account_status), account_role = VALUES(account_role)');
     $stmt->execute([
         'role_id' => $roleId,
         'account_role' => $roleName,
@@ -40,13 +40,14 @@ function createTestUser(string $email, string $roleName, string $fullName, strin
         'account_status' => 'active',
     ]);
 
-    return (int) $pdo->lastInsertId();
+    $existingId = (int) $pdo->query("SELECT id FROM accounts WHERE email = '$email' LIMIT 1")->fetchColumn();
+    return $existingId > 0 ? $existingId : (int) $pdo->lastInsertId();
 }
 
 function ensureJunkshopProfile(int $accountId, string $businessName): void
 {
     global $pdo;
-    $stmt = $pdo->prepare('INSERT INTO junkshop_profiles (account_id, business_name, owner_name, complete_address, operating_schedule, business_permit_reference, approval_status) VALUES (:account_id, :business_name, :owner_name, :complete_address, :operating_schedule, :business_permit_reference, :approval_status) ON DUPLICATE KEY UPDATE business_name = VALUES(business_name), approval_status = VALUES(approval_status)');
+    $stmt = $pdo->prepare('INSERT INTO junkshop_profiles (account_id, business_name, owner_name, complete_address, operating_schedule, business_permit_reference, approval_status, is_available, latitude, longitude) VALUES (:account_id, :business_name, :owner_name, :complete_address, :operating_schedule, :business_permit_reference, :approval_status, 1, :latitude, :longitude) ON DUPLICATE KEY UPDATE business_name = VALUES(business_name), approval_status = VALUES(approval_status), is_available = VALUES(is_available), latitude = VALUES(latitude), longitude = VALUES(longitude)');
     $stmt->execute([
         'account_id' => $accountId,
         'business_name' => $businessName,
@@ -55,7 +56,28 @@ function ensureJunkshopProfile(int $accountId, string $businessName): void
         'operating_schedule' => 'Monday–Friday | 8:00 AM–5:00 PM',
         'business_permit_reference' => 'BP-TEST-001',
         'approval_status' => 'approved',
+        'latitude' => 14.123,
+        'longitude' => 121.123,
     ]);
+}
+
+function cleanLifecycleData(int $sellerId, int $junkshopId): void
+{
+    global $pdo;
+
+    $pickupRequestIds = $pdo->query("SELECT id FROM pickup_requests WHERE seller_account_id = $sellerId OR junkshop_id = $junkshopId")->fetchAll(PDO::FETCH_COLUMN);
+    if (empty($pickupRequestIds)) {
+        return;
+    }
+
+    $ids = implode(',', array_map('intval', $pickupRequestIds));
+    $pdo->exec("DELETE FROM transaction_materials WHERE pickup_request_item_id IN (SELECT id FROM pickup_request_items WHERE pickup_request_id IN ($ids))");
+    $pdo->exec("DELETE FROM transactions WHERE pickup_request_id IN ($ids)");
+    $pdo->exec("DELETE FROM pickup_request_items WHERE pickup_request_id IN ($ids)");
+    $pdo->exec("DELETE FROM pickup_request_status_history WHERE pickup_request_id IN ($ids)");
+    $pdo->exec("DELETE FROM booking_status_history WHERE pickup_request_id IN ($ids)");
+    $pdo->exec("DELETE FROM junkshop_assignments WHERE pickup_request_id IN ($ids)");
+    $pdo->exec("DELETE FROM pickup_requests WHERE id IN ($ids)");
 }
 
 function ensureMaterialPrice(int $junkshopId, int $materialId, float $price): void
@@ -75,9 +97,10 @@ try {
     $adminId = createTestUser('admin.lifecycle.test@example.com', 'admin', 'Lifecycle Admin', password_hash('Password123', PASSWORD_BCRYPT));
 
     $pdo->query("UPDATE accounts SET account_status = 'active' WHERE id IN ($sellerId, $junkshopId, $adminId)");
+    cleanLifecycleData($sellerId, $junkshopId);
 
-    $materialId = (int) $pdo->query("SELECT id FROM recyclable_materials WHERE material_name = 'Paper' LIMIT 1")->fetchColumn();
-    assertTrue($materialId > 0, 'Paper material should exist for lifecycle test');
+    $materialId = (int) $pdo->query("SELECT id FROM recyclable_materials WHERE COALESCE(name, material_name) = 'Newspapers' LIMIT 1")->fetchColumn();
+    assertTrue($materialId > 0, 'Newspapers material should exist for lifecycle test');
     $secondMaterialId = (int) $pdo->query("SELECT id FROM recyclable_materials WHERE id <> $materialId ORDER BY id ASC LIMIT 1")->fetchColumn();
     assertTrue($secondMaterialId > 0, 'A second material should exist for multi-material lifecycle test');
 
@@ -86,13 +109,33 @@ try {
     ensureMaterialPrice($junkshopId, $secondMaterialId, 12.00);
 
     $pickupController = new PickupRequestController();
+    $tooLightResult = $pickupController->createRequest($sellerId, [
+        'items' => [
+            [ 'material_id' => $materialId, 'estimated_weight' => 4.9 ],
+        ],
+        'junkshop_id' => $junkshopId,
+        'contact_number' => '639123456789',
+        'pickup_address' => '123 Seller Street',
+        'approximate_distance_km' => 4.5,
+        'seller_lat' => '13.940000',
+        'seller_lng' => '121.170000',
+        'preferred_pickup_date' => date('Y-m-d', strtotime('+2 days')),
+        'preferred_pickup_time' => '10:00 AM',
+        'notes' => 'Should fail because under minimum weight',
+    ]);
+    assertTrue(($tooLightResult['success'] ?? true) === false, 'Pickup requests under 5 kg must be rejected');
+
     $createResult = $pickupController->createRequest($sellerId, [
         'items' => [
             [ 'material_id' => $materialId, 'estimated_weight' => 5.5 ],
-            [ 'material_id' => $secondMaterialId, 'estimated_weight' => 3.0 ],
+            [ 'material_id' => $secondMaterialId, 'estimated_weight' => 5.0 ],
         ],
+        'junkshop_id' => $junkshopId,
+        'contact_number' => '639123456789',
         'pickup_address' => '123 Seller Street',
         'approximate_distance_km' => 4.5,
+        'seller_lat' => '13.940000',
+        'seller_lng' => '121.170000',
         'preferred_pickup_date' => date('Y-m-d', strtotime('+2 days')),
         'preferred_pickup_time' => '10:00 AM',
         'notes' => 'Lifecycle test request',

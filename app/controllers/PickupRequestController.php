@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
+require_once __DIR__ . '/../services/MatchingEngine.php';
 require_once __DIR__ . '/../../includes/philsms_service.php';
 
 class PickupRequestController
@@ -47,8 +48,8 @@ class PickupRequestController
             static fn (array $item): float => (float) $item['estimated_weight'],
             $normalized['items']
         ));
-        if ($totalEstimatedWeight < 3) {
-            return ['success' => false, 'message' => 'The total estimated weight must be at least 3 kg to request a pickup.', 'validation_errors' => []];
+        if ($totalEstimatedWeight < 5) {
+            return ['success' => false, 'message' => 'Minimum estimated weight for pickup is 5 kg.', 'validation_errors' => []];
         }
 
         try {
@@ -96,7 +97,7 @@ class PickupRequestController
                 )->fetch();
                 if (!$material || (float) $item['estimated_weight'] <= 0) {
                     $this->db->rollBack();
-                    return ['success' => false, 'message' => 'Add at least one active material with a weight greater than zero.', 'validation_errors' => []];
+                    return ['success' => false, 'message' => 'Each selected material must have a positive estimated weight.', 'validation_errors' => []];
                 }
             }
 
@@ -163,8 +164,8 @@ class PickupRequestController
             );
             foreach ($normalized['items'] as $item) {
                 $this->db->query(
-                    'INSERT INTO pickup_request_items (pickup_request_id, material_id, estimated_weight) VALUES (:request_id, :material_id, :estimated_weight)',
-                    ['request_id' => $requestId, 'material_id' => (int) $item['material_id'], 'estimated_weight' => $item['estimated_weight']]
+                    'INSERT INTO pickup_request_items (pickup_request_id, material_id, estimated_weight, estimated_weight_kg) VALUES (:request_id, :material_id, :estimated_weight, :estimated_weight_kg)',
+                    ['request_id' => $requestId, 'material_id' => (int) $item['material_id'], 'estimated_weight' => $item['estimated_weight'], 'estimated_weight_kg' => $item['estimated_weight']]
                 );
             }
             $this->db->query(
@@ -176,6 +177,8 @@ class PickupRequestController
 
             if ($requestId > 0) {
                 StatusLogger::logChange($requestId, null, 'Pending Request', 'Seller', (int) $sellerAccountId);
+                $materialIds = array_values(array_unique(array_map(static fn (array $item): int => (int) ($item['material_id'] ?? 0), $normalized['items'])));
+                MatchingEngine::onNewPickupRequestCreated($requestId, $materialIds, (float) $normalized['approximate_distance_km']);
             }
 
             return [
@@ -207,8 +210,8 @@ class PickupRequestController
                 COALESCE(NULLIF(SUM(pri.actual_weight), 0), (SELECT SUM(tm.actual_weight_kg) FROM transaction_materials tm JOIN transactions tx ON tx.id = tm.transaction_id WHERE tx.pickup_request_id = pr.id AND tm.accepted = 1), 0) AS actual_weight,
                 COALESCE(jp.business_name, junkshop.full_name, 'Junkshop') AS junkshop_name,
                 COUNT(pri.id) AS item_count,
-                COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
-                GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+                COALESCE(SUM(COALESCE(pri.estimated_weight_kg, pri.estimated_weight)), 0) AS estimated_total_weight,
+                GROUP_CONCAT(DISTINCT CONCAT(COALESCE(NULLIF(rm.name, ''), rm.material_name), ' (', FORMAT(COALESCE(pri.estimated_weight_kg, pri.estimated_weight), 2), ' kg)') ORDER BY COALESCE(NULLIF(rm.name, ''), rm.material_name) SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
              LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
              LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
@@ -246,8 +249,8 @@ class PickupRequestController
                       t.pickup_fee AS final_pickup_fee,
                       t.ecopick_service_fee AS final_service_fee,
                       t.final_seller_amount AS final_net_amount,
-                    pr.created_at, pr.updated_at, pri.id AS item_id, pri.material_id, rm.material_name, rm.category,
-                    rm.unit_of_measure, pri.estimated_weight
+                    pr.created_at, pr.updated_at, pri.id AS item_id, pri.material_id, COALESCE(NULLIF(rm.name, ''), rm.material_name) AS material_name, rm.category,
+                    rm.unit_of_measure, COALESCE(pri.estimated_weight_kg, pri.estimated_weight) AS estimated_weight
              FROM pickup_requests pr
              JOIN accounts a ON a.id = pr.seller_account_id
                     JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0
@@ -275,7 +278,7 @@ class PickupRequestController
         if (!empty($itemIds)) {
             $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
             $snapshotRows = $this->db->query(
-                'SELECT pri.id, COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> \'Pending Request\' THEN jmp.buying_price END) AS matched_price_per_kg, COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> \'Pending Request\' THEN ROUND(pri.estimated_weight * jmp.buying_price, 2) END) AS estimated_value, tm.final_material_value AS actual_value, COALESCE(tm.`condition`, pri.material_condition) AS material_condition, pri.estimated_buying_price_per_kg, pri.estimated_material_value, pri.estimate_snapshot_at FROM pickup_request_items pri JOIN pickup_requests pr ON pr.id = pri.pickup_request_id LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id AND tm.accepted = 1 WHERE pri.id IN (' . $placeholders . ') AND pri.is_removed = 0 ORDER BY tm.id DESC',
+                'SELECT pri.id, COALESCE(tm.buying_price_per_kg, pri.estimated_buying_price_per_kg, CASE WHEN pr.current_status <> \'Pending Request\' THEN jmp.buying_price END) AS matched_price_per_kg, COALESCE(tm.final_material_value, pri.estimated_material_value, CASE WHEN pr.current_status <> \'Pending Request\' THEN ROUND(COALESCE(pri.estimated_weight_kg, pri.estimated_weight) * jmp.buying_price, 2) END) AS estimated_value, tm.final_material_value AS actual_value, COALESCE(tm.`condition`, pri.material_condition) AS material_condition, pri.estimated_buying_price_per_kg, pri.estimated_material_value, pri.estimate_snapshot_at FROM pickup_request_items pri JOIN pickup_requests pr ON pr.id = pri.pickup_request_id LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 LEFT JOIN transaction_materials tm ON tm.pickup_request_item_id = pri.id AND tm.accepted = 1 WHERE pri.id IN (' . $placeholders . ') AND pri.is_removed = 0 ORDER BY tm.id DESC',
                 $itemIds
             )->fetchAll();
             foreach ($snapshotRows as $snapshotRow) {
@@ -449,8 +452,8 @@ class PickupRequestController
                 "SELECT pr.id, pr.booking_reference, pr.current_status, a.full_name AS seller_name, a.email AS seller_email,
                     jp.business_name AS junkshop_name,
                     pr.contact_number, pr.pickup_address, pr.preferred_pickup_date, pr.preferred_pickup_time,
-                    pr.photo_path, pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(pri.estimated_weight), 0) AS estimated_total_weight,
-                    GROUP_CONCAT(DISTINCT CONCAT(rm.material_name, ' (', FORMAT(pri.estimated_weight, 2), ' kg)') ORDER BY rm.material_name SEPARATOR ', ') AS materials_summary
+                    pr.photo_path, pr.notes, pr.created_at, pr.updated_at, COALESCE(SUM(COALESCE(pri.estimated_weight_kg, pri.estimated_weight)), 0) AS estimated_total_weight,
+                    GROUP_CONCAT(DISTINCT CONCAT(COALESCE(NULLIF(rm.name, ''), rm.material_name), ' (', FORMAT(COALESCE(pri.estimated_weight_kg, pri.estimated_weight), 2), ' kg)') ORDER BY COALESCE(NULLIF(rm.name, ''), rm.material_name) SEPARATOR ', ') AS materials_summary
              FROM pickup_requests pr
              JOIN accounts a ON a.id = pr.seller_account_id
              LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
@@ -473,8 +476,18 @@ class PickupRequestController
                     $errors[] = "Choose a recyclable material for row {$row}.";
                 }
                 if (!is_numeric($item['estimated_weight'] ?? null) || (float) $item['estimated_weight'] <= 0) {
-                    $errors[] = "Estimated weight for row {$row} must be greater than zero.";
+                    $errors[] = "Enter a positive estimated weight for row {$row}.";
                 }
+            }
+        }
+
+        if (empty($errors) && !empty($data['items']) && is_array($data['items'])) {
+            $totalWeight = array_sum(array_map(
+                static fn (array $item): float => (float) ($item['estimated_weight'] ?? 0),
+                $data['items']
+            ));
+            if ($totalWeight < 5.0) {
+                $errors[] = 'Minimum total estimated weight for pickup is 5 kg.';
             }
         }
 

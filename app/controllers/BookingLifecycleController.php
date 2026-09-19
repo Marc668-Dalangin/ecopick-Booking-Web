@@ -179,7 +179,7 @@ class BookingLifecycleController
     private function getEstimatedNetAmount(int $pickupRequestId): float
     {
         $row = $this->db->query(
-            'SELECT COALESCE(SUM(pri.estimated_weight * COALESCE(jmp.buying_price, 0)), 0) AS gross_amount, pr.pickup_fee, COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct FROM pickup_requests pr LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0 LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 WHERE pr.id = :pickup_request_id GROUP BY pr.id',
+            'SELECT COALESCE(SUM(COALESCE(pri.estimated_weight_kg, pri.estimated_weight) * COALESCE(jmp.buying_price, 0)), 0) AS gross_amount, pr.pickup_fee, COALESCE((SELECT config_value FROM fee_configurations WHERE config_key = \'ecopick_service_fee_pct\' LIMIT 1), 5.00) AS service_fee_pct FROM pickup_requests pr LEFT JOIN pickup_request_items pri ON pri.pickup_request_id = pr.id AND pri.is_removed = 0 LEFT JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = pr.junkshop_id AND jmp.material_id = pri.material_id AND jmp.available = 1 WHERE pr.id = :pickup_request_id GROUP BY pr.id',
             ['pickup_request_id' => $pickupRequestId]
         )->fetch();
         if (!$row) {
@@ -242,7 +242,7 @@ class BookingLifecycleController
         if ($totalActualWeight < 3) {
             return ['success' => false, 'message' => 'The total actual weight must be at least 3 kg to complete this transaction.'];
         }
-        if ($paymentMethod !== 'Cash' || !in_array($paymentStatus, ['Unpaid', 'Paid'], true)) {
+        if ($paymentMethod !== 'Cash' || !in_array($paymentStatus, ['Paid'], true)) {
             return ['success' => false, 'message' => 'A valid payment method and payment status are required.'];
         }
 

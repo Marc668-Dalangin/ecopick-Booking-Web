@@ -107,12 +107,17 @@ CREATE TABLE IF NOT EXISTS preferred_junkshops (
 CREATE TABLE IF NOT EXISTS recyclable_materials (
     id INT PRIMARY KEY AUTO_INCREMENT,
     material_name VARCHAR(100) NOT NULL,
-    category VARCHAR(80) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    description TEXT NULL,
+    examples TEXT NULL,
+    preparation_notes TEXT NULL,
     unit_of_measure VARCHAR(20) NOT NULL DEFAULT 'kg',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_material_name (material_name),
+    UNIQUE KEY uq_category_name (category, name),
     INDEX idx_category (category),
     INDEX idx_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -180,12 +185,14 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
 
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lat DECIMAL(10,8) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lng DECIMAL(11,8) NULL DEFAULT NULL;
+ALTER TABLE pickup_requests ADD INDEX IF NOT EXISTS idx_seller_junkshop_status (seller_account_id, junkshop_id, current_status);
 
 CREATE TABLE IF NOT EXISTS pickup_request_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
     pickup_request_id INT NOT NULL,
     material_id INT NOT NULL,
     estimated_weight DECIMAL(10,2) NOT NULL,
+    estimated_weight_kg DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     estimated_buying_price_per_kg DECIMAL(10,2) NULL,
     estimated_material_value DECIMAL(10,2) NULL,
     estimate_snapshot_at DATETIME NULL,
@@ -197,7 +204,7 @@ CREATE TABLE IF NOT EXISTS pickup_request_items (
     INDEX idx_pickup_item_request (pickup_request_id),
     INDEX idx_pickup_item_material (material_id),
     CONSTRAINT fk_pickup_item_request FOREIGN KEY (pickup_request_id) REFERENCES pickup_requests(id) ON DELETE CASCADE,
-    CONSTRAINT fk_pickup_item_material FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE RESTRICT
+    CONSTRAINT fk_pickup_item_material FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pickup_request_status_history (
@@ -506,6 +513,22 @@ ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_endpoint VARCHAR(255) 
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS';
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS sms_enabled TINYINT(1) NOT NULL DEFAULT 1;
 ALTER TABLE concerns ADD COLUMN IF NOT EXISTS account_id INT NULL;
+ALTER TABLE recyclable_materials ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE recyclable_materials ADD COLUMN IF NOT EXISTS description TEXT NULL;
+ALTER TABLE recyclable_materials ADD COLUMN IF NOT EXISTS examples TEXT NULL;
+ALTER TABLE recyclable_materials ADD COLUMN IF NOT EXISTS preparation_notes TEXT NULL;
+ALTER TABLE recyclable_materials ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'MISCELLANEOUS';
+ALTER TABLE pickup_request_items ADD COLUMN IF NOT EXISTS estimated_weight_kg DECIMAL(10,2) NOT NULL DEFAULT 0.00;
+UPDATE pickup_request_items SET estimated_weight_kg = estimated_weight WHERE estimated_weight_kg = 0 AND estimated_weight > 0;
+ALTER TABLE pickup_request_items DROP FOREIGN KEY IF EXISTS fk_pickup_item_material;
+ALTER TABLE pickup_request_items ADD CONSTRAINT fk_pickup_item_material FOREIGN KEY (material_id) REFERENCES recyclable_materials(id) ON DELETE CASCADE;
+UPDATE recyclable_materials SET name = COALESCE(NULLIF(name, ''), material_name), category = COALESCE(NULLIF(category, ''), 'MISCELLANEOUS') WHERE name = '' OR category = '' OR category IS NULL;
+ALTER TABLE recyclable_materials ADD UNIQUE KEY IF NOT EXISTS uq_category_name (category, name);
+DELETE t1 FROM recyclable_materials t1
+JOIN recyclable_materials t2
+  ON t1.id > t2.id
+ AND t1.category = t2.category
+ AND t1.name = t2.name;
 UPDATE concerns SET account_id = reporter_account_id WHERE account_id IS NULL AND reporter_account_id IS NOT NULL;
 
 -- STAGE 3: Seed Data Inserts
@@ -531,18 +554,37 @@ ON DUPLICATE KEY UPDATE
     account_status = VALUES(account_status),
     account_role = VALUES(account_role);
 
-INSERT INTO recyclable_materials (id, material_name, category, unit_of_measure, is_active, created_at, updated_at)
+UPDATE recyclable_materials
+SET is_active = 0
+WHERE material_name NOT IN (
+    'Newspapers',
+    'Corrugated Cardboard',
+    'PET Bottles',
+    'HDPE Plastic',
+    'Aluminum Cans',
+    'Tin / Steel Cans',
+    'Scrap Metal',
+    'Glass Bottles',
+    'Glass Containers'
+);
+
+INSERT INTO recyclable_materials (id, material_name, name, category, description, examples, preparation_notes, unit_of_measure, is_active, created_at, updated_at)
 VALUES
-    (1, 'Plastic', 'Plastic', 'kg', 1, NOW(), NOW()),
-    (2, 'Paper', 'Paper', 'kg', 1, NOW(), NOW()),
-    (3, 'Cardboard', 'Paper', 'kg', 1, NOW(), NOW()),
-    (4, 'Aluminum Cans', 'Metal', 'kg', 1, NOW(), NOW()),
-    (5, 'Metal', 'Metal', 'kg', 1, NOW(), NOW()),
-    (6, 'Glass', 'Glass', 'kg', 1, NOW(), NOW()),
-    (7, 'E-waste', 'Electronics', 'kg', 1, NOW(), NOW())
+    (1, 'Newspapers', 'Newspapers', 'PAPER', 'Used newspapers made primarily of paper, including old daily newspapers, community newspapers, and similar printed news materials.', 'old newspapers, newspaper sheets, newspaper inserts.', 'Keep dry and free from food, oil, and excessive moisture.', 'kg', 1, NOW(), NOW()),
+    (2, 'Corrugated Cardboard', 'Corrugated Cardboard', 'CARDBOARD', 'Thick cardboard consisting of multiple paper layers, commonly used for shipping and packaging.', 'delivery boxes, shipping boxes, appliance boxes, grocery boxes.', 'Flatten the boxes and remove excessive tape, plastic, foam, and other non-cardboard materials when possible.', 'kg', 1, NOW(), NOW()),
+    (3, 'PET Bottles', 'PET Bottles', 'PLASTIC', 'Plastic bottles commonly made from PET (Polyethylene Terephthalate), frequently used for beverages.', 'water bottles, soft-drink bottles, some juice bottles.', 'Empty and, when practical, rinse the bottles. Caps may be handled separately depending on the junkshop.', 'kg', 1, NOW(), NOW()),
+    (4, 'HDPE Plastic', 'HDPE Plastic', 'PLASTIC', 'Durable, rigid plastic commonly used for household and cleaning-product containers.', 'detergent bottles, shampoo bottles, some cleaning-product containers, plastic jugs. (Identification: Often marked with #2).', 'Empty the containers and remove excessive contents or contaminants.', 'kg', 1, NOW(), NOW()),
+    (5, 'Aluminum Cans', 'Aluminum Cans', 'METAL', 'Lightweight cans primarily made from aluminum.', 'soft-drink cans, beer cans, some food and beverage cans.', 'Empty the cans and remove excessive contaminants when possible.', 'kg', 1, NOW(), NOW()),
+    (6, 'Tin / Steel Cans', 'Tin / Steel Cans', 'METAL', 'Metal cans made primarily from steel, sometimes coated with tin.', 'canned-food containers, food cans, some beverage cans, paint cans depending on the junkshop.', 'Empty and reasonably clean the cans. Do not include containers that held hazardous or chemical substances unless specifically accepted by the junkshop.', 'kg', 1, NOW(), NOW()),
+    (7, 'Scrap Metal', 'Scrap Metal', 'METAL', 'Non-hazardous discarded metal materials that can be recovered and sold as scrap.', 'metal pieces, wires, metal frames, old metal household components, and other non-hazardous metal items.', 'The junkshop may classify scrap metal further according to the type of metal and its condition.', 'kg', 1, NOW(), NOW()),
+    (8, 'Glass Bottles', 'Glass Bottles', 'GLASS', 'Glass bottles commonly used for beverages and other products.', 'beverage bottles, condiment bottles, sauce bottles, and other glass bottles.', 'Empty the bottles and handle them carefully to prevent breakage.', 'kg', 1, NOW(), NOW()),
+    (9, 'Glass Containers', 'Glass Containers', 'GLASS', 'Other household or commercial containers primarily made from glass.', 'glass jars, food jars, storage containers, and similar glass packaging.', 'Acceptance may vary depending on the type, color, condition, and recycling requirements of the junkshop.', 'kg', 1, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
-    material_name = VALUES(material_name),
+    name = VALUES(name),
     category = VALUES(category),
+    description = VALUES(description),
+    examples = VALUES(examples),
+    preparation_notes = VALUES(preparation_notes),
     unit_of_measure = VALUES(unit_of_measure),
     is_active = VALUES(is_active),
     updated_at = CURRENT_TIMESTAMP;

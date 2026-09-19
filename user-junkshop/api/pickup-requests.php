@@ -37,12 +37,16 @@ if ($method === 'POST') {
 
     if ($action === 'create') {
         $items = [];
-        $materialIds = (array) ($_POST['material_id'] ?? []);
-        $weights = (array) ($_POST['estimated_weight'] ?? []);
-        foreach ($materialIds as $index => $materialId) {
+        foreach ((array) ($_POST['materials'] ?? []) as $materialId => $materialData) {
+            if (!is_array($materialData)) {
+                continue;
+            }
+            if ((string) ($materialData['selected'] ?? '') !== '1') {
+                continue;
+            }
             $items[] = [
                 'material_id' => $materialId,
-                'estimated_weight' => $weights[$index] ?? '',
+                'estimated_weight' => $materialData['weight'] ?? '',
             ];
         }
 

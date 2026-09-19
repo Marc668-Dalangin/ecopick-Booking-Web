@@ -15,8 +15,20 @@ if (Auth::userRole() !== 'seller') {
 }
 
 $controller = new MaterialPriceController();
-$junkshops = $controller->listApprovedJunkshopsWithPrices(Auth::userId());
+$sellerAccountId = (int) Auth::userId();
+$junkshops = $controller->listApprovedJunkshopsWithPrices($sellerAccountId);
 $materials = $controller->listActiveMaterials();
+$pendingJunkshopIds = array_fill_keys(array_map(
+    static fn (array $row): int => (int) $row['junkshop_id'],
+    Database::getInstance()->query(
+        "SELECT DISTINCT junkshop_id
+         FROM pickup_requests
+         WHERE seller_account_id = :seller_id
+           AND junkshop_id IS NOT NULL
+           AND current_status IN ('Pending Request', 'Matched', 'Accepted', 'Scheduled', 'For Pickup')",
+        ['seller_id' => $sellerAccountId]
+    )->fetchAll()
+), true);
 $feeConfigs = FeeCalculator::getConfigs();
 $perKmRate = (float)($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
 $serviceFeePct = (float)($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
@@ -133,8 +145,9 @@ ob_start();
                                     <button type="button" class="btn <?php echo !empty($junkshop['is_preferred']) ? 'btn-outline-secondary' : 'btn-outline-primary'; ?> toggle-preferred" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-is-preferred="<?php echo !empty($junkshop['is_preferred']) ? '1' : '0'; ?>">
                                         <?php echo !empty($junkshop['is_preferred']) ? 'Remove Preferred' : 'Set as Preferred'; ?>
                                     </button>
-                                    <?php if (!empty($junkshop['has_active_request'])): ?>
-                                        <button type="button" class="btn btn-secondary disabled" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" disabled>
+                                    <?php $hasPendingRequest = isset($pendingJunkshopIds[(int)($junkshop['junkshop_account_id'] ?? 0)]); ?>
+                                    <?php if ($hasPendingRequest): ?>
+                                        <button type="button" class="btn btn-secondary disabled disabled-request-btn" data-junkshop-id="<?php echo (int)($junkshop['junkshop_account_id'] ?? 0); ?>" data-junkshop-lat="<?php echo htmlspecialchars((string)($junkshop['latitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-lng="<?php echo htmlspecialchars((string)($junkshop['longitude'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-junkshop-address="<?php echo htmlspecialchars((string)($junkshop['address'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" disabled>
                                             <i class="bi bi-clock-history"></i> Request Pending
                                         </button>
                                     <?php elseif (!$isAvailable): ?>
@@ -181,11 +194,58 @@ ob_start();
                     <small id="pickup-fee-note" class="text-muted d-block mt-1">Note: Pickup fee rate is ₱<?php echo number_format($perKmRate, 2); ?> per km based on active system configuration.</small>
 
                     <div class="mb-4">
-                        <h6 class="fw-bold mb-2">Materials</h6>
-                        <div id="material-rows"></div>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-material-row">
-                            <i class="bi bi-plus-lg"></i> Add material
-                        </button>
+                        <h6 class="fw-bold mb-2">Select Materials</h6>
+                        <div class="accordion accordion-flush mb-3" id="pickup-material-catalog">
+                            <?php
+                            $catalogCategories = ['PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'];
+                            foreach ($catalogCategories as $catalogCategory):
+                                $catalogMaterials = array_values(array_filter($materials, static function (array $material) use ($catalogCategory): bool {
+                                    return strtoupper((string)($material['category'] ?? '')) === $catalogCategory;
+                                }));
+                                $catalogCollapseId = 'pickup-material-' . strtolower($catalogCategory);
+                            ?>
+                                <div class="accordion-item border rounded mb-2 overflow-hidden">
+                                    <h6 class="accordion-header">
+                                        <button class="accordion-button collapsed py-2 px-3" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo $catalogCollapseId; ?>">
+                                            <?php echo Validator::escape($catalogCategory); ?>
+                                        </button>
+                                    </h6>
+                                    <div id="<?php echo $catalogCollapseId; ?>" class="accordion-collapse collapse" data-bs-parent="#pickup-material-catalog">
+                                        <div class="accordion-body p-0">
+                                            <?php if (empty($catalogMaterials)): ?>
+                                                <div class="p-3 text-muted small">No materials available in this category.</div>
+                                            <?php else: ?>
+                                                <?php foreach ($catalogMaterials as $catalogMaterial): ?>
+                                                    <?php $catalogMaterialId = (int)($catalogMaterial['id'] ?? 0); $catalogInfoId = 'material-info-' . $catalogMaterialId; ?>
+                                                    <div class="border-bottom p-3">
+                                                        <div class="d-flex justify-content-between align-items-center gap-2">
+                                                            <div class="form-check mb-0">
+                                                                <input class="form-check-input material-checkbox" type="checkbox" name="materials[<?php echo $catalogMaterialId; ?>][selected]" value="1" data-id="<?php echo $catalogMaterialId; ?>" data-name="<?php echo Validator::escape($catalogMaterial['material_name'] ?? ''); ?>" id="<?php echo $catalogInfoId; ?>-check">
+                                                                <label class="form-check-label" for="<?php echo $catalogInfoId; ?>-check"><?php echo Validator::escape($catalogMaterial['material_name'] ?? ''); ?></label>
+                                                            </div>
+                                                            <a class="btn btn-link btn-sm p-0" data-bs-toggle="collapse" href="#<?php echo $catalogInfoId; ?>">View Info</a>
+                                                        </div>
+                                                        <div class="collapse mt-2" id="<?php echo $catalogInfoId; ?>">
+                                                            <div class="small text-muted">
+                                                                <div><strong>Description:</strong> <?php echo nl2br(Validator::escape((string)($catalogMaterial['description'] ?? ''))); ?></div>
+                                                                <div class="mt-1"><strong>Examples:</strong> <?php echo nl2br(Validator::escape((string)($catalogMaterial['examples'] ?? ''))); ?></div>
+                                                                <div class="mt-1"><strong>Preparation Notes:</strong> <?php echo nl2br(Validator::escape((string)($catalogMaterial['preparation_notes'] ?? ''))); ?></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0">Selected Materials &amp; Estimated Quantity</h6>
+                            <span class="badge bg-primary-subtle text-primary" id="selected-material-weight-total">0.0 kg</span>
+                        </div>
+                        <div id="selected-materials-list" class="d-flex flex-column gap-2"></div>
+                        <div id="material-selection-error" class="invalid-feedback d-block d-none" role="alert">Minimum total estimated weight for pickup is 5 kg.</div>
                     </div>
 
                     <div class="card border-0 bg-light-subtle mb-4">
@@ -262,7 +322,8 @@ ob_start();
         const materialFilter = document.getElementById('filter-material');
         const cards = Array.from(document.querySelectorAll('.seller-junkshop-card'));
         const form = document.getElementById('pickup-request-form');
-        const rows = document.getElementById('material-rows');
+        const selectedMaterialsList = document.getElementById('selected-materials-list');
+        const materialSelectionError = document.getElementById('material-selection-error');
         const status = document.getElementById('pickup-request-form-status');
         const submitButton = document.getElementById('submit-pickup-request');
         const resetSubmitButton = function () {
@@ -319,7 +380,6 @@ ob_start();
             overlay?.classList.remove('show');
         }
 
-        const materialOptions = <?php echo json_encode($materials, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         const pricesByJunkshop = <?php
             $pricesByJunkshop = [];
             foreach ($rowsByJunkshop as $junkshopId => $junkshopRows) {
@@ -337,6 +397,7 @@ ob_start();
         const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
         const preferredApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/toggle_preferred_junkshop.php';
         const materialsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_junkshop_materials.php';
+        const pendingStatusesUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_pending_statuses.php';
         const csrfToken = '<?php echo CSRF::token(); ?>';
         const getLocationButton = document.getElementById('btn-get-location');
         const pickupAddress = document.getElementById('pickup_address');
@@ -349,7 +410,6 @@ ob_start();
         const contactNumberInput = document.getElementById('contact_number');
         const locationErrorNote = document.getElementById('location-error-note');
         const locationErrorMessage = '<strong>Location Access Required:</strong> Please ensure your device GPS is turned ON in settings and location permissions are ALLOWED for this website in your browser settings. Once enabled, reload the page to view your location and exact distance.';
-        let rowIndex = 0;
         let selectedPrices = {};
         let distanceInKm = 0;
 
@@ -646,27 +706,18 @@ ob_start();
             status.classList.remove('d-none');
         }
 
-        function refreshMaterialChoices() {
-            const selected = Array.from(document.querySelectorAll('.material-select')).map(function (select) { return select.value; }).filter(Boolean);
-            document.querySelectorAll('.material-select').forEach(function (select) {
-                select.querySelectorAll('option').forEach(function (option) {
-                    option.disabled = !!(option.value && selected.includes(option.value) && option.value !== select.value);
-                });
-            });
-        }
-
         function updateEstimateSummary() {
             let materialTotal = 0;
-            document.querySelectorAll('.material-row').forEach(function (row) {
-                const select = row.querySelector('.material-select');
-                const weightInput = row.querySelector('.weight-input');
-                if (!select || !weightInput) return;
-                const materialId = Number(select.value || 0);
+            let totalWeight = 0;
+            document.querySelectorAll('.material-weight-input').forEach(function (weightInput) {
+                const materialId = Number(weightInput.dataset.materialId || 0);
                 const weight = Number(weightInput.value || 0);
                 const price = materialId && selectedPrices[materialId] ? Number(selectedPrices[materialId]) : 0;
+                totalWeight += Number.isFinite(weight) ? weight : 0;
                 materialTotal += weight * price;
             });
 
+            document.getElementById('selected-material-weight-total').textContent = totalWeight.toFixed(1) + ' kg';
             const wholeKm = Math.floor(distanceInKm);
             const pickupFee = wholeKm * perKmRate;
             const serviceFee = materialTotal * (serviceFeePct / 100);
@@ -677,28 +728,74 @@ ob_start();
             document.getElementById('calc-estimated-total').textContent = formatMoney(estimatedTotal);
         }
 
-        function markJunkshopRequestPending(junkshopId) {
-            const button = document.querySelector('button.request-pickup-btn[data-junkshop-id="' + CSS.escape(String(junkshopId)) + '"]');
-            if (!button) return;
-
-            button.classList.remove('btn-primary', 'request-pickup-btn');
-            button.classList.add('btn-secondary', 'disabled');
-            button.disabled = true;
-            button.innerHTML = '<i class="bi bi-clock-history"></i> Request Pending';
+        function renderSelectedMaterial(materialCheckbox) {
+            const materialId = Number(materialCheckbox.dataset.id || 0);
+            const materialName = materialCheckbox.dataset.name || materialCheckbox.nextElementSibling?.textContent || 'Material';
+            const rowId = 'selected-material-' + materialId;
+            const existingRow = document.getElementById(rowId);
+            if (materialCheckbox.checked && !existingRow) {
+                const row = document.createElement('div');
+                row.id = rowId;
+                row.className = 'row g-2 align-items-center border rounded p-2 selected-material-row';
+                row.innerHTML = '<div class="col-md-6"><span class="fw-semibold">' + escapeHtml(materialName) + '</span><span class="badge bg-light text-dark ms-2">Info in catalog</span></div>'
+                    + '<div class="col-md-6"><label class="visually-hidden" for="material-weight-' + materialId + '">Estimated weight for ' + escapeHtml(materialName) + '</label><div class="input-group"><input type="number" id="material-weight-' + materialId + '" name="materials[' + materialId + '][weight]" class="form-control material-weight-input" data-material-id="' + materialId + '" min="0.1" step="0.1" placeholder="Weight in kg" required><span class="input-group-text">kg</span></div></div>';
+                selectedMaterialsList.appendChild(row);
+                row.querySelector('.material-weight-input').addEventListener('input', updateEstimateSummary);
+            } else if (!materialCheckbox.checked && existingRow) {
+                existingRow.remove();
+            }
+            materialSelectionError.classList.add('d-none');
+            updateEstimateSummary();
         }
 
-        function addMaterialRow() {
-            const row = document.createElement('div');
-            row.className = 'row g-2 align-items-end mb-3 material-row';
-            row.dataset.index = String(rowIndex++);
-            row.innerHTML = '<div class="col-md-7"><label class="form-label" for="material-' + row.dataset.index + '">Material <span class="text-danger">*</span></label><select class="form-select material-select" id="material-' + row.dataset.index + '" name="material_id[]" required><option value="">Choose material</option>' + materialOptions.map(function (material) { return '<option value="' + material.id + '">' + material.material_name + ' (' + material.unit_of_measure + ')</option>'; }).join('') + '</select></div><div class="col-md-3"><label class="form-label" for="weight-' + row.dataset.index + '">Estimated kg <span class="text-danger">*</span></label><input class="form-control weight-input" id="weight-' + row.dataset.index + '" name="estimated_weight[]" type="number" min="3" step="0.01" required placeholder="0.00"></div><div class="col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-material" aria-label="Remove material row"><i class="bi bi-trash"></i></button></div>';
-            rows.appendChild(row);
-            refreshMaterialChoices();
-            row.querySelectorAll('.material-select, .weight-input').forEach(function (input) {
-                input.addEventListener('input', updateEstimateSummary);
-                input.addEventListener('change', updateEstimateSummary);
+        function resetSelectedMaterials() {
+            document.querySelectorAll('.material-checkbox').forEach(function (checkbox) {
+                checkbox.checked = false;
             });
+            selectedMaterialsList.innerHTML = '';
+            materialSelectionError.classList.add('d-none');
             updateEstimateSummary();
+        }
+
+        function getRequestButton(junkshopId) {
+            const card = document.querySelector('.seller-junkshop-card[data-junkshop-id="' + CSS.escape(String(junkshopId)) + '"]');
+            return card?.querySelector('button.request-pickup-btn, button.disabled-request-btn');
+        }
+
+        function setJunkshopRequestState(junkshopId, isPending) {
+            const button = getRequestButton(junkshopId);
+            if (!button) return;
+
+            if (isPending) {
+                button.classList.remove('btn-primary', 'request-pickup-btn');
+                button.classList.add('btn-secondary', 'disabled', 'disabled-request-btn');
+                button.disabled = true;
+                button.innerHTML = '<i class="bi bi-clock-history"></i> Request Pending';
+                return;
+            }
+
+            button.classList.remove('btn-secondary', 'disabled', 'disabled-request-btn');
+            button.classList.add('btn-primary', 'request-pickup-btn');
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-plus-circle"></i> Request Pickup';
+        }
+
+        async function refreshPendingRequestStates() {
+            try {
+                const response = await fetch(pendingStatusesUrl, { credentials: 'same-origin', cache: 'no-store' });
+                const payload = await response.json();
+                if (payload.session_expired && payload.redirect) {
+                    window.location.href = payload.redirect;
+                    return;
+                }
+                if (!response.ok || !payload.success) return;
+                const pendingIds = new Set((payload.pending_junkshop_ids || []).map(function (id) { return String(id); }));
+                document.querySelectorAll('.seller-junkshop-card[data-junkshop-id]').forEach(function (card) {
+                    setJunkshopRequestState(card.dataset.junkshopId, pendingIds.has(String(card.dataset.junkshopId)));
+                });
+            } catch (error) {
+                console.warn('Unable to refresh pickup request statuses.', error);
+            }
         }
 
         nameFilter?.addEventListener('input', applySellerFilters);
@@ -731,18 +828,17 @@ ob_start();
             });
         });
 
-        document.querySelectorAll('.request-pickup-btn').forEach(function (button) {
-            button.addEventListener('click', function () {
+        document.getElementById('seller-price-list')?.addEventListener('click', function (event) {
+            const button = event.target.closest('.request-pickup-btn');
+            if (!button || button.disabled) return;
                 const selectedJunkshopId = button.dataset.junkshopId || '0';
                 status.classList.add('d-none');
                 form.reset();
+                resetSelectedMaterials();
                 hiddenJunkshopId.value = selectedJunkshopId;
                 selectJunkshopLocation(button);
                 selectedPrices = pricesByJunkshop[selectedJunkshopId] || {};
-                rows.innerHTML = '';
-                addMaterialRow();
                 pickupModal.show();
-            });
         });
 
         junkshopSelect?.addEventListener('change', function () {
@@ -750,24 +846,13 @@ ob_start();
             if (!selectedOption || !junkshopSelect.value) return;
             hiddenJunkshopId.value = junkshopSelect.value;
             selectedPrices = pricesByJunkshop[junkshopSelect.value] || {};
-            rows.innerHTML = '';
-            addMaterialRow();
+            resetSelectedMaterials();
             junkshopLocationInfo.textContent = 'Junkshop location: ' + (selectedOption.getAttribute('data-address') || 'Address unavailable');
             calculateDistance();
         });
 
-        document.getElementById('add-material-row').addEventListener('click', addMaterialRow);
-        rows.addEventListener('change', function () { refreshMaterialChoices(); updateEstimateSummary(); });
-        rows.addEventListener('click', function (event) {
-            const button = event.target.closest('.remove-material');
-            if (!button) return;
-            if (document.querySelectorAll('.material-row').length === 1) {
-                showStatus('At least one recyclable material is required.', false, []);
-                return;
-            }
-            button.closest('.material-row').remove();
-            refreshMaterialChoices();
-            updateEstimateSummary();
+        document.querySelectorAll('.material-checkbox').forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () { renderSelectedMaterial(checkbox); });
         });
 
         form.addEventListener('submit', async function (event) {
@@ -780,20 +865,13 @@ ob_start();
                 return;
             }
 
-            const totalEstimatedWeight = Array.from(form.querySelectorAll('.material-row')).reduce(function (total, row) {
-                const material = row.querySelector('.material-select');
-                const weight = row.querySelector('.weight-input');
-                const value = Number(weight?.value);
-                return material?.value && Number.isFinite(value) && value > 0 ? total + value : total;
+            const checkedMaterials = Array.from(document.querySelectorAll('.material-checkbox:checked'));
+            const totalEstimatedWeight = Array.from(document.querySelectorAll('.material-weight-input')).reduce(function (total, input) {
+                return total + (Number(input.value) || 0);
             }, 0);
-            if (totalEstimatedWeight < 3) {
-                showStatus('The total estimated weight must be at least 3 kg to request a pickup.', false, []);
-                return;
-            }
-
-            const selected = Array.from(document.querySelectorAll('.material-select')).map(function (select) { return select.value; }).filter(Boolean);
-            if (selected.length !== new Set(selected).size) {
-                showStatus('Please choose each recyclable material only once.', false, []);
+            if (!checkedMaterials.length || totalEstimatedWeight < 5) {
+                materialSelectionError.classList.remove('d-none');
+                showStatus('Minimum total estimated weight for pickup is 5 kg.', false, []);
                 return;
             }
 
@@ -839,13 +917,13 @@ ob_start();
                     return;
                 }
 
-                markJunkshopRequestPending(submittedJunkshopId);
+                setJunkshopRequestState(submittedJunkshopId, true);
                 const toastMessage = document.querySelector('[data-toast-message]');
                 toastMessage.textContent = 'Pickup request submitted successfully for selected partner junkshop.';
                 successToast.show();
                 form.reset();
-                rows.innerHTML = '';
-                addMaterialRow();
+                resetSelectedMaterials();
+                updateEstimateSummary();
                 resetSubmitButton();
                 clearActionButtonLoading(confirmButton);
                 pickupModal.hide();
@@ -871,7 +949,8 @@ ob_start();
         const today = new Date();
         const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         dateField.min = localToday;
-        addMaterialRow();
+        refreshPendingRequestStates();
+        window.setInterval(refreshPendingRequestStates, 7000);
     });
 </script>
 <?php
