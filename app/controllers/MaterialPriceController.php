@@ -181,22 +181,17 @@ class MaterialPriceController
     public function getAdminPriceOverview()
     {
         return $this->db->query(
-            "SELECT jp.account_id AS junkshop_account_id, jp.business_name, jp.complete_address AS location,
+            "SELECT DISTINCT jp.account_id AS junkshop_account_id, jp.business_name, jp.complete_address AS location,
                     jp.operating_schedule, a.full_name AS contact_person, a.email, a.mobile_number,
-                    rm.id AS material_id, COALESCE(NULLIF(rm.name, ''), rm.material_name) AS material_name,
-                    rm.category, rm.description, rm.examples, rm.preparation_notes, rm.unit_of_measure,
-                    jmp.buying_price, jmp.available, jmp.id AS price_id, jmp.updated_at,
-                    stats.avg_price, stats.min_price, stats.max_price
+                    rm.id AS material_id,
+                    rm.category,
+                    COALESCE(NULLIF(rm.name, ''), rm.material_name) AS material_name,
+                    rm.description, rm.examples, rm.preparation_notes, rm.unit_of_measure, rm.is_active,
+                    jmp.buying_price, jmp.available, jmp.id AS price_id, jmp.updated_at
              FROM junkshop_profiles jp
              JOIN accounts a ON a.id = jp.account_id
              JOIN junkshop_material_prices jmp ON jmp.junkshop_account_id = jp.account_id
              JOIN recyclable_materials rm ON rm.id = jmp.material_id
-             LEFT JOIN (
-                 SELECT material_id, AVG(buying_price) AS avg_price, MIN(buying_price) AS min_price, MAX(buying_price) AS max_price
-                 FROM junkshop_material_prices
-                 WHERE available = 1
-                 GROUP BY material_id
-             ) stats ON stats.material_id = rm.id
              WHERE jp.approval_status = 'approved' AND rm.is_active = 1
              ORDER BY jp.business_name ASC,
                       FIELD(rm.category, 'PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'),
@@ -204,67 +199,16 @@ class MaterialPriceController
         )->fetchAll();
     }
 
-    public function getAdminMaterialCatalog(): array
+    public function listAdminMaterialCatalog(): array
     {
         return $this->db->query(
-            "SELECT rm.id AS material_id,
-                    rm.category,
+            "SELECT DISTINCT rm.id AS material_id, rm.category,
                     COALESCE(NULLIF(rm.name, ''), rm.material_name) AS material_name,
-                    rm.description,
-                    rm.examples,
-                    rm.preparation_notes,
-                    rm.is_active,
-                    rm.unit_of_measure,
-                    AVG(jmp.buying_price) AS avg_price,
-                    MIN(jmp.buying_price) AS min_price,
-                    MAX(jmp.buying_price) AS max_price
+                    rm.description, rm.examples, rm.preparation_notes, rm.is_active
              FROM recyclable_materials rm
-             LEFT JOIN junkshop_material_prices jmp
-                ON jmp.material_id = rm.id AND jmp.available = 1
              WHERE rm.is_active = 1
-             GROUP BY rm.id, rm.category, rm.name, rm.material_name, rm.description,
-                      rm.examples, rm.preparation_notes, rm.is_active, rm.unit_of_measure
-             ORDER BY FIELD(rm.category, 'PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'),
-                      material_name ASC"
+             ORDER BY FIELD(rm.category, 'PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'), material_name ASC"
         )->fetchAll();
-    }
-
-    public function createAdminMaterial(array $data): array
-    {
-        return $this->writeAdminMaterial('INSERT INTO recyclable_materials (material_name, name, category, description, examples, preparation_notes, unit_of_measure, is_active) VALUES (:material_name, :name, :category, :description, :examples, :preparation_notes, :unit_of_measure, 1)', $data, 'Material created successfully.');
-    }
-
-    public function updateAdminMaterial(int $materialId, array $data): array
-    {
-        $data['material_id'] = $materialId;
-        return $this->writeAdminMaterial('UPDATE recyclable_materials SET material_name = :material_name, name = :name, category = :category, description = :description, examples = :examples, preparation_notes = :preparation_notes, unit_of_measure = :unit_of_measure, updated_at = CURRENT_TIMESTAMP WHERE id = :material_id', $data, 'Material updated successfully.');
-    }
-
-    private function writeAdminMaterial(string $sql, array $data, string $successMessage): array
-    {
-        $allowedCategories = ['PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'];
-        $name = trim((string) ($data['name'] ?? ''));
-        $category = strtoupper(trim((string) ($data['category'] ?? '')));
-        if ($name === '' || !in_array($category, $allowedCategories, true)) {
-            return ['success' => false, 'message' => 'A valid category and material name are required.'];
-        }
-
-        try {
-            $this->db->query($sql, [
-                'material_id' => (int) ($data['material_id'] ?? 0),
-                'material_name' => $name,
-                'name' => $name,
-                'category' => $category,
-                'description' => trim((string) ($data['description'] ?? '')),
-                'examples' => trim((string) ($data['examples'] ?? '')),
-                'preparation_notes' => trim((string) ($data['preparation_notes'] ?? '')),
-                'unit_of_measure' => trim((string) ($data['unit_of_measure'] ?? 'kg')) ?: 'kg',
-            ]);
-            return ['success' => true, 'message' => $successMessage];
-        } catch (Throwable $exception) {
-            error_log('Admin material write error: ' . $exception->getMessage());
-            return ['success' => false, 'message' => 'Unable to save the material. The category/name may already exist.'];
-        }
     }
 
     public function getJunkshopApprovalStatus($accountId)
