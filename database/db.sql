@@ -220,6 +220,7 @@ CREATE TABLE IF NOT EXISTS fee_settings (
     renewal_fee_6_months DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     renewal_fee_1_year DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     expiration_notice_lead_days INT NOT NULL DEFAULT 1,
+    concern_cooldown_hours INT NOT NULL DEFAULT 24,
     smtp_host VARCHAR(255) NOT NULL DEFAULT 'smtp.gmail.com',
     smtp_port INT NOT NULL DEFAULT 587,
     smtp_user VARCHAR(255) NULL DEFAULT NULL,
@@ -488,10 +489,14 @@ ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) 
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending';
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_error_message TEXT NULL DEFAULT NULL;
+ALTER TABLE concerns ADD COLUMN IF NOT EXISTS is_read_admin TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS concern_cooldown_hours INT NOT NULL DEFAULT 24;
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_api_token TEXT NULL DEFAULT NULL;
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_endpoint VARCHAR(255) NULL DEFAULT 'https://dashboard.philsms.com/api/v3/sms/send';
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS';
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS sms_enabled TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE concerns ADD COLUMN IF NOT EXISTS account_id INT NULL;
+UPDATE concerns SET account_id = reporter_account_id WHERE account_id IS NULL AND reporter_account_id IS NOT NULL;
 
 -- STAGE 3: Seed Data Inserts
 
@@ -537,15 +542,16 @@ ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_endpoint VARCHAR(255) 
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS';
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS sms_enabled TINYINT(1) NOT NULL DEFAULT 1;
 
-INSERT IGNORE INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days)
-VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1);
+INSERT IGNORE INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, concern_cooldown_hours)
+VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 24);
 
 UPDATE fee_settings
 SET
+    concern_cooldown_hours = 24,
     philsms_endpoint = 'https://dashboard.philsms.com/api/v3/sms/send',
     philsms_sender_id = 'PhilSMS',
     sms_enabled = 1
-WHERE id = 1 AND (philsms_sender_id IS NULL OR philsms_sender_id = '');
+WHERE id = 1 AND (concern_cooldown_hours IS NULL OR concern_cooldown_hours = 0 OR philsms_sender_id IS NULL OR philsms_sender_id = '');
 
 INSERT INTO fee_configurations (config_key, config_value, description)
 VALUES

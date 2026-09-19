@@ -99,6 +99,7 @@ ob_start();
                             <label class="form-check-label fw-semibold" for="sms_enabled"><?php echo $smsEnabled ? 'Enabled' : 'Disabled'; ?></label>
                         </div>
                     </div>
+
                     <div class="mt-4 d-flex justify-content-end">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Settings</button>
                     </div>

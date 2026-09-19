@@ -2073,3 +2073,6 @@
 530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
 530 5.7.0 specifications. 98e67ed59e1d1-39e6299a880sm931830a91.3 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
 [18-Sep-2026 23:57:34 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 08:33:53 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[19-Sep-2026 08:33:55 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[19-Sep-2026 08:34:00 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it

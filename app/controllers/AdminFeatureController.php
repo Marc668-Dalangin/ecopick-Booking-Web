@@ -326,19 +326,113 @@ class AdminFeatureController
         return ['success' => true, 'message' => 'Renewal payment submitted for admin confirmation.'];
     }
 
+    public function getConcernCooldownHours(): int
+    {
+        $hours = (int) $this->db->query(
+            'SELECT concern_cooldown_hours FROM fee_settings ORDER BY id ASC LIMIT 1'
+        )->fetchColumn();
+
+        return $hours > 0 ? $hours : 24;
+    }
+
+    public function getLatestConcernCreatedAt(int $accountId): ?string
+    {
+        $createdAt = $this->db->query(
+            'SELECT created_at FROM concerns WHERE reporter_account_id = :account_id ORDER BY created_at DESC LIMIT 1',
+            ['account_id' => $accountId]
+        )->fetchColumn();
+
+        return $createdAt !== false && $createdAt !== null ? (string) $createdAt : null;
+    }
+
     public function listConcerns(?int $reporterId = null): array
     {
-        if ($reporterId === null) $this->requireAdmin();
-        $sql = 'SELECT c.*, a.full_name AS reporter_name, a.email AS reporter_email FROM concerns c JOIN accounts a ON a.id = c.reporter_account_id';
-        $params = [];
-        if ($reporterId !== null) { $sql .= ' WHERE c.reporter_account_id = :reporter_id'; $params['reporter_id'] = $reporterId; }
-        return $this->db->query($sql . ' ORDER BY c.created_at DESC', $params)->fetchAll();
+        if ($reporterId === null) {
+            $this->requireAdmin();
+        }
+
+        $sql = 'SELECT c.*, a.full_name AS reporter_name, a.email AS reporter_email,
+                CASE
+                    WHEN COALESCE(jp.business_name, \'\') <> \'\' THEN jp.business_name
+                    ELSE a.full_name
+                END AS reporter_display_name,
+                CASE
+                    WHEN a.account_role = :junkshop_role THEN \'Junkshop\'
+                    WHEN a.account_role = :seller_role THEN \'Seller\'
+                    ELSE \'User\'
+                END AS reporter_role
+                FROM concerns c
+                JOIN accounts a ON a.id = c.reporter_account_id
+                LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id
+                LEFT JOIN sellers s ON s.account_id = a.id';
+        $params = ['junkshop_role' => 'junkshop', 'seller_role' => 'seller'];
+        if ($reporterId !== null) {
+            $sql .= ' WHERE c.reporter_account_id = :reporter_id';
+            $params['reporter_id'] = $reporterId;
+        }
+
+        $rows = $this->db->query($sql . ' ORDER BY c.created_at DESC', $params)->fetchAll();
+        foreach ($rows as &$row) {
+            $row['reporter_name'] = $row['reporter_display_name'] ?: $row['reporter_name'];
+            $row['reporter_role'] = $row['reporter_role'] ?? 'Seller';
+        }
+        unset($row);
+
+        return $rows;
     }
 
     public function submitConcern(int $reporterId, string $subject, string $description): array
     {
-        if (trim($subject) === '' || trim($description) === '') return ['success' => false, 'message' => 'Subject and description are required.'];
-        $statement = $this->db->query('INSERT INTO concerns (reporter_account_id, subject, description) VALUES (:reporter_id, :subject, :description)', ['reporter_id' => $reporterId, 'subject' => mb_substr(trim($subject), 0, 160), 'description' => trim($description)]);
+        $subject = trim($subject);
+        $description = trim($description);
+
+        if ($subject === '' || $description === '') {
+            return ['success' => false, 'message' => 'Subject and description are required.'];
+        }
+
+        if (mb_strlen($subject) > 50) {
+            return ['success' => false, 'message' => 'Subject must be 50 characters or fewer.'];
+        }
+
+        if (mb_strlen($description) > 150) {
+            return ['success' => false, 'message' => 'Description must be 150 characters or fewer.'];
+        }
+
+        $cooldownHours = $this->getConcernCooldownHours();
+        $lastCreatedAt = $this->getLatestConcernCreatedAt($reporterId);
+
+        if ($lastCreatedAt !== null) {
+            $lastTimestamp = strtotime($lastCreatedAt);
+            $elapsedSeconds = time() - $lastTimestamp;
+            $cooldownSeconds = $cooldownHours * 3600;
+
+            if ($elapsedSeconds < $cooldownSeconds) {
+                $remainingSeconds = $cooldownSeconds - $elapsedSeconds;
+                $hours = intdiv($remainingSeconds, 3600);
+                $minutes = intdiv($remainingSeconds % 3600, 60);
+                $message = sprintf(
+                    'You must wait %d hours and %d minutes before submitting another concern.',
+                    $hours,
+                    $minutes
+                );
+                if ($hours === 0) {
+                    $message = sprintf('You must wait %d minutes before submitting another concern.', $minutes);
+                }
+                return ['success' => false, 'message' => $message];
+            }
+        }
+
+        $statement = $this->db->query(
+            'INSERT INTO concerns (reporter_account_id, account_id, subject, description, status, created_at)
+             VALUES (:reporter_id, :account_id, :subject, :description, :status, CURRENT_TIMESTAMP)',
+            [
+                'reporter_id' => $reporterId,
+                'account_id' => $reporterId,
+                'subject' => mb_substr($subject, 0, 50),
+                'description' => mb_substr($description, 0, 150),
+                'status' => 'Open',
+            ]
+        );
         if ($statement->rowCount() !== 1) {
             return ['success' => false, 'message' => 'Your concern could not be submitted.'];
         }
