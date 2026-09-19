@@ -295,7 +295,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
     function showLocationError() {
         if (!locationErrorNote) return;
-        locationErrorNote.innerHTML = locationErrorMessage;
+        locationErrorNote.innerHTML = '<strong>Location service issue:</strong> Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.';
         locationErrorNote.classList.remove('d-none');
     }
 
@@ -407,14 +407,26 @@ window.addEventListener('DOMContentLoaded', function () {
         const updateCurrentLocation = function () {
             if (locationUpdateInProgress) return;
             navigator.geolocation.getCurrentPosition(function (position) {
-                const junkshopLat = parseFloat(position.coords.latitude);
-                const junkshopLng = parseFloat(position.coords.longitude);
+                const junkshopLat = Number.parseFloat(position.coords.latitude);
+                const junkshopLng = Number.parseFloat(position.coords.longitude);
                 if (!Number.isFinite(junkshopLat) || !Number.isFinite(junkshopLng)) return;
                 hideLocationError();
-                updateLiveLocation(requestId, junkshopLat, junkshopLng, sellerLat, sellerLng);
-            }, function () {
-                showLocationError();
-                if (trackingRequestId === requestId && junkshopAddressText) junkshopAddressText.textContent = 'Unable to access current location';
+                updateLiveLocation(requestId, Number(junkshopLat.toFixed(6)), Number(junkshopLng.toFixed(6)), sellerLat, sellerLng);
+            }, function (error) {
+                const weakSignalMessage = 'Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.';
+                if (error && (error.code === 2 || error.code === 3 || error.code === 4)) {
+                    showLocationError();
+                    if (trackingRequestId === requestId && junkshopAddressText) junkshopAddressText.textContent = 'Location unavailable';
+                } else {
+                    showLocationError();
+                    if (trackingRequestId === requestId && junkshopAddressText) junkshopAddressText.textContent = 'Unable to access current location';
+                }
+                if (trackingRequestId === requestId && junkshopAddressText) {
+                    junkshopAddressText.textContent = junkshopAddressText.textContent || 'Location unavailable';
+                }
+                if (error && (error.code === 2 || error.code === 3 || error.code === 4) && window.bootstrap?.Toast) {
+                    // no-op: handled inline with alert feedback
+                }
             }, highPrecisionGeoOptions);
         };
         function initAutoLocation() {

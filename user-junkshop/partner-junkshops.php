@@ -419,17 +419,26 @@ ob_start();
             calculateDistance();
         }
 
+        function sanitizeReverseGeocodeAddress(data) {
+            const address = data && data.address ? data.address : {};
+            const road = address.road || address.pedestrian || address.street || '';
+            const barangay = address.village || address.suburb || address.neighbourhood || address.quarter || '';
+            const city = address.city || address.town || address.municipality || address.city_district || '';
+            const province = address.state || address.province || address.region || '';
+            const formatted = [road, barangay, city, province].filter(function (part) {
+                return typeof part === 'string' && part.trim() !== '' && !/^(postal code|zip code|region)$/i.test(part.trim());
+            }).map(function (part) {
+                return part.trim().replace(/,\s*$/, '');
+            });
+            return formatted.join(', ');
+        }
+
         function updatePickupAddress(lat, lng) {
             return fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, { headers: { 'Accept': 'application/json' } })
                 .then(function (response) { return response.json(); })
                 .then(function (data) {
-                    const address = data.address || {};
-                    const road = address.road || address.pedestrian || address.street;
-                    const barangay = address.village || address.suburb || address.neighbourhood || address.quarter;
-                    const city = address.city || address.town || address.municipality || address.city_district;
-                    const province = address.state || address.region;
-                    const completeAddress = [road, barangay, city, province].filter(Boolean).join(', ');
-                    pickupAddress.value = completeAddress || data.display_name || '';
+                    const completeAddress = sanitizeReverseGeocodeAddress(data);
+                    pickupAddress.value = completeAddress || '';
                 });
         }
 
@@ -463,7 +472,11 @@ ob_start();
         }
 
         function handleLocationError(error) {
-            showLocationError();
+            const weakSignalMessage = 'Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.';
+            if (locationErrorNote) {
+                locationErrorNote.innerHTML = '<strong>Location service issue:</strong> ' + weakSignalMessage;
+                locationErrorNote.classList.remove('d-none');
+            }
             resetLocationButton();
         }
 
@@ -474,14 +487,14 @@ ob_start();
                 return;
             }
             navigator.geolocation.getCurrentPosition(function (position) {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
+                const lat = Number(position.coords.latitude).toFixed(6);
+                const lng = Number(position.coords.longitude).toFixed(6);
                 sellerLatInput.value = lat;
                 sellerLngInput.value = lng;
                 hideLocationError();
                 calculateDistance();
-                initializePickupMap(lat, lng);
-                updatePickupAddress(lat, lng).catch(function () {}).finally(resetLocationButton);
+                initializePickupMap(Number(lat), Number(lng));
+                updatePickupAddress(Number(lat), Number(lng)).catch(function () {}).finally(resetLocationButton);
             }, handleLocationError, highPrecisionGeoOptions);
         }
 

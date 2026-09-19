@@ -481,8 +481,25 @@ ob_start();
         if (!trackButton || !latitudeInput || !longitudeInput || !addressInput || !mapElement) return;
 
         function setCoordinates(lat, lng) {
-            latitudeInput.value = Number(lat).toFixed(8);
-            longitudeInput.value = Number(lng).toFixed(8);
+            latitudeInput.value = Number(lat).toFixed(6);
+            longitudeInput.value = Number(lng).toFixed(6);
+        }
+
+        function sanitizeReverseGeocodeAddress(data) {
+            const address = data && data.address ? data.address : {};
+            const road = address.road || address.pedestrian || address.street || '';
+            const barangay = address.village || address.suburb || address.neighbourhood || address.quarter || '';
+            const city = address.city || address.town || address.municipality || address.city_district || '';
+            const province = address.state || address.province || address.region || '';
+            const parts = [road, barangay, city, province].filter(function (part) {
+                return typeof part === 'string' && part.trim() !== '' && !/^(postal code|zip code|region)$/i.test(part.trim());
+            }).map(function (part) {
+                return part.trim().replace(/,\s*$/, '');
+            });
+            if (!parts.length) {
+                return '';
+            }
+            return parts.join(', ');
         }
 
         function reverseGeocodeJunkshopLocation(lat, lng) {
@@ -498,16 +515,12 @@ ob_start();
                     return response.json();
                 })
                 .then(function(data) {
-                    if (data.display_name) return data.display_name;
-                    const address = data.address || {};
-                    return [
-                        address.road,
-                        address.house_number,
-                        address.neighbourhood || address.suburb || address.village,
-                        address.city || address.town || address.municipality,
-                        address.state || address.region,
-                        address.country
-                    ].filter(Boolean).join(', ');
+                    const sanitized = sanitizeReverseGeocodeAddress(data);
+                    if (sanitized) return sanitized;
+                    if (data && typeof data.display_name === 'string') {
+                        return sanitizeReverseGeocodeAddress({ address: { road: '', village: '', city: '', state: '' } });
+                    }
+                    return '';
                 });
         }
 
@@ -555,14 +568,15 @@ ob_start();
         }
 
         function handleLocationError(error) {
+            const weakSignalMessage = 'Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.';
             if (!window.isSecureContext) {
-                alert('Geolocation requires a secure HTTPS connection on mobile devices.');
-            } else if (error.code === 1) {
-                alert('Location permission was denied. Please allow location access and try again.');
-            } else if (error.code === 2 || error.code === 3) {
-                alert('Unable to get your location. Please enable GPS and try again.');
+                showLocationFeedback('Geolocation requires a secure HTTPS connection on mobile devices.', false);
+            } else if (error && (error.code === 2 || error.code === 3 || error.code === 4)) {
+                showLocationFeedback(weakSignalMessage, false);
+            } else if (error && error.code === 1) {
+                showLocationFeedback('Location permission was denied. Please allow location access and try again.', false);
             } else {
-                alert('Unable to get your current location. Please try again.');
+                showLocationFeedback(weakSignalMessage, false);
             }
             resetTrackButton();
         }

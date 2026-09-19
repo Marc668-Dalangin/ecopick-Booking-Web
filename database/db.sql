@@ -89,6 +89,9 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
     INDEX idx_junkshop_approval_expiry (approval_status, partnership_expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS collector_lat DECIMAL(10,8) NULL DEFAULT NULL;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS collector_lng DECIMAL(11,8) NULL DEFAULT NULL;
+
 CREATE TABLE IF NOT EXISTS preferred_junkshops (
     id INT PRIMARY KEY AUTO_INCREMENT,
     seller_id INT NOT NULL,
@@ -153,6 +156,8 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     seller_lng DECIMAL(11,8) NULL,
     junkshop_lat DECIMAL(11,8) NULL,
     junkshop_lng DECIMAL(11,8) NULL,
+    collector_lat DECIMAL(10,8) NULL DEFAULT NULL,
+    collector_lng DECIMAL(11,8) NULL DEFAULT NULL,
     calculated_distance DECIMAL(6,2) NULL,
     pickup_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total_estimated_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -172,6 +177,9 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     CONSTRAINT fk_pickup_request_seller FOREIGN KEY (seller_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     CONSTRAINT fk_pickup_request_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lat DECIMAL(10,8) NULL DEFAULT NULL;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lng DECIMAL(11,8) NULL DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS pickup_request_items (
     id INT PRIMARY KEY AUTO_INCREMENT,

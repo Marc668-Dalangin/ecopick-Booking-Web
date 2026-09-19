@@ -24,7 +24,7 @@ try {
     $database = Database::getInstance();
     $pdo = $database->getPDO();
     $stmt = $pdo->prepare(
-        "SELECT pr.current_status, pr.junkshop_lat, pr.junkshop_lng
+        "SELECT pr.current_status, pr.seller_lat, pr.seller_lng, pr.junkshop_lat, pr.junkshop_lng, pr.collector_lat, pr.collector_lng
          FROM pickup_requests pr
          WHERE pr.id = :booking_id AND {$ownership}
          LIMIT 1",
@@ -39,11 +39,18 @@ try {
         exit;
     }
 
+    $collectorLat = $request['collector_lat'] !== null ? (float) $request['collector_lat'] : ($request['junkshop_lat'] !== null ? (float) $request['junkshop_lat'] : null);
+    $collectorLng = $request['collector_lng'] !== null ? (float) $request['collector_lng'] : ($request['junkshop_lng'] !== null ? (float) $request['junkshop_lng'] : null);
+
     echo json_encode([
         'success' => true,
         'status' => $request['current_status'],
+        'seller_lat' => $request['seller_lat'] !== null ? (float) $request['seller_lat'] : null,
+        'seller_lng' => $request['seller_lng'] !== null ? (float) $request['seller_lng'] : null,
         'junkshop_lat' => $request['junkshop_lat'] !== null ? (float) $request['junkshop_lat'] : null,
         'junkshop_lng' => $request['junkshop_lng'] !== null ? (float) $request['junkshop_lng'] : null,
+        'collector_lat' => $collectorLat,
+        'collector_lng' => $collectorLng,
     ]);
 } catch (Throwable $exception) {
     $stmt = null;

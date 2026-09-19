@@ -126,6 +126,25 @@ window.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function showWeakSignalAlert(message) {
+        const container = document.getElementById('seller-live-tracking');
+        if (!container) return;
+        const warning = container.querySelector('.live-tracking-warning') || document.createElement('div');
+        warning.className = 'live-tracking-warning alert alert-warning mt-3 mb-0';
+        warning.setAttribute('role', 'alert');
+        warning.textContent = message || 'Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.';
+        if (!warning.parentNode) {
+            container.appendChild(warning);
+        }
+    }
+
+    function clearWeakSignalAlert() {
+        const container = document.getElementById('seller-live-tracking');
+        if (!container) return;
+        const warning = container.querySelector('.live-tracking-warning');
+        if (warning) warning.remove();
+    }
+
     function updateSellerLiveText(payload) {
         const container = document.getElementById('seller-live-tracking');
         if (!container || payload.status === 'Completed') {
@@ -133,11 +152,12 @@ window.addEventListener('DOMContentLoaded', function () {
             if (container) container.remove();
             return;
         }
-        const junkshopLat = parseFloat(payload.junkshop_lat);
-        const junkshopLng = parseFloat(payload.junkshop_lng);
-        if (!Number.isFinite(sellerLat) || sellerLat < -90 || sellerLat > 90 || !Number.isFinite(sellerLng) || sellerLng < -180 || sellerLng > 180 || !Number.isFinite(junkshopLat) || junkshopLat < -90 || junkshopLat > 90 || !Number.isFinite(junkshopLng) || junkshopLng < -180 || junkshopLng > 180) return;
-        reverseGeocodeJunkshopLocation(junkshopLat, junkshopLng);
-        document.getElementById('seller-live-distance').textContent = calculateDistance(sellerLat, sellerLng, junkshopLat, junkshopLng).toFixed(2) + ' km';
+        const collectorLat = Number.parseFloat(payload.collector_lat ?? payload.junkshop_lat);
+        const collectorLng = Number.parseFloat(payload.collector_lng ?? payload.junkshop_lng);
+        if (!Number.isFinite(sellerLat) || sellerLat < -90 || sellerLat > 90 || !Number.isFinite(sellerLng) || sellerLng < -180 || sellerLng > 180 || !Number.isFinite(collectorLat) || collectorLat < -90 || collectorLat > 90 || !Number.isFinite(collectorLng) || collectorLng < -180 || collectorLng > 180) return;
+        clearWeakSignalAlert();
+        reverseGeocodeJunkshopLocation(collectorLat, collectorLng);
+        document.getElementById('seller-live-distance').textContent = calculateDistance(sellerLat, sellerLng, collectorLat, collectorLng).toFixed(2) + ' km';
     }
 
     function pollJunkshopLiveLocation() {
@@ -151,9 +171,14 @@ window.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(payload => {
-                if (payload?.success) updateSellerLiveText(payload);
+                if (!payload?.success) {
+                    throw new Error(payload?.message || 'Unable to fetch live location.');
+                }
+                updateSellerLiveText(payload);
             })
-            .catch(function () {})
+            .catch(function () {
+                showWeakSignalAlert('Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.');
+            })
             .finally(function () {
                 if (document.getElementById('seller-live-tracking')) {
                     liveLocationTimeout = window.setTimeout(pollJunkshopLiveLocation, 10000);

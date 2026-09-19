@@ -2158,3 +2158,48 @@
 530 5.7.0 specifications. 98e67ed59e1d1-39e6c615f05sm2894230a91.15 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
 [19-Sep-2026 14:10:48 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
 [19-Sep-2026 18:13:52 Asia/Manila] PHP Warning:  session_destroy(): Trying to destroy uninitialized session in C:\xampp\htdocs\booking-website-lipacity\app\core\Session.php on line 77
+[19-Sep-2026 22:25:43 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e6bd191aesm5089556a91.0 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:25:43 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:25:48 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e6c3145e5sm5212914a91.5 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:25:48 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:26:12 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddc16b472esm10599765ad.1 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:26:12 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:26:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-877aa6023ebsm1082376b3a.56 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:26:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:26:39 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc72aead0casm1032854a12.20 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:26:39 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:26:44 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e6c164c18sm4924419a91.1 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:26:44 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:26:46 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddc17d7120sm10713375ad.63 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:26:46 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:30:29 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-39e6c5b3932sm4850851a91.13 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:30:29 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:30:30 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2ddc17ff4d7sm10613395ad.74 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:30:30 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:31:13 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a026898b76sm2696501a91.16 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:31:13 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 22:31:15 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-877a6bec901sm1078236b3a.4 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[19-Sep-2026 22:31:15 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[19-Sep-2026 23:06:12 Asia/Manila] Junkshop live location fetch failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pr.collector_lat' in 'field list'
