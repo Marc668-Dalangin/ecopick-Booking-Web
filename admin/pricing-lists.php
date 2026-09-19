@@ -14,12 +14,13 @@ if (Auth::userRole() !== 'admin') {
 
 $controller = new MaterialPriceController();
 $rows = $controller->getAdminPriceOverview();
+$catalog = $controller->getAdminMaterialCatalog();
 $pageTitle = 'Pricing Lists';
 $activePage = 'pricing-lists';
 
 $materials = [];
-foreach ($rows as $row) {
-    $materials[(string)($row['material_name'] ?? '')] = true;
+foreach ($catalog as $material) {
+    $materials[(string)($material['material_name'] ?? '')] = true;
 }
 
 ob_start();
@@ -31,14 +32,10 @@ ob_start();
                 <h4 class="mb-1 fw-bold"><i class="bi bi-currency-dollar"></i> Pricing Lists</h4>
                 <p class="text-muted mb-0">Approved junkshops and their current material buying prices are monitored here.</p>
             </div>
-            <span class="badge bg-primary-subtle text-primary"><?php echo count($rows); ?> current entries</span>
+            <span class="badge bg-primary-subtle text-primary"><?php echo count($catalog); ?> catalog materials</span>
         </div>
 
         <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <label class="form-label" for="admin-junkshop-filter">Filter by Junkshop</label>
-                <input type="text" class="form-control" id="admin-junkshop-filter" placeholder="Search by business name">
-            </div>
             <div class="col-md-6">
                 <label class="form-label" for="admin-material-filter">Filter by Material</label>
                 <select class="form-select" id="admin-material-filter">
@@ -61,7 +58,7 @@ ob_start();
                 <?php
                 $categories = ['PAPER', 'CARDBOARD', 'PLASTIC', 'METAL', 'GLASS'];
                 foreach ($categories as $category):
-                    $categoryRows = array_values(array_filter($rows, static function (array $row) use ($category): bool {
+                    $categoryRows = array_values(array_filter($catalog, static function (array $row) use ($category): bool {
                         return strtoupper((string)($row['category'] ?? '')) === $category;
                     }));
                     $collapseId = 'adminMaterialsCategory-' . strtolower($category);
@@ -78,23 +75,27 @@ ob_start();
                                     <table class="table table-hover align-middle mb-0" id="admin-pricing-table-<?php echo strtolower($category); ?>">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>Junkshop</th>
-                                                <th>Location</th>
                                                 <th>Material</th>
-                                                <th>Category</th>
-                                                <th>Buying Price</th>
-                                                <th>Updated</th>
+                                                <th>Price Statistics</th>
+                                                <th class="text-end">Details</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($categoryRows as $row): ?>
-                                                <tr data-junkshop-name="<?php echo Validator::escape(strtolower((string)($row['business_name'] ?? ''))); ?>" data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
-                                                    <td class="fw-semibold"><?php echo Validator::escape($row['business_name'] ?? ''); ?></td>
-                                                    <td><?php echo Validator::escape($row['location'] ?? ''); ?></td>
-                                                    <td><?php echo Validator::escape($row['material_name'] ?? ''); ?></td>
-                                                    <td><?php echo Validator::escape($row['category'] ?? ''); ?></td>
-                                                    <td>₱<?php echo number_format((float)($row['buying_price'] ?? 0), 2); ?> / <?php echo Validator::escape($row['unit_of_measure'] ?? 'kg'); ?></td>
-                                                    <td><?php echo Validator::escape(date('M d, Y', strtotime($row['updated_at'] ?? date('Y-m-d')))); ?></td>
+                                                <?php $detailsId = 'admin-material-details-' . (int)($row['material_id'] ?? 0); ?>
+                                                <tr data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
+                                                    <td class="fw-semibold"><?php echo Validator::escape($row['material_name'] ?? ''); ?></td>
+                                                    <td class="small">Avg: ₱<?php echo number_format((float)($row['avg_price'] ?? 0), 2); ?><br>Min: ₱<?php echo number_format((float)($row['min_price'] ?? 0), 2); ?><br>Max: ₱<?php echo number_format((float)($row['max_price'] ?? 0), 2); ?></td>
+                                                    <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#<?php echo $detailsId; ?>" aria-expanded="false" aria-controls="<?php echo $detailsId; ?>">View Info</button></td>
+                                                </tr>
+                                                <tr class="collapse" id="<?php echo $detailsId; ?>" data-material-name="<?php echo Validator::escape(strtolower((string)($row['material_name'] ?? ''))); ?>">
+                                                    <td colspan="3" class="bg-light-subtle">
+                                                        <div class="row g-3 small">
+                                                            <div class="col-md-4"><strong>Description</strong><div class="text-muted mt-1"><?php echo nl2br(Validator::escape((string)($row['description'] ?? ''))); ?></div></div>
+                                                            <div class="col-md-4"><strong>Examples</strong><div class="text-muted mt-1"><?php echo nl2br(Validator::escape((string)($row['examples'] ?? ''))); ?></div></div>
+                                                            <div class="col-md-4"><strong>Preparation Notes</strong><div class="text-muted mt-1"><?php echo nl2br(Validator::escape((string)($row['preparation_notes'] ?? ''))); ?></div></div>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
@@ -110,22 +111,18 @@ ob_start();
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const junkshopFilter = document.getElementById('admin-junkshop-filter');
         const materialFilter = document.getElementById('admin-material-filter');
-        const rows = Array.from(document.querySelectorAll('#admin-pricing-table tbody tr'));
+        const rows = Array.from(document.querySelectorAll('[id^="admin-pricing-table-"] tbody tr'));
 
         function applyAdminFilters() {
-            const junkshopValue = (junkshopFilter?.value || '').toLowerCase().trim();
             const materialValue = (materialFilter?.value || '').toLowerCase().trim();
 
             rows.forEach(function (row) {
-                const nameMatch = !junkshopValue || (row.dataset.junkshopName || '').includes(junkshopValue);
                 const materialMatch = !materialValue || (row.dataset.materialName || '').includes(materialValue);
-                row.style.display = nameMatch && materialMatch ? '' : 'none';
+                row.style.display = materialMatch ? '' : 'none';
             });
         }
 
-        junkshopFilter?.addEventListener('input', applyAdminFilters);
         materialFilter?.addEventListener('change', applyAdminFilters);
     });
 </script>

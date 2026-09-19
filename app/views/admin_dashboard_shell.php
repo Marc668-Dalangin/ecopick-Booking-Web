@@ -64,6 +64,10 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
                     <i class="bi bi-currency-dollar"></i>
                     <span>Pricing Lists</span>
                 </a>
+                <a class="nav-link <?php echo $adminActive === 'materials' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/materials.php">
+                    <i class="bi bi-recycle"></i>
+                    <span>Materials Management</span>
+                </a>
                 <a class="nav-link <?php echo $adminActive === 'pending-pickups' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pending-pickup-requests.php">
                     <i class="bi bi-inboxes"></i>
                     <span>Pending Pickup Requests</span>
@@ -162,6 +166,10 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
                             <a class="nav-link <?php echo $adminActive === 'pricing-lists' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pricing-lists.php">
                                 <i class="bi bi-currency-dollar"></i>
                                 <span>Pricing Lists</span>
+                            </a>
+                            <a class="nav-link <?php echo $adminActive === 'materials' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/materials.php">
+                                <i class="bi bi-recycle"></i>
+                                <span>Materials Management</span>
                             </a>
                             <a class="nav-link <?php echo $adminActive === 'pending-pickups' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/pending-pickup-requests.php">
                                 <i class="bi bi-inboxes"></i>
