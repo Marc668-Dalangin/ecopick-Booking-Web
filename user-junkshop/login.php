@@ -119,19 +119,6 @@ $pageTitle = 'Login';
                             </div>
                         </div>
 
-                        <!-- Remember Me -->
-                        <div class="mb-3 form-check">
-                            <input 
-                                type="checkbox" 
-                                class="form-check-input" 
-                                id="rememberMe" 
-                                name="remember_me"
-                            >
-                            <label class="form-check-label" for="rememberMe">
-                                Remember me (for future phases)
-                            </label>
-                        </div>
-
                         <!-- Login Button -->
                         <button type="submit" class="btn btn-primary w-100 mb-3">
                             <i class="bi bi-box-arrow-in-right"></i> Login
