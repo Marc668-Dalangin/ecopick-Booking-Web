@@ -590,11 +590,6 @@ ON DUPLICATE KEY UPDATE
     is_active = VALUES(is_active),
     updated_at = CURRENT_TIMESTAMP;
 
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_api_token TEXT NULL DEFAULT NULL;
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_endpoint VARCHAR(255) NULL DEFAULT 'https://dashboard.philsms.com/api/v3/sms/send';
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_sender_id VARCHAR(50) NULL DEFAULT 'PhilSMS';
-ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS sms_enabled TINYINT(1) NOT NULL DEFAULT 1;
-
 INSERT IGNORE INTO fee_settings (id, pickup_fee, service_fee_percent, commission_percent, registration_fee, renewal_fee_1_month, renewal_fee_6_months, renewal_fee_1_year, expiration_notice_lead_days, concern_cooldown_hours)
 VALUES (1, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1, 24);
 
@@ -602,8 +597,7 @@ UPDATE fee_settings
 SET
     concern_cooldown_hours = 24,
     philsms_endpoint = 'https://dashboard.philsms.com/api/v3/sms/send',
-    philsms_sender_id = 'PhilSMS',
-    sms_enabled = 1
+    philsms_sender_id = 'PhilSMS'
 WHERE id = 1 AND (concern_cooldown_hours IS NULL OR concern_cooldown_hours = 0 OR philsms_sender_id IS NULL OR philsms_sender_id = '');
 
 INSERT INTO fee_configurations (config_key, config_value, description)

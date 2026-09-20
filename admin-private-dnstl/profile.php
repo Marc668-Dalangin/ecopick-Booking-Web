@@ -12,24 +12,33 @@ if (Auth::userRole() !== 'admin') {
 }
 
 $pdo = Database::getInstance()->getPDO();
-$smsEnabled = 1;
+$settings = $pdo->query('SELECT philsms_api_token, philsms_endpoint, philsms_sender_id, sms_enabled FROM fee_settings WHERE id = 1')->fetch(PDO::FETCH_ASSOC) ?: [];
+$sms_enabled = (int) ($settings['sms_enabled'] ?? 1);
 $systemAlert = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_sms_settings'])) {
     if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
         $systemAlert = ['type' => 'danger', 'message' => 'Security token expired. Please try again.'];
     } else {
-        $smsEnabled = (isset($_POST['sms_enabled']) && $_POST['sms_enabled'] === '1') ? 1 : 0;
-        $pdo->prepare(
-            'INSERT INTO fee_settings (id, sms_enabled) VALUES (1, :sms_enabled) ON DUPLICATE KEY UPDATE sms_enabled = VALUES(sms_enabled), updated_at = CURRENT_TIMESTAMP'
-        )->execute(['sms_enabled' => $smsEnabled]);
-        $systemAlert = [
-            'type' => 'success',
-            'message' => 'System settings updated: SMS notifications are now ' . ($smsEnabled ? 'Enabled' : 'Disabled') . '.'
-        ];
+        $sms_enabled = (isset($_POST['sms_enabled']) && (int) $_POST['sms_enabled'] === 1) ? 1 : 0;
+        $stmt = $pdo->prepare(
+            'UPDATE fee_settings
+             SET philsms_api_token = :api_token,
+                 philsms_endpoint = :endpoint,
+                 philsms_sender_id = :sender_id,
+                 sms_enabled = :sms_enabled
+             WHERE id = 1'
+        );
+        $stmt->execute([
+            ':api_token' => $_POST['philsms_api_token'] ?? ($settings['philsms_api_token'] ?? null),
+            ':endpoint' => $_POST['philsms_endpoint'] ?? ($settings['philsms_endpoint'] ?? 'https://dashboard.philsms.com/api/v3/sms/send'),
+            ':sender_id' => $_POST['philsms_sender_id'] ?? ($settings['philsms_sender_id'] ?? 'PhilSMS'),
+            ':sms_enabled' => $sms_enabled,
+        ]);
+        $_SESSION['flash_message'] = 'PhilSMS settings updated successfully.';
+        header('Location: profile.php');
+        exit;
     }
-} else {
-    $smsEnabled = (int) ($pdo->query('SELECT sms_enabled FROM fee_settings ORDER BY id ASC LIMIT 1')->fetchColumn() ?: 1);
 }
 
 $pageTitle = 'Admin Profile';
@@ -95,8 +104,8 @@ ob_start();
                             <p class="text-muted mb-0">Toggle platform-wide SMS dispatch for pickup alerts and status updates.</p>
                         </div>
                         <div class="form-check form-switch ms-md-auto mb-0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="sms_enabled" name="sms_enabled" value="1" <?php echo $smsEnabled ? 'checked' : ''; ?>>
-                            <label class="form-check-label fw-semibold" for="sms_enabled"><?php echo $smsEnabled ? 'Enabled' : 'Disabled'; ?></label>
+                            <input class="form-check-input" type="checkbox" role="switch" id="sms_enabled" name="sms_enabled" value="1" <?php echo ($sms_enabled === 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label fw-semibold" for="sms_enabled"><?php echo ($sms_enabled === 1) ? 'Enabled' : 'Disabled'; ?></label>
                         </div>
                     </div>
 
