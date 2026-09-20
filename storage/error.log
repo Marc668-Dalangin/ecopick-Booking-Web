@@ -2572,3 +2572,16 @@
 530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
 530 5.7.0 specifications. 41be03b00d2f7-cc72aeae0b8sm1147933a12.19 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
 [20-Sep-2026 02:12:43 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[20-Sep-2026 09:12:38 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:12:40 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:30:54 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:30:54 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:48 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:49 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:52 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:53 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:54 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:56 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:31:57 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:32:00 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[20-Sep-2026 09:32:01 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it

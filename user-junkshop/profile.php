@@ -25,17 +25,19 @@ if ($role === 'seller') {
         if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
             $errors[] = 'Invalid security token. Please try again.';
         } else {
-            $firstName = trim((string)($_POST['first_name'] ?? ''));
-            $lastName = trim((string)($_POST['last_name'] ?? ''));
+            $firstName = strtoupper(trim((string)($_POST['first_name'] ?? '')));
+            $lastName = strtoupper(trim((string)($_POST['last_name'] ?? '')));
             $fullName = trim($firstName . ' ' . $lastName);
-            $mobileNumber = Validator::normalizeMobileNumber(($_POST['mobile_number'] ?? ''));
+            $mobileSuffix = trim((string)($_POST['mobile_number'] ?? ''));
+            $mobileNumber = preg_match('/^[0-9]{1,9}$/', $mobileSuffix) === 1 ? '09' . $mobileSuffix : '';
             $address = trim((string)($_POST['address'] ?? ''));
             $barangay = trim((string)($_POST['barangay'] ?? ''));
 
             if (!Validator::required($firstName)) $errors[] = 'First name is required.';
             if (!Validator::required($lastName)) $errors[] = 'Last name is required.';
+            if (($firstName !== '' && !preg_match('/^[A-Z\s]+$/', $firstName)) || ($lastName !== '' && !preg_match('/^[A-Z\s]+$/', $lastName))) $errors[] = 'Name fields must contain uppercase letters only.';
             if (!Validator::required($fullName)) $errors[] = 'Full name is required.';
-            if (!Validator::required($mobileNumber) || !Validator::mobileNumber($mobileNumber)) $errors[] = 'Valid mobile number is required.';
+            if (!preg_match('/^[0-9]{1,9}$/', $mobileSuffix)) $errors[] = 'Mobile number must be numbers only up to 9 digits.';
             if (!Validator::required($address)) $errors[] = 'Address is required.';
             if (!Validator::required($barangay)) $errors[] = 'Barangay is required.';
 
@@ -59,9 +61,10 @@ if ($role === 'seller') {
         } elseif (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
             $errors[] = 'Invalid security token. Please try again.';
         } else {
-            $businessName = trim((string)($_POST['business_name'] ?? ''));
-            $ownerName = trim((string)($_POST['owner_name'] ?? ''));
-            $mobileNumber = Validator::normalizeMobileNumber(($_POST['mobile_number'] ?? ''));
+            $businessName = strtoupper(trim((string)($_POST['business_name'] ?? '')));
+            $ownerName = strtoupper(trim((string)($_POST['owner_name'] ?? '')));
+            $mobileSuffix = trim((string)($_POST['mobile_number'] ?? ''));
+            $mobileNumber = preg_match('/^[0-9]{1,9}$/', $mobileSuffix) === 1 ? '09' . $mobileSuffix : '';
             $address = trim((string)($_POST['complete_address'] ?? ''));
             $schedule = trim((string)($_POST['operating_schedule'] ?? ''));
             $permit = trim((string)($_POST['business_permit_reference'] ?? ''));
@@ -74,7 +77,8 @@ if ($role === 'seller') {
 
             if (!Validator::required($businessName)) $errors[] = 'Business name is required.';
             if (!Validator::required($ownerName)) $errors[] = 'Business owner name is required.';
-            if (!Validator::required($mobileNumber) || !Validator::mobileNumber($mobileNumber)) $errors[] = 'Valid mobile number is required.';
+            if (($businessName !== '' && !preg_match('/^[A-Z\s\.\-]+$/', $businessName)) || ($ownerName !== '' && !preg_match('/^[A-Z\s\.\-]+$/', $ownerName))) $errors[] = 'Business and owner names must contain uppercase letters, spaces, dots, or hyphens only.';
+            if (!preg_match('/^[0-9]{1,9}$/', $mobileSuffix)) $errors[] = 'Mobile number must be numbers only up to 9 digits.';
             if (!Validator::required($address)) $errors[] = 'Business address is required.';
             if (!Validator::required($schedule)) $errors[] = 'Operating schedule is required.';
             if (!Validator::required($permit)) $errors[] = 'Permit reference is required.';
@@ -172,17 +176,17 @@ ob_start();
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="first_name">First Name</label>
-                                <input type="text" class="form-control" id="first_name" name="first_name" value="<?php echo Validator::escape($sellerFirstName); ?>" required>
+                                <input type="text" class="form-control" id="first_name" name="first_name" value="<?php echo Validator::escape($sellerFirstName); ?>" required style="text-transform: uppercase;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="last_name">Last Name</label>
-                                <input type="text" class="form-control" id="last_name" name="last_name" value="<?php echo Validator::escape($sellerLastName); ?>" required>
+                                <input type="text" class="form-control" id="last_name" name="last_name" value="<?php echo Validator::escape($sellerLastName); ?>" required style="text-transform: uppercase;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="mobile_number">Mobile Number</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">09</span>
-                                    <input type="tel" class="form-control" id="mobile_number" name="mobile_number" value="<?php echo Validator::escape($sellerMobile); ?>" required inputmode="numeric" maxlength="9" pattern="[0-9]*" placeholder="123456789">
+                                    <input type="text" class="form-control" id="mobile_number" name="mobile_number" value="<?php echo Validator::escape($sellerMobile); ?>" required inputmode="numeric" maxlength="9" pattern="[0-9]{1,9}" placeholder="123456789">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -223,17 +227,17 @@ ob_start();
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="business_name">Business Name</label>
-                                <input type="text" class="form-control" id="business_name" name="business_name" value="<?php echo Validator::escape($currentProfile['business_name'] ?? ''); ?>" required>
+                                <input type="text" class="form-control" id="business_name" name="business_name" value="<?php echo Validator::escape($currentProfile['business_name'] ?? ''); ?>" required style="text-transform: uppercase;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="owner_name">Owner / Contact Person</label>
-                                <input type="text" class="form-control" id="owner_name" name="owner_name" value="<?php echo Validator::escape($currentProfile['owner_name'] ?? ''); ?>" required>
+                                <input type="text" class="form-control" id="owner_name" name="owner_name" value="<?php echo Validator::escape($currentProfile['owner_name'] ?? ''); ?>" required style="text-transform: uppercase;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="mobile_number">Mobile Number</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">09</span>
-                                    <input type="tel" class="form-control" id="mobile_number" name="mobile_number" value="<?php echo Validator::escape($junkshopMobile); ?>" required inputmode="numeric" maxlength="9" pattern="[0-9]*" placeholder="123456789">
+                                    <input type="text" class="form-control" id="mobile_number" name="mobile_number" value="<?php echo Validator::escape($junkshopMobile); ?>" required inputmode="numeric" maxlength="9" pattern="[0-9]{1,9}" placeholder="123456789">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -323,8 +327,8 @@ ob_start();
     function validateMobileSuffix(input) {
         if (!input) return false;
         const value = input.value.trim();
-        const valid = /^\d{9}$/.test(value);
-        input.setCustomValidity(valid ? '' : 'Enter exactly 9 digits after 09.');
+        const valid = /^\d{1,9}$/.test(value);
+        input.setCustomValidity(valid ? '' : 'Enter 1 to 9 digits after 09.');
         return valid;
     }
 
@@ -426,8 +430,21 @@ ob_start();
             }
         }
 
+        document.querySelectorAll('#first_name, #last_name').forEach(function(input) {
+            input.addEventListener('input', function() {
+                this.value = this.value.toUpperCase().replace(/[^A-Z\s]/g, '');
+            });
+        });
+
+        document.querySelectorAll('#business_name, #owner_name').forEach(function(input) {
+            input.addEventListener('input', function() {
+                this.value = this.value.toUpperCase().replace(/[^A-Z\s\.\-]/g, '');
+            });
+        });
+
         document.querySelectorAll('#mobile_number').forEach(function(input) {
             input.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
                 validateMobileSuffix(this);
             });
             input.addEventListener('blur', function() {
