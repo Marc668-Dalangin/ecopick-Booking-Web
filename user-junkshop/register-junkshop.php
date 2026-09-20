@@ -11,8 +11,10 @@ Auth::redirectIfAuthenticated();
 
 $errors = [];
 $success = false;
-$otpRequired = false;
-$otpEmail = '';
+$pendingRegistration = Session::get('pending_registration');
+$otpRequired = is_array($pendingRegistration) && ($pendingRegistration['type'] ?? '') === 'junkshop';
+$otpEmail = $otpRequired ? (string) ($pendingRegistration['email'] ?? '') : '';
+$otpSentAt = $otpRequired ? (int) ($pendingRegistration['last_otp_sent_at'] ?? Session::get('last_otp_sent_at', 0)) : 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
@@ -72,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result['success']) {
             $otpRequired = !empty($result['otp_required']);
             $otpEmail = (string) ($result['email'] ?? $data['email']);
+            $otpSentAt = (int) ($result['otp_sent_at'] ?? 0);
             $success = !$otpRequired;
         } else {
             $errors = $result['errors'];
@@ -405,6 +408,7 @@ $pageTitle = 'Register Your Junkshop';
                     <input type="hidden" name="email" value="<?php echo Validator::escape($otpEmail); ?>">
                     <label for="otp_code" class="form-label">Verification code</label>
                     <input type="text" class="form-control form-control-lg text-center" id="otp_code" name="otp_code" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" required>
+                    <button type="button" id="resend-otp-btn" class="btn btn-outline-secondary mt-2" disabled>Resend Code (<span id="cooldown-timer">60</span>s)</button>
                     <button type="submit" class="btn btn-success w-100 mt-3">Verify email</button>
                 </form>
             </div>
@@ -495,6 +499,30 @@ $pageTitle = 'Register Your Junkshop';
         const verificationSuccessMessage = document.getElementById('verificationSuccessMessage');
         const successModal = verificationSuccessModal ? new bootstrap.Modal(verificationSuccessModal) : null;
         const otpEmail = otpForm?.elements.email;
+        const resendOtpButton = document.getElementById('resend-otp-btn');
+        let cooldownInterval;
+
+        function startOtpCooldown(sentAt) {
+            const storageKey = `junkshop_otp_sent_at_${otpEmail?.value || 'pending'}`;
+            const sentTimestamp = Number(sentAt) || Math.floor(Date.now() / 1000);
+            localStorage.setItem(storageKey, String(sentTimestamp));
+            clearInterval(cooldownInterval);
+
+            function updateCooldown() {
+                const remaining = Math.max(0, 60 - (Math.floor(Date.now() / 1000) - sentTimestamp));
+                if (remaining === 0) {
+                    resendOtpButton.textContent = 'Resend Code';
+                    resendOtpButton.disabled = false;
+                    clearInterval(cooldownInterval);
+                    return;
+                }
+                resendOtpButton.innerHTML = `Resend Code (<span id="cooldown-timer">${remaining}</span>s)`;
+                resendOtpButton.disabled = true;
+            }
+
+            updateCooldown();
+            cooldownInterval = setInterval(updateCooldown, 1000);
+        }
 
         function showRegistrationError(message) {
             registrationMessage.className = 'alert alert-danger';
@@ -529,6 +557,7 @@ $pageTitle = 'Register Your Junkshop';
                     return;
                 }
                 otpEmail.value = result.email;
+                startOtpCooldown(result.otp_sent_at);
                 modal.show();
             } catch (error) {
                 showRegistrationError('Unable to submit registration. Please try again.');
@@ -540,6 +569,11 @@ $pageTitle = 'Register Your Junkshop';
         });
 
         if (otpModal && otpForm) {
+            const storedOtpSentAt = localStorage.getItem(`junkshop_otp_sent_at_${otpEmail?.value || 'pending'}`);
+            const initialOtpSentAt = Number(storedOtpSentAt) || <?php echo $otpSentAt; ?>;
+            if (initialOtpSentAt) {
+                startOtpCooldown(initialOtpSentAt);
+            }
             if (<?php echo $otpRequired ? 'true' : 'false'; ?>) {
                 modal.show();
             }
@@ -560,6 +594,22 @@ $pageTitle = 'Register Your Junkshop';
                     modal.hide();
                     verificationSuccessMessage.textContent = result.message;
                     successModal.show();
+                }
+            });
+
+            resendOtpButton?.addEventListener('click', async function() {
+                const resendData = new FormData(otpForm);
+                resendData.set('action', 'resend');
+                resendOtpButton.disabled = true;
+                const response = await fetch('verify_otp.php', { method: 'POST', headers: { 'Accept': 'application/json' }, body: resendData });
+                const result = await response.json();
+                const message = document.getElementById('otpMessage');
+                message.className = result.success ? 'alert alert-success' : 'alert alert-danger';
+                message.textContent = result.message;
+                if (result.success) {
+                    startOtpCooldown(result.otp_sent_at);
+                } else if (result.remaining) {
+                    startOtpCooldown(Math.floor(Date.now() / 1000) - (60 - result.remaining));
                 }
             });
         }

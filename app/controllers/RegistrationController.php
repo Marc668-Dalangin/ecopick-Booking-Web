@@ -63,6 +63,7 @@ class RegistrationController
             if (!MailerService::sendRegistrationOtp($data['email'], $data['full_name'], $otp)) {
                 return ['success' => false, 'otp_send_failed' => true, 'errors' => ['Failed to send OTP. Please check your email address.']];
             }
+            $otpSentAt = time();
 
             Session::set('pending_registration', [
                 'type' => 'seller',
@@ -76,9 +77,11 @@ class RegistrationController
                 'otp_code' => $otp,
                 'otp_expires_at' => $otpExpiresAt,
                 'otp_expires_timestamp' => strtotime($otpExpiresAt),
+                'last_otp_sent_at' => $otpSentAt,
             ]);
+            Session::set('last_otp_sent_at', $otpSentAt);
 
-            return ['success' => true, 'otp_required' => true, 'email' => $data['email']];
+            return ['success' => true, 'otp_required' => true, 'email' => $data['email'], 'otp_sent_at' => $otpSentAt];
         } catch (Throwable $e) {
             error_log('Registration error: ' . $e->getMessage());
             return ['success' => false, 'errors' => [$e->getMessage()]];
@@ -117,6 +120,7 @@ class RegistrationController
             if (!MailerService::sendRegistrationOtp($data['email'], $data['owner_name'], $otp)) {
                 return ['success' => false, 'otp_send_failed' => true, 'errors' => ['Failed to send OTP. Please check your email address.']];
             }
+            $otpSentAt = time();
 
             Session::set('pending_registration', [
                 'type' => 'junkshop',
@@ -133,9 +137,11 @@ class RegistrationController
                 'otp_code' => $otp,
                 'otp_expires_at' => $otpExpiresAt,
                 'otp_expires_timestamp' => strtotime($otpExpiresAt),
+                'last_otp_sent_at' => $otpSentAt,
             ]);
+            Session::set('last_otp_sent_at', $otpSentAt);
 
-            return ['success' => true, 'otp_required' => true, 'email' => $data['email']];
+            return ['success' => true, 'otp_required' => true, 'email' => $data['email'], 'otp_sent_at' => $otpSentAt];
         } catch (Throwable $e) {
             error_log('Registration error: ' . $e->getMessage());
             return ['success' => false, 'errors' => [$e->getMessage()]];

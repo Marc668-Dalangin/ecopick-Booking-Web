@@ -18,7 +18,50 @@ if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
 
 if (($_POST['action'] ?? '') === 'cancel') {
     Session::unset('pending_registration');
+    Session::unset('last_otp_sent_at');
     echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (($_POST['action'] ?? '') === 'resend') {
+    try {
+        $pending = Session::get('pending_registration');
+        if (!is_array($pending)
+            || !isset($pending['type'], $pending['email'], $pending['full_name'])
+            || !in_array($pending['type'], ['seller', 'junkshop'], true)) {
+            echo json_encode(['success' => false, 'message' => 'Your registration session has expired. Please register again.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $now = time();
+        $lastSent = (int) ($pending['last_otp_sent_at'] ?? Session::get('last_otp_sent_at', 0));
+        if (($now - $lastSent) < 60) {
+            $remaining = 60 - ($now - $lastSent);
+            echo json_encode(['success' => false, 'message' => "Please wait {$remaining} seconds before requesting a new code.", 'remaining' => $remaining], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpExpiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        if (!MailerService::sendRegistrationOtp($pending['email'], $pending['full_name'], $otp)) {
+            echo json_encode(['success' => false, 'message' => 'Failed to send OTP. Please check your email address.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sentAt = time();
+        $pending['otp_code'] = $otp;
+        $pending['otp_expires_at'] = $otpExpiresAt;
+        $pending['otp_expires_timestamp'] = strtotime($otpExpiresAt);
+        $pending['last_otp_sent_at'] = $sentAt;
+        Session::set('pending_registration', $pending);
+        Session::set('last_otp_sent_at', $sentAt);
+
+        echo json_encode(['success' => true, 'message' => 'A new verification code has been sent to your email.', 'otp_sent_at' => $sentAt], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $exception) {
+        error_log('OTP resend error: ' . $exception->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Unable to resend the OTP right now. Please try again.'], JSON_UNESCAPED_UNICODE);
+    }
     exit;
 }
 
@@ -99,6 +142,7 @@ try {
 
     $db->commit();
     Session::unset('pending_registration');
+    Session::unset('last_otp_sent_at');
 
     $message = $pending['type'] === 'seller'
         ? 'Email verified successfully! Your account has been created. You can now proceed to log in.'
