@@ -340,12 +340,12 @@ $pageTitle = 'Register Your Junkshop';
                                 <input 
                                     type="checkbox" 
                                     class="form-check-input" 
-                                    id="terms" 
+                                    id="main_terms_checkbox"
                                     name="terms"
                                     required
                                 >
-                                <label class="form-check-label" for="terms">
-                                    I agree to the EcoPick terms and conditions <span class="text-danger">*</span>
+                                <label class="form-check-label" for="main_terms_checkbox">
+                                    I agree to the <a href="#termsModal" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a> <span class="text-danger">*</span>
                                 </label>
                             </div>
 
@@ -381,6 +381,42 @@ $pageTitle = 'Register Your Junkshop';
                         </div>
                     <?php endif; ?>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">EcoPick Platform Terms &amp; Conditions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="termsContent" class="border rounded p-3 mb-3" style="max-height: 320px; overflow-y: auto;">
+                    <h6>1. Material Honesty &amp; Sorting Compliance</h6>
+                    <p>Users agree to accurately categorize recyclables (Paper, Cardboard, Plastic, Metal, Glass) and declare realistic estimated weights. Hazardous materials, medical waste, explosive items, and stolen property are strictly prohibited from pickup requests.</p>
+                    <h6>2. Pickup Commitments &amp; Weight Thresholds</h6>
+                    <p>Sellers acknowledge a strict minimum 5 kg total threshold per pickup request. Junkshops reserve the right to decline or adjust payouts on site if delivered materials significantly diverge from the submitted request descriptions or fail contamination standards.</p>
+                    <h6>3. Geolocation &amp; Privacy Data Usage</h6>
+                    <p>Real-time tracking operates strictly for active pickup fulfillment, route optimization, and distance calculations between matched partners. Coordinate logging refreshes during active transactions and is managed in accordance with local data privacy mandates.</p>
+                    <h6>4. Cancellations &amp; Platform Code of Conduct</h6>
+                    <p>Repeated last-minute cancellations, fraudulent weight declarations, or abusive behavior toward collectors or sellers will result in temporary suspension or permanent account ban under Admin review.</p>
+                    <h6>5. Financial Transactions &amp; Dispute Resolution</h6>
+                    <p>EcoPick provides matching, price visibility, and tracking infrastructure. Physical weight measurement and cash or digital payouts are finalized directly between the Seller and the Junkshop at the time of pickup. Concerns or disputes must be logged through the official Concerns &amp; Disputes channel for Admin mediation.</p>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="modal_check_1" disabled>
+                    <label class="form-check-label" for="modal_check_1">I agree to the EcoPick Terms of Service, User Responsibility Guidelines, and Privacy Policy.</label>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="modal_check_2" disabled>
+                    <label class="form-check-label" for="modal_check_2">I confirm I have reviewed and accept the terms.</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="confirm_terms_btn" disabled>Confirm &amp; Accept</button>
             </div>
         </div>
     </div>
@@ -448,6 +484,7 @@ $pageTitle = 'Register Your Junkshop';
     }
 </style>
 
+<script src="<?php echo APP_URL; ?>/assets/js/terms_modal.js"></script>
 <script>
     function validateUsername(input) {
         if (!input) return false;

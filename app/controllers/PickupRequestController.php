@@ -199,8 +199,29 @@ class PickupRequestController
         }
     }
 
-    public function listSellerRequests($sellerAccountId)
+    public function listSellerRequests($sellerAccountId, ?string $selectedStatus = null, string $sortOrder = 'DESC')
     {
+        $statusGroups = [
+            'Pending' => ['Pending Request', 'Pending'],
+            'Accepted' => ['Accepted'],
+            'Declined' => ['Declined'],
+            'Completed' => ['Completed'],
+            'Cancelled' => ['Cancelled', 'Cancelled by Seller', 'Cancelled by Junkshop'],
+        ];
+        $selectedStatus = array_key_exists($selectedStatus ?? '', $statusGroups) ? $selectedStatus : null;
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+        $params = ['seller_id' => (int) $sellerAccountId];
+        $statusSql = '';
+        if ($selectedStatus !== null) {
+            $statusPlaceholders = [];
+            foreach ($statusGroups[$selectedStatus] as $index => $status) {
+                $placeholder = 'status_' . $index;
+                $statusPlaceholders[] = ':' . $placeholder;
+                $params[$placeholder] = $status;
+            }
+            $statusSql = ' AND pr.current_status IN (' . implode(', ', $statusPlaceholders) . ')';
+        }
+
         return $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.current_status, pr.contact_number, pr.pickup_address,
                 pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date,
@@ -217,9 +238,9 @@ class PickupRequestController
              LEFT JOIN recyclable_materials rm ON rm.id = pri.material_id
              LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
             LEFT JOIN accounts junkshop ON junkshop.id = pr.junkshop_id
-             WHERE pr.seller_account_id = :seller_id
-             GROUP BY pr.id, jp.account_id, junkshop.id ORDER BY pr.created_at DESC",
-            ['seller_id' => (int) $sellerAccountId]
+             WHERE pr.seller_account_id = :seller_id" . $statusSql . "
+             GROUP BY pr.id, jp.account_id, junkshop.id ORDER BY pr.created_at " . $sortOrder . ", pr.id " . $sortOrder,
+            $params
         )->fetchAll();
     }
 

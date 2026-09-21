@@ -2716,3 +2716,19 @@
 530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
 530 5.7.0 specifications. 98e67ed59e1d1-39e6cabafbasm9390998a91.10 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
 [20-Sep-2026 21:36:45 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[21-Sep-2026 18:26:54 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[21-Sep-2026 18:27:07 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[21-Sep-2026 18:27:16 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[21-Sep-2026 18:27:21 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[21-Sep-2026 18:28:41 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[21-Sep-2026 18:28:41 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[21-Sep-2026 18:30:10 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[21-Sep-2026 18:30:10 Asia/Manila] Database connection failed: SQLSTATE[HY000] [2006] MySQL server has gone away
+[21-Sep-2026 18:31:16 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:17 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:17 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:17 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:18 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:25 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:26 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[21-Sep-2026 18:31:28 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'

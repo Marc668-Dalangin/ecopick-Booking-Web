@@ -30,7 +30,10 @@ if (!empty($_SESSION['is_expired'])) {
 }
 
 $dashboardController = new DashboardController();
-$assignments = $dashboardController->getPendingJunkshopRequests(Auth::userId());
+$allowedStatuses = ['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled'];
+$selectedStatus = in_array((string) ($_GET['status'] ?? ''), $allowedStatuses, true) ? (string) $_GET['status'] : null;
+$sortOrder = strtoupper((string) ($_GET['sort'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+$assignments = $dashboardController->getPendingJunkshopRequests(Auth::userId(), $selectedStatus, $sortOrder);
 $pageTitle = 'Matched Requests';
 $currentPage = 'matched-requests';
 $userDisplayName = Auth::userName();
@@ -65,6 +68,12 @@ ob_start();
 
         <div id="assignment-feedback" class="alert d-none" role="status" aria-live="polite"></div>
 
+        <form method="GET" class="row g-3 align-items-end mb-4" aria-label="Filter matched requests">
+            <div class="col-12 col-md-6 col-lg-5"><label class="form-label fw-semibold" for="matched-status">Status</label><select class="form-select" id="matched-status" name="status" onchange="this.form.submit()"><option value="">All statuses</option><?php foreach ($allowedStatuses as $status): ?><option value="<?php echo Validator::escape($status); ?>" <?php echo $selectedStatus === $status ? 'selected' : ''; ?>><?php echo $status === 'Cancelled' ? 'Cancelled by Seller' : Validator::escape($status); ?></option><?php endforeach; ?></select></div>
+            <div class="col-12 col-md-6 col-lg-5"><label class="form-label fw-semibold" for="matched-sort">Sort by date</label><select class="form-select" id="matched-sort" name="sort" onchange="this.form.submit()"><option value="DESC" <?php echo $sortOrder === 'DESC' ? 'selected' : ''; ?>>Newest First</option><option value="ASC" <?php echo $sortOrder === 'ASC' ? 'selected' : ''; ?>>Oldest First</option></select></div>
+            <?php if ($selectedStatus !== null): ?><div class="col-12 col-lg-2"><a class="btn btn-outline-secondary w-100" href="<?php echo APP_URL; ?>/user-junkshop/matched-requests.php">Clear filters</a></div><?php endif; ?>
+        </form>
+
         <div id="live-tracking-container" style="display: <?php echo $activeTrackingAssignment !== null ? 'block' : 'none'; ?>;" data-booking-id="<?php echo (int) ($activeTrackingAssignment['pickup_request_id'] ?? 0); ?>">
             <div class="tracking-info">
                 <p><strong class="text-danger">Seller location:</strong> <span id="seller-address-text"></span></p>
@@ -85,7 +94,7 @@ ob_start();
                 <?php foreach ($assignments as $assignment): ?>
                     <?php $currentStatus = (string)($assignment['current_status'] ?? 'Matched'); ?>
                     <?php $isCancelled = in_array($currentStatus, ['Cancelled', 'Cancelled by Seller'], true); ?>
-                    <?php $statusClass = strtolower((string)($assignment['assignment_status'] ?? 'Matched')); ?>
+                    <?php $statusClass = strtolower((string)($assignment['assignment_status'] ?? $currentStatus)); ?>
                     <?php $pickupDate = $formatPickupDate($assignment['confirmed_pickup_date'] ?? $assignment['preferred_pickup_date'] ?? ''); ?>
                     <?php $pickupTime = $formatPickupTime($assignment['confirmed_pickup_time'] ?? $assignment['preferred_pickup_time'] ?? ''); ?>
                     <?php $terminalTimestamp = $isCancelled ? ($assignment['formatted_cancelled_at'] ?? '') : ($currentStatus === 'Completed' ? ($assignment['formatted_completed_at'] ?? '') : ''); ?>
@@ -98,7 +107,7 @@ ob_start();
                                         <h5 class="fw-bold mb-1"><?php echo Validator::escape($assignment['booking_reference'] ?? ''); ?></h5>
                                         <div class="small text-muted"><?php echo Validator::escape($assignment['materials_summary'] ?? ''); ?></div>
                                     </div>
-                                    <?php if ($isCancelled): ?><span class="badge bg-danger" data-live-assignment-status>Cancelled by Seller<?php if ($terminalTimestamp !== ''): ?><small class="d-block fw-normal"><?php echo Validator::escape($terminalTimestamp); ?></small><?php endif; ?></span><?php else: ?><span class="status-badge <?php echo $statusClass === 'accepted' ? 'approved' : ($statusClass === 'declined' ? 'rejected' : 'pending'); ?>" data-live-assignment-status><?php echo Validator::escape($assignment['assignment_status'] ?? 'Matched'); ?><?php if ($terminalTimestamp !== ''): ?><small class="d-block fw-normal"><?php echo Validator::escape($terminalTimestamp); ?></small><?php endif; ?></span><?php endif; ?>
+                                    <?php if ($isCancelled): ?><span class="badge bg-secondary" data-live-assignment-status>Cancelled by Seller<?php if ($terminalTimestamp !== ''): ?><small class="d-block fw-normal"><?php echo Validator::escape($terminalTimestamp); ?></small><?php endif; ?></span><?php elseif ($currentStatus === 'Declined'): ?><span class="badge bg-danger" data-live-assignment-status>Declined by Junkshop</span><?php elseif ($currentStatus === 'Completed'): ?><span class="badge bg-success" data-live-assignment-status>Completed<?php if ($terminalTimestamp !== ''): ?><small class="d-block fw-normal"><?php echo Validator::escape($terminalTimestamp); ?></small><?php endif; ?></span><?php else: ?><span class="status-badge <?php echo $statusClass === 'accepted' ? 'approved' : 'pending'; ?>" data-live-assignment-status><?php echo Validator::escape($assignment['assignment_status'] ?? 'Matched'); ?></span><?php endif; ?>
                                 </div>
 
                                 <div class="row g-3 small mb-3">
@@ -110,6 +119,7 @@ ob_start();
                                 </div>
 
                                 <div class="small text-muted mb-3"><?php echo Validator::escape($assignment['pickup_address'] ?? ''); ?></div>
+                                <?php if ($currentStatus === 'Declined' && trim((string) ($assignment['decline_reason'] ?? '')) !== ''): ?><div class="alert alert-danger py-2 mb-3"><strong>Decline reason:</strong> <?php echo Validator::escape($assignment['decline_reason']); ?></div><?php endif; ?>
 
                                 <?php $booking = ['id' => (int)($assignment['pickup_request_id'] ?? 0), 'status' => strtolower(str_replace(' ', '_', (string)($assignment['current_status'] ?? ''))), 'seller_lat' => $assignment['seller_lat'] ?? null, 'seller_lng' => $assignment['seller_lng'] ?? null]; ?>
                                 <?php if (strtolower($booking['status']) === 'for_pickup'): ?>
@@ -255,7 +265,7 @@ ob_start();
 window.ecopickMatchedRequestsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_matched_requests.php';
 window.addEventListener('DOMContentLoaded', function () {
     const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/junkshop-operations.php';
-    const matchedRequestsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_matched_requests.php';
+    const matchedRequestsApiUrl = <?php echo json_encode(APP_URL . '/user-junkshop/api/get_matched_requests.php' . ($selectedStatus !== null || $sortOrder !== 'DESC' ? '?' . http_build_query(array_filter(['status' => $selectedStatus, 'sort' => $sortOrder], static fn ($value): bool => $value !== null)) : ''), JSON_UNESCAPED_SLASHES); ?>;
     const feedback = document.getElementById('assignment-feedback');
     const assignmentList = document.getElementById('assignment-list');
     const confirmation = window.ecopick.setupActionConfirmation({ modalId: 'confirmMatchedRequestModal' });
@@ -592,7 +602,7 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 
     async function openPickupModal(requestId) {
-        const response = await fetch(matchedRequestsApiUrl + '?action=list-matched', { credentials: 'same-origin' });
+        const response = await fetch(apiUrl + '?action=list-matched', { credentials: 'same-origin' });
         const payload = await response.json();
         const request = (payload.data?.requests || []).find(item => getPickupRequestId(item) === requestId);
         if (!request || request.current_status !== 'Scheduled') {
@@ -876,10 +886,10 @@ window.addEventListener('DOMContentLoaded', function () {
             const requestId = getPickupRequestId(request);
             const status = request.current_status || 'Pending Request';
             const cancelled = status === 'Cancelled' || status === 'Cancelled by Seller';
-            const statusClass = status === 'Completed' ? 'approved' : (['Pending Request', 'Pending', 'Requested', 'Matched'].includes(status) ? 'pending' : 'scheduled');
+            const statusClass = status === 'Completed' ? 'approved' : (status === 'Declined' ? 'rejected' : (['Pending Request', 'Pending', 'Requested', 'Matched'].includes(status) ? 'pending' : 'scheduled'));
             const terminalTimestamp = status === 'Completed' ? request.formatted_completed_at : (cancelled ? request.formatted_cancelled_at : '');
-            const statusLabel = cancelled ? 'Cancelled by Seller' : status;
-            const statusMarkup = '<span class="' + (cancelled ? 'badge bg-danger' : 'status-badge ' + statusClass) + '">' + escapeHtml(statusLabel) + (terminalTimestamp ? '<small class="d-block fw-normal">' + escapeHtml(terminalTimestamp) + '</small>' : '') + '</span>';
+            const statusLabel = cancelled ? 'Cancelled by Seller' : (status === 'Declined' ? 'Declined by Junkshop' : status);
+            const statusMarkup = '<span class="' + (cancelled ? 'badge bg-secondary' : (status === 'Declined' ? 'badge bg-danger' : (status === 'Completed' ? 'badge bg-success' : 'status-badge ' + statusClass))) + '">' + escapeHtml(statusLabel) + (terminalTimestamp ? '<small class="d-block fw-normal">' + escapeHtml(terminalTimestamp) + '</small>' : '') + '</span>';
             const distance = request.distance_km === null || request.distance_km === undefined ? 'Pending' : Number(request.distance_km).toFixed(2) + ' km';
             const pickupDate = formatPickupDate(request.confirmed_pickup_date || request.preferred_pickup_date || '');
             const pickupTime = formatPickupTime(request.confirmed_pickup_time || request.preferred_pickup_time || '');
@@ -890,7 +900,8 @@ window.addEventListener('DOMContentLoaded', function () {
             const actualWeightMarkup = actualWeight > 0 ? '<span class="badge bg-success font-monospace fs-6">' + actualWeight.toFixed(2) + ' kg</span>' : '<span class="badge bg-secondary">Pending Weight</span>';
             const sellerMobile = request.seller_mobile || request.contact_number || '';
             const contactMarkup = formatPhilippineMobile(sellerMobile) !== 'Not provided' ? '<strong><a href="tel:' + escapeHtml(formatPhilippineMobile(sellerMobile)) + '">' + escapeHtml(formatPhilippineMobile(sellerMobile)) + '</a></strong> <a href="sms:' + escapeHtml(formatPhilippineMobile(sellerMobile)) + '" class="ms-1" aria-label="SMS seller"><i class="bi bi-chat-dots"></i></a>' : '<span class="text-muted">Not provided</span>';
-            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Mobile Number</div>' + contactMarkup + '</div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong>' + escapeHtml(distance) + '</strong></div><div class="col-md-4"><div class="text-muted">Actual Weight</div>' + actualWeightMarkup + '</div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
+            const declineReason = status === 'Declined' && request.decline_reason ? '<div class="alert alert-danger py-2 mb-3"><strong>Decline reason:</strong> ' + escapeHtml(request.decline_reason) + '</div>' : '';
+            return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Mobile Number</div>' + contactMarkup + '</div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong>' + escapeHtml(distance) + '</strong></div><div class="col-md-4"><div class="text-muted">Actual Weight</div>' + actualWeightMarkup + '</div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + declineReason + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
         }).join('');
         initializeSellerMaps();
     }

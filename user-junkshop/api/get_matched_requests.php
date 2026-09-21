@@ -49,7 +49,10 @@ if (!empty($_SESSION['is_expired'])) {
 session_write_close();
 $dashboardController = new DashboardController();
 $junkshopId = (int) Auth::userId();
-$requests = $dashboardController->getPendingJunkshopRequests($junkshopId);
+$allowedStatuses = ['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled'];
+$selectedStatus = in_array((string) ($_GET['status'] ?? ''), $allowedStatuses, true) ? (string) $_GET['status'] : null;
+$sortOrder = strtoupper((string) ($_GET['sort'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+$requests = $dashboardController->getPendingJunkshopRequests($junkshopId, $selectedStatus, $sortOrder);
 $count = $dashboardController->getJunkshopRequestCount($junkshopId);
 
 echo json_encode([

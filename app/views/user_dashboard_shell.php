@@ -9,7 +9,7 @@ $userRole = Auth::userRole();
 $currentPage = $currentPage ?? 'dashboard';
 $notificationCount = (int) (new NotificationController())->unreadCount(Auth::userId());
 $isExpiredJunkshop = $userRole === 'junkshop' && (bool) ($_SESSION['is_expired'] ?? false);
-$siteFavicon = APP_URL . '/assets/images/logo.jpg';
+$siteFavicon = APP_URL . '/assets/images/logo.png';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -17,8 +17,8 @@ $siteFavicon = APP_URL . '/assets/images/logo.jpg';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? Validator::escape($pageTitle) . ' - EcoPick' : 'EcoPick'; ?></title>
-    <link rel="icon" type="image/png" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="icon" type="image/png" sizes="256x256" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <?php if ($currentPage === 'profile' && Auth::userRole() === 'junkshop'): ?><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><?php endif; ?>

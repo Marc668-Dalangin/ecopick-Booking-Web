@@ -446,6 +446,7 @@ class DashboardController
             'Requested',
             'Matched',
             'Accepted',
+            'Declined',
             'Scheduled',
             'For Pickup',
             'Completed',
@@ -468,9 +469,18 @@ class DashboardController
         )->fetchColumn();
     }
 
-    public function getPendingJunkshopRequests(int $junkshopId): array
+    public function getPendingJunkshopRequests(int $junkshopId, ?string $selectedStatus = null, string $sortOrder = 'DESC'): array
     {
-        $statuses = $this->getJunkshopRequestStatuses();
+        $statusGroups = [
+            'Pending' => ['Pending Request', 'Pending', 'Requested', 'Matched'],
+            'Accepted' => ['Accepted'],
+            'Declined' => ['Declined'],
+            'Completed' => ['Completed'],
+            'Cancelled' => ['Cancelled', 'Cancelled by Seller'],
+        ];
+        $selectedStatus = array_key_exists($selectedStatus ?? '', $statusGroups) ? $selectedStatus : null;
+        $statuses = $selectedStatus === null ? $this->getJunkshopRequestStatuses() : $statusGroups[$selectedStatus];
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
         $statusPlaceholders = implode(',', array_fill(0, count($statuses), '?'));
         return $this->db->query(
             'SELECT
@@ -491,6 +501,7 @@ class DashboardController
                 pr.pickup_fee,
                 pr.created_at,
                                 pr.updated_at,
+                                pr.notes AS decline_reason,
                      (SELECT DATE_FORMAT(MAX(bsh.changed_at), \'%b %d, %Y at %h:%i %p\')
                                  FROM booking_status_history bsh
                                  WHERE bsh.pickup_request_id = pr.id
@@ -526,7 +537,7 @@ class DashboardController
                 WHERE pr.junkshop_id = ?
                         AND pr.current_status IN (' . $statusPlaceholders . ')
                 GROUP BY pr.id, seller.id, sp.id
-                    ORDER BY pr.created_at DESC, pr.id DESC',
+                    ORDER BY pr.created_at ' . $sortOrder . ', pr.id ' . $sortOrder,
             array_merge([$junkshopId], $statuses)
         )->fetchAll();
     }

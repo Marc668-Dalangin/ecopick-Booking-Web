@@ -49,6 +49,14 @@ try {
     $foreignKeysDisabled = true;
     $pdo->exec($sqlContent);
 
+    $statusColumn = $pdo->query("SHOW COLUMNS FROM `pickup_requests` LIKE 'current_status'")->fetch(PDO::FETCH_ASSOC);
+    $statusType = (string) ($statusColumn['Type'] ?? '');
+    foreach (['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled'] as $requiredStatus) {
+        if (stripos($statusType, "'" . $requiredStatus . "'") === false) {
+            throw new RuntimeException('The imported backup does not preserve all pickup request status states.');
+        }
+    }
+
     $tableNames = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
     $tableCount = count($tableNames);
     $rowCount = 0;

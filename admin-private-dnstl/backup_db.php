@@ -55,6 +55,15 @@ try {
     }
 
     $tables = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'")->fetchAll(PDO::FETCH_COLUMN);
+    if (in_array('pickup_requests', $tables, true)) {
+        $statusColumn = $pdo->query("SHOW COLUMNS FROM `pickup_requests` LIKE 'current_status'")->fetch(PDO::FETCH_ASSOC);
+        $statusType = (string) ($statusColumn['Type'] ?? '');
+        foreach (['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled'] as $requiredStatus) {
+            if (stripos($statusType, "'" . $requiredStatus . "'") === false) {
+                throw new RuntimeException('pickup_requests.current_status does not support all required lifecycle states.');
+            }
+        }
+    }
     foreach ($tables as $tableName) {
         $tableName = (string) $tableName;
         $quotedTable = $quoteIdentifier($tableName);

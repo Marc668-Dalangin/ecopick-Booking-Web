@@ -507,6 +507,8 @@ ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) 
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending';
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_error_message TEXT NULL DEFAULT NULL;
+-- Preserve every pickup lifecycle state when older installations are migrated.
+ALTER TABLE pickup_requests MODIFY COLUMN current_status ENUM('Pending Request', 'Pending', 'Matched', 'Requested', 'Accepted', 'Declined', 'Rematched', 'Scheduled', 'For Pickup', 'Completed', 'Cancelled', 'Cancelled by Seller', 'Cancelled by Junkshop') NOT NULL DEFAULT 'Pending Request';
 ALTER TABLE concerns ADD COLUMN IF NOT EXISTS is_read_admin TINYINT(1) NOT NULL DEFAULT 0;
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS concern_cooldown_hours INT NOT NULL DEFAULT 24;
 ALTER TABLE fee_settings ADD COLUMN IF NOT EXISTS philsms_api_token TEXT NULL DEFAULT NULL;
