@@ -90,7 +90,7 @@ ob_start();
 window.addEventListener('DOMContentLoaded', function () {
     const list = document.getElementById('current-bookings-list');
     const feedback = document.getElementById('bookings-feedback');
-    const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
+    const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php<?php echo ($selectedStatus !== null || $sortOrder !== 'DESC') ? '?' . http_build_query(array_filter(['status' => $selectedStatus, 'sort' => $sortOrder], static fn ($value): bool => $value !== null)) : ''; ?>';
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>';
     const modalElement = document.getElementById('cancelBookingConfirmModal');
     const modal = modalElement ? new bootstrap.Modal(modalElement) : null;

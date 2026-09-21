@@ -18,6 +18,9 @@ if (Auth::userRole() !== 'seller') {
 
 $sellerId = (int) Auth::userId();
 $controller = new PickupRequestController();
+$allowedStatuses = ['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled'];
+$selectedStatus = in_array((string) ($_GET['status'] ?? ''), $allowedStatuses, true) ? (string) $_GET['status'] : null;
+$sortOrder = strtoupper((string) ($_GET['sort'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'list');
 
@@ -75,7 +78,7 @@ if ($method === 'POST') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         $result = $controller->cancelRequest($requestId, $sellerId);
         $result['validation_errors'] = [];
-        $result['data'] = ['requests' => $controller->listSellerRequests($sellerId)];
+        $result['data'] = ['requests' => $controller->listSellerRequests($sellerId, $selectedStatus, $sortOrder)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -96,7 +99,7 @@ if ($action === 'details') {
     exit;
 }
 
-$requests = $controller->listSellerRequests($sellerId);
+$requests = $controller->listSellerRequests($sellerId, $selectedStatus, $sortOrder);
 echo json_encode(['success' => true, 'message' => 'Pickup requests loaded.', 'data' => ['requests' => $requests], 'validation_errors' => [], 'timestamp' => time()], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $exception) {
     error_log('Pickup request database error: ' . $exception->getMessage());
