@@ -179,6 +179,64 @@ class MailerService
         }
     }
 
+    public static function sendRenewalRejection(
+        string $recipientEmail,
+        string $businessName,
+        string $planType,
+        string $paymentMethod,
+        string $referenceNumber,
+        string $dateSubmitted,
+        string $rejectionReason
+    ): array {
+        $recipientEmail = strtolower(trim($recipientEmail));
+        $subject = '[EcoPick] Partnership Renewal Payment Issue';
+        $safeName = htmlspecialchars(trim($businessName) !== '' ? $businessName : 'Junkshop partner', ENT_QUOTES, 'UTF-8');
+        $safePlan = htmlspecialchars($planType, ENT_QUOTES, 'UTF-8');
+        $safeMethod = htmlspecialchars($paymentMethod, ENT_QUOTES, 'UTF-8');
+        $safeReference = htmlspecialchars($referenceNumber !== '' ? $referenceNumber : 'N/A', ENT_QUOTES, 'UTF-8');
+        $safeDate = htmlspecialchars($dateSubmitted, ENT_QUOTES, 'UTF-8');
+        $safeReason = htmlspecialchars($rejectionReason, ENT_QUOTES, 'UTF-8');
+        $renewalUrl = htmlspecialchars(APP_URL . '/user-junkshop/renewal.php', ENT_QUOTES, 'UTF-8');
+        $plainBody = "Dear {$businessName},\n\nYour Partnership Renewal payment submission was rejected.\n\nRenewal Plan: {$planType}\nPayment Method: {$paymentMethod}\nSubmitted Reference No: " . ($referenceNumber !== '' ? $referenceNumber : 'N/A') . "\nDate Submitted: {$dateSubmitted}\nReason for Rejection: {$rejectionReason}\n\nPlease verify your payment details and submit a new renewal request at {$renewalUrl}.\n\nEcoPick Platform Operations";
+        $body = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;background:#f4f6f8;color:#333;margin:0;padding:20px}.container{max-width:600px;background:#fff;padding:30px;border-radius:8px;border:1px solid #e0e0e0;margin:0 auto}.header{border-bottom:2px solid #dc3545;padding-bottom:15px;margin-bottom:20px}.header h2{color:#dc3545;margin:0}.details-box{background:#f8f9fa;padding:15px;border-left:4px solid #dc3545;margin:20px 0}.btn{display:inline-block;padding:12px 24px;background:#198754;color:#fff!important;text-decoration:none;border-radius:5px;font-weight:bold;margin-top:15px}.footer{margin-top:30px;font-size:12px;color:#6c757d;border-top:1px solid #eee;padding-top:15px}</style></head><body><div class="container"><div class="header"><h2>Partnership Renewal Payment Issue</h2></div><p>Dear <strong>' . $safeName . '</strong>,</p><p>We reviewed your recent Partnership Renewal payment submission and were unable to verify your payment details.</p><div class="details-box"><p><strong>Renewal Plan:</strong> ' . $safePlan . '</p><p><strong>Payment Method:</strong> ' . $safeMethod . '</p><p><strong>Submitted Reference No:</strong> ' . $safeReference . '</p><p><strong>Date Submitted:</strong> ' . $safeDate . '</p><p style="color:#dc3545"><strong>Reason for Rejection:</strong> ' . $safeReason . '</p></div><p>Your submission lock has been removed. Please verify your payment receipt details and submit a new renewal request.</p><a href="' . $renewalUrl . '" class="btn">Return to Renewal Page</a><div class="footer"><p>This is an automated notification from EcoPick Platform Operations. Please do not reply directly to this email.</p></div></div></body></html>';
+
+        if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            self::logEmail($recipientEmail ?: 'invalid-recipient', $subject, $plainBody, 'Failed', 'Invalid recipient email address.');
+            return ['sent' => false, 'error' => 'Invalid recipient email address.'];
+        }
+        $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+        $config = self::config();
+        if (!is_file($autoload) || !$config['enabled'] || $config['smtp_host'] === '' || $config['smtp_username'] === '' || $config['smtp_password'] === '') {
+            $error = !is_file($autoload) ? 'Composer autoloader not found.' : 'SMTP is not enabled or is missing configuration.';
+            self::logEmail($recipientEmail, $subject, $plainBody, 'Failed', $error);
+            return ['sent' => false, 'error' => $error];
+        }
+        require_once $autoload;
+        try {
+            $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mailer->isSMTP();
+            $mailer->Host = $config['smtp_host'];
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $config['smtp_username'];
+            $mailer->Password = $config['smtp_password'];
+            $mailer->SMTPSecure = strtolower($config['smtp_encryption']) === 'ssl' ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mailer->Port = (int) $config['smtp_port'];
+            $mailer->setFrom($config['smtp_username'], $config['from_name']);
+            $mailer->addAddress($recipientEmail, $businessName !== '' ? $businessName : 'Junkshop partner');
+            $mailer->isHTML(true);
+            $mailer->Subject = $subject;
+            $mailer->Body = $body;
+            $mailer->AltBody = $plainBody;
+            $sent = $mailer->send();
+            self::logEmail($recipientEmail, $subject, $plainBody, $sent ? 'Sent' : 'Failed', $sent ? null : 'SMTP server did not accept the message.');
+            return ['sent' => $sent, 'error' => $sent ? null : 'SMTP server did not accept the message.'];
+        } catch (Throwable $exception) {
+            self::logEmail($recipientEmail, $subject, $plainBody, 'Failed', $exception->getMessage());
+            error_log('Renewal rejection email error: ' . $exception->getMessage());
+            return ['sent' => false, 'error' => $exception->getMessage()];
+        }
+    }
+
     private static function logEmail(string $recipientEmail, string $subject, string $body, string $status, ?string $errorMessage = null): void
     {
         try {

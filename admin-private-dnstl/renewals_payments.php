@@ -48,7 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
             $feedback['message'] .= ' Renewal notifications queued for background delivery.';
         }
     } elseif ($action === 'reconcile') {
-        $feedback = $controller->reconcilePartnershipPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''));
+        $rejectionReason = trim((string) ($_POST['rejection_reason'] ?? ''));
+        $customReason = trim((string) ($_POST['custom_reason'] ?? ''));
+        if ((string) ($_POST['payment_status'] ?? '') === 'Rejected' && $rejectionReason === 'Custom Reason') {
+            $rejectionReason = $customReason;
+        }
+        $feedback = $controller->reconcilePartnershipPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''), $rejectionReason);
     } elseif ($action === 'commission') {
         $feedback = $controller->reconcileCommissionPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''));
     }
@@ -99,7 +104,7 @@ ob_start();
                 <h2 class="fw-bold mb-1">Renewals &amp; Payments</h2>
                 <p class="text-muted mb-0">Manage partnership periods, renewals, and payment reconciliation.</p>
             </div>
-            <span class="badge bg-warning-subtle text-warning"><?php echo count(array_filter($payments, fn ($payment) => $payment['payment_status'] !== 'Confirmed')); ?> outstanding</span>
+            <span class="badge bg-warning-subtle text-warning"><?php echo count(array_filter($payments, fn ($payment) => !in_array($payment['status'], ['Approved', 'Rejected'], true))); ?> outstanding</span>
         </div>
 
         <div class="border rounded p-3 mb-4">
@@ -141,7 +146,7 @@ ob_start();
                         <td class="fw-semibold"><?php echo Validator::escape($junkshop['business_name']); ?></td>
                         <td><span class="badge text-bg-<?php echo $isExpired ? 'danger' : ($junkshop['account_status'] === 'active' ? 'success' : 'secondary'); ?>"><?php echo Validator::escape(ucfirst($junkshop['display_status'])); ?></span></td>
                         <td><?php echo Validator::escape($junkshop['partnership_expires_at'] ?: 'Not assigned'); ?></td>
-                        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#expiryModal" data-account-id="<?php echo (int) $junkshop['account_id']; ?>" data-junkshop-name="<?php echo Validator::escape($junkshop['business_name']); ?>" data-current-expiry="<?php echo Validator::escape($junkshop['partnership_expires_at'] ?: ''); ?>">Extend / Modify Expiry</button></td>
+                        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#expiryModal" data-account-id="<?php echo (int) $junkshop['account_id']; ?>" data-junkshop-name="<?php echo Validator::escape($junkshop['business_name']); ?>" data-current-expiry="<?php echo Validator::escape($junkshop['partnership_expires_at'] ?: ''); ?>">Modify Expiry</button></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$junkshops): ?><tr><td colspan="4" class="text-center text-muted py-4">No approved junkshops found.</td></tr><?php endif; ?>
@@ -185,10 +190,36 @@ ob_start();
     </div></div>
 </div>
 
-<div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Partnership Payment Reconciliation</h4><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody><?php foreach ($payments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['payment_type']); ?></td><td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td><td><?php echo Validator::escape($payment['payment_status']); ?></td><td><?php if ($payment['payment_status'] !== 'Confirmed'): ?><form method="post" class="d-flex gap-2"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" value="<?php echo (int) $payment['id']; ?>"><input class="form-control form-control-sm" name="payment_reference" placeholder="Reference"><select class="form-select form-select-sm" name="payment_status"><option>Confirmed</option><option>Paid</option></select><button class="btn btn-sm btn-primary">Reconcile</button></form><?php else: ?><span class="text-success">Settled</span><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div></div></div>
+<div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Partnership Payment Reconciliation</h4><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop Name / Business Name</th><th>Type of Renewal Plan</th><th>Payment Method</th><th>Amount (₱)</th><th>Reference Number</th><th>Receipt</th><th>Date and Time</th><th>Status</th><th>Actions</th></tr></thead><tbody><?php foreach ($payments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['plan_type']); ?></td><td><?php echo Validator::escape($payment['payment_method']); ?></td><td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td><td><?php echo $payment['payment_method'] === 'GCash' && $payment['reference_number'] ? Validator::escape($payment['reference_number']) : 'N/A'; ?></td><td><?php if ($payment['payment_method'] === 'GCash' && !empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View Receipt</button><?php else: ?>N/A<?php endif; ?></td><td><?php echo Validator::escape((new DateTime($payment['created_at']))->format('Y-m-d H:i:s')); ?></td><td><?php echo Validator::escape($payment['status']); ?></td><td><?php if (!in_array($payment['status'], ['Approved', 'Rejected'], true)): ?><form method="post" class="d-flex gap-2"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" value="<?php echo (int) $payment['id']; ?>"><button class="btn btn-sm btn-success" name="payment_status" value="Approved">Approve</button><button class="btn btn-sm btn-outline-danger" name="payment_status" value="Rejected">Reject</button></form><?php else: ?><span class="text-muted">Completed</span><?php endif; ?></td></tr><?php endforeach; ?><?php if (!$payments): ?><tr><td colspan="9" class="text-center text-muted py-4">No renewal requests found.</td></tr><?php endif; ?></tbody></table></div></div></div>
+
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="receiptModalLabel">GCash Receipt</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body text-center"><img id="receiptModalImage" class="img-fluid" alt="GCash receipt"></div></div></div></div>
+
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form method="post" id="rejectForm"><div class="modal-header"><h5 class="modal-title" id="rejectModalLabel">Reject Renewal Payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" id="reject_payment_id"><input type="hidden" name="payment_status" value="Rejected"><label for="rejection_reason" class="form-label fw-bold">Reason for rejection</label><select name="rejection_reason" id="rejection_reason" class="form-select" required><option value="" selected disabled>Select a reason</option><option>GCash Reference Number does not match receipt screenshot</option><option>Uploaded receipt image is unreadable or incomplete</option><option>Payment amount does not match selected plan</option><option value="Custom Reason">Custom Reason</option></select><div id="customReasonGroup" class="mt-3 d-none"><label for="custom_reason" class="form-label fw-bold">Custom reason</label><textarea name="custom_reason" id="custom_reason" class="form-control" rows="3" maxlength="500"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Reject Payment</button></div></form></div></div></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const rejectModal = document.getElementById('rejectModal');
+    const rejectPaymentId = document.getElementById('reject_payment_id');
+    const rejectionReason = document.getElementById('rejection_reason');
+    const customReasonGroup = document.getElementById('customReasonGroup');
+    const customReason = document.getElementById('custom_reason');
+    document.querySelectorAll('button[name="payment_status"][value="Rejected"]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            const paymentMethod = button.closest('tr')?.children[2]?.textContent.trim();
+            if (paymentMethod === 'Cash') {
+                return;
+            }
+            event.preventDefault();
+            rejectPaymentId.value = button.closest('form').querySelector('input[name="payment_id"]').value;
+            bootstrap.Modal.getOrCreateInstance(rejectModal).show();
+        });
+    });
+    rejectionReason.addEventListener('change', function () {
+        const isCustom = rejectionReason.value === 'Custom Reason';
+        customReasonGroup.classList.toggle('d-none', !isCustom);
+        customReason.required = isCustom;
+        if (!isCustom) customReason.value = '';
+    });
     document.querySelectorAll('.js-loading-form').forEach(function (form) {
         form.addEventListener('submit', function () {
             if (!form.checkValidity()) return;
@@ -268,6 +299,14 @@ document.addEventListener('DOMContentLoaded', function () {
         timeInput.value = base.toTimeString().slice(0, 5);
     });
     dateInput.addEventListener('change', window.clearPreset);
+    const receiptModal = document.getElementById('receiptModal');
+    const receiptModalImage = document.getElementById('receiptModalImage');
+    receiptModal.addEventListener('show.bs.modal', function (event) {
+        receiptModalImage.src = event.relatedTarget.getAttribute('data-receipt-url');
+    });
+    receiptModal.addEventListener('hidden.bs.modal', function () {
+        receiptModalImage.removeAttribute('src');
+    });
 });
 </script>
 <?php $content = ob_get_clean(); require_once __DIR__ . '/../app/views/admin_dashboard_shell.php';

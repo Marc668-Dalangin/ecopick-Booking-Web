@@ -36,23 +36,12 @@ class AdminFeatureController
     public function listPartnershipPayments(): array
     {
         $this->requireAdmin();
-        $paymentReference = $this->hasColumn('junkshop_partnership_payments', 'payment_reference')
-            ? 'p.payment_reference'
-            : 'NULL';
-        $partnershipExpiry = $this->hasColumn('junkshop_profiles', 'partnership_expires_at')
-            ? 'jp.partnership_expires_at'
-            : 'NULL';
-        $renewalStatus = $this->hasColumn('junkshop_profiles', 'renewal_status')
-            ? 'jp.renewal_status'
-            : "'Current'";
         return $this->db->query(
-            "SELECT p.id, p.junkshop_account_id, p.payment_type, p.amount, p.payment_method,
-                    p.payment_status, {$paymentReference} AS payment_reference, p.due_at,
-                    p.paid_at, p.confirmed_at, p.created_at, COALESCE(jp.business_name, 'Unknown') AS business_name,
-                    {$partnershipExpiry} AS partnership_expires_at, {$renewalStatus} AS renewal_status
-             FROM junkshop_partnership_payments p
-             LEFT JOIN junkshop_profiles jp ON jp.account_id = p.junkshop_account_id
-             ORDER BY p.payment_status = 'Confirmed', p.created_at DESC"
+            "SELECT pr.id, pr.junkshop_account_id, COALESCE(jp.business_name, 'Unknown') AS business_name,
+                    pr.plan_type, pr.payment_method, pr.amount, pr.reference_number, pr.receipt_image, pr.status, pr.created_at
+             FROM partnership_renewals pr
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_account_id
+             ORDER BY pr.created_at DESC"
         )->fetchAll();
     }
 
@@ -164,62 +153,84 @@ class AdminFeatureController
         }
     }
 
-    public function reconcilePartnershipPayment(int $paymentId, string $status, string $reference = ''): array
+    public function reconcilePartnershipPayment(int $paymentId, string $status, string $reference = '', string $rejectionReason = ''): array
     {
         $this->requireAdmin();
-        if (!in_array($status, ['Paid', 'Confirmed'], true)) {
-            return ['success' => false, 'message' => 'Invalid payment status.'];
+        if (!in_array($status, ['Approved', 'Rejected'], true)) {
+            return ['success' => false, 'message' => 'Invalid renewal status.'];
+        }
+        $rejectionReason = trim($rejectionReason);
+        if (strlen($rejectionReason) > 500) {
+            return ['success' => false, 'message' => 'A specific rejection reason is required.'];
         }
         try {
             $this->db->beginTransaction();
-            $payment = $this->db->query('SELECT * FROM junkshop_partnership_payments WHERE id = :id FOR UPDATE', ['id' => $paymentId])->fetch();
-            if (!$payment) {
+            $renewal = $this->db->query(
+                'SELECT pr.*, a.email, COALESCE(jp.business_name, a.full_name) AS business_name
+                 FROM partnership_renewals pr
+                 JOIN accounts a ON a.id = pr.junkshop_account_id
+                 LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id
+                 WHERE pr.id = :id
+                 FOR UPDATE',
+                ['id' => $paymentId]
+            )->fetch();
+            if (!$renewal) {
                 $this->db->rollBack();
-                return ['success' => false, 'message' => 'Payment not found.'];
+                return ['success' => false, 'message' => 'Renewal request not found.'];
             }
-            if ($payment['payment_status'] === 'Confirmed' && $status !== 'Confirmed') {
+            if (in_array($renewal['status'], ['Approved', 'Rejected'], true)) {
                 $this->db->rollBack();
-                return ['success' => false, 'message' => 'Payment is already confirmed.'];
+                return ['success' => false, 'message' => 'Renewal request has already been reconciled.'];
             }
-            $updateFields = [
-                'payment_status = :payment_status',
-                'paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP)',
-                "confirmed_at = IF(:confirmed_status = 'Confirmed', CURRENT_TIMESTAMP, confirmed_at)",
-                'recorded_by_account_id = :admin_id',
-            ];
-            $updateParameters = [
-                'payment_status' => $status,
-                'confirmed_status' => $status,
-                'admin_id' => Auth::userId(),
-                'id' => $paymentId,
-            ];
-            if ($this->hasColumn('junkshop_partnership_payments', 'payment_reference')) {
-                $updateFields[] = 'payment_reference = :reference';
-                $updateParameters['reference'] = trim($reference) !== '' ? trim($reference) : null;
+            $isCashPayment = strcasecmp((string) $renewal['payment_method'], 'Cash') === 0;
+            if ($status === 'Rejected' && !$isCashPayment && ($rejectionReason === '' || strlen($rejectionReason) > 500)) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'A specific rejection reason is required for GCash payments.'];
+            }
+            if ($isCashPayment) {
+                $rejectionReason = '';
             }
             $this->db->query(
-                'UPDATE junkshop_partnership_payments SET ' . implode(', ', $updateFields) . ' WHERE id = :id',
-                $updateParameters
+                'UPDATE partnership_renewals SET status = :status, rejection_reason = :rejection_reason, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
+                ['status' => $status, 'rejection_reason' => $status === 'Rejected' ? $rejectionReason : null, 'id' => $paymentId]
             );
-            if ($status === 'Confirmed') {
+            $this->db->query(
+                'UPDATE payment_records SET status = :status WHERE renewal_id = :renewal_id',
+                ['status' => $status, 'renewal_id' => $paymentId]
+            );
+            if ($status === 'Approved') {
+                $interval = match ((string) $renewal['plan_type']) {
+                    '6 Months', 'Quarterly' => '6 MONTH',
+                    '1 Year', 'Annual' => '1 YEAR',
+                    default => '1 MONTH',
+                };
                 $this->db->query(
-                    'UPDATE junkshop_profiles SET partnership_expires_at = DATE_ADD(CASE WHEN partnership_expires_at IS NULL OR partnership_expires_at <= CURRENT_TIMESTAMP THEN CURRENT_TIMESTAMP ELSE partnership_expires_at END, INTERVAL 365 DAY), renewal_status = \'Current\' WHERE account_id = :account_id',
-                    ['account_id' => (int) $payment['junkshop_account_id']]
+                    "UPDATE junkshop_profiles SET partnership_expires_at = DATE_ADD(CASE WHEN partnership_expires_at IS NULL OR partnership_expires_at <= CURRENT_TIMESTAMP THEN CURRENT_TIMESTAMP ELSE partnership_expires_at END, INTERVAL {$interval}), renewal_status = 'Current' WHERE account_id = :account_id",
+                    ['account_id' => (int) $renewal['junkshop_account_id']]
                 );
-                $profile = $this->db->query(
-                    'SELECT partnership_expires_at, renewal_status FROM junkshop_profiles WHERE account_id = :account_id',
-                    ['account_id' => (int) $payment['junkshop_account_id']]
-                )->fetch();
-                if (!$profile || $profile['partnership_expires_at'] === null || $profile['renewal_status'] !== 'Current') {
-                    throw new RuntimeException('Junkshop profile was not updated.');
-                }
             }
-            $saved = $this->db->query('SELECT payment_status FROM junkshop_partnership_payments WHERE id = :id', ['id' => $paymentId])->fetchColumn();
+            $saved = $this->db->query('SELECT status FROM partnership_renewals WHERE id = :id', ['id' => $paymentId])->fetchColumn();
             if ($saved !== $status) {
                 throw new RuntimeException('Partnership payment state was not persisted.');
             }
             $this->db->commit();
-            return ['success' => true, 'message' => 'Partnership payment reconciled.'];
+            if ($status === 'Rejected' && !$isCashPayment) {
+                $emailResult = MailerService::sendRenewalRejection(
+                    (string) $renewal['email'],
+                    (string) $renewal['business_name'],
+                    (string) $renewal['plan_type'],
+                    (string) $renewal['payment_method'],
+                    (string) ($renewal['reference_number'] ?? ''),
+                    (string) $renewal['created_at'],
+                    $rejectionReason
+                );
+                if (!$emailResult['sent']) {
+                    error_log('Renewal rejection email was not sent: ' . ($emailResult['error'] ?? 'Unknown error'));
+                }
+            }
+            return ['success' => true, 'message' => $status === 'Rejected' && $isCashPayment
+                ? 'Cash renewal request rejected. No email notification was sent.'
+                : 'Partnership renewal reconciled.'];
         } catch (Throwable $exception) {
             $this->db->rollBack();
             error_log('Partnership payment reconciliation error: ' . $exception->getMessage());
@@ -285,18 +296,29 @@ class AdminFeatureController
         }
     }
 
-    public function createRenewalPayment(int $junkshopAccountId, string $method, string $planKey = 'renewal_fee_1_month'): array
+    public function createRenewalPayment(int $junkshopAccountId, string $method, string $planKey = 'renewal_fee_1_month', string $referenceNumber = '', ?array $receiptFile = null): array
     {
         if (!Auth::check() || Auth::userRole() !== 'junkshop' || Auth::userId() !== $junkshopAccountId) {
             return ['success' => false, 'message' => 'You cannot create this payment record.'];
         }
+        $profile = $this->db->query(
+            'SELECT id, account_id FROM junkshop_profiles WHERE account_id = :account_id LIMIT 1',
+            ['account_id' => $junkshopAccountId]
+        )->fetch();
+        if (!$profile || (int) $profile['account_id'] !== $junkshopAccountId) {
+            return ['success' => false, 'message' => 'Your junkshop profile could not be found. Please contact support.'];
+        }
         if (!in_array($method, ['Cash', 'GCash'], true)) {
             return ['success' => false, 'message' => 'Select a valid payment method.'];
         }
+        $referenceNumber = trim($referenceNumber);
+        if ($method === 'GCash' && !preg_match('/^[0-9]{13}$/', $referenceNumber)) {
+            return ['success' => false, 'message' => 'The GCash reference number must contain exactly 13 digits.'];
+        }
         $plans = [
-            'renewal_fee_1_month' => 'Renewal - 1 Month',
-            'renewal_fee_6_months' => 'Renewal - 6 Months',
-            'renewal_fee_1_year' => 'Renewal - 1 Year',
+            'renewal_fee_1_month' => '1 Month',
+            'renewal_fee_6_months' => '6 Months',
+            'renewal_fee_1_year' => '1 Year',
         ];
         if (!isset($plans[$planKey])) {
             return ['success' => false, 'message' => 'Select a valid renewal plan.'];
@@ -310,20 +332,119 @@ class AdminFeatureController
             return ['success' => false, 'message' => 'The selected renewal plan is unavailable.'];
         }
 
-        $statement = $this->db->query(
-            'INSERT INTO junkshop_partnership_payments (junkshop_account_id, payment_type, amount, payment_method, payment_status, due_at)
-             VALUES (:account_id, :payment_type, :amount, :method, \'Paid\', CURRENT_TIMESTAMP)',
-            [
-                'account_id' => $junkshopAccountId,
-                'payment_type' => $plans[$planKey],
-                'amount' => (float) $fee,
-                'method' => $method,
-            ]
-        );
-        if ($statement->rowCount() !== 1) {
-            return ['success' => false, 'message' => 'Renewal payment could not be recorded.'];
+        $amount = (float) $fee;
+        $planType = $plans[$planKey];
+        $receiptPath = null;
+        $uploadedReceiptPath = null;
+        try {
+            $this->db->beginTransaction();
+            $lockedProfile = $this->db->query(
+                'SELECT partnership_expires_at
+                 FROM junkshop_profiles
+                 WHERE account_id = :account_id
+                 FOR UPDATE',
+                ['account_id' => $junkshopAccountId]
+            )->fetch();
+            $lockedExpiry = !empty($lockedProfile['partnership_expires_at'])
+                ? new DateTime($lockedProfile['partnership_expires_at'])
+                : null;
+            if ($lockedExpiry !== null && $lockedExpiry > new DateTime()) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Renewal submission is available after your partnership plan expires.'];
+            }
+            $pendingRequest = $this->db->query(
+                "SELECT id
+                 FROM partnership_renewals
+                 WHERE junkshop_account_id = :account_id
+                   AND status IN ('Pending', 'Pending Reconciliation')
+                 LIMIT 1
+                 FOR UPDATE",
+                ['account_id' => $junkshopAccountId]
+            )->fetch();
+            if ($pendingRequest) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'You already have a pending renewal request awaiting Admin reconciliation.'];
+            }
+            if ($method === 'GCash') {
+                if (!is_array($receiptFile) || ($receiptFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    throw new InvalidArgumentException('Upload a GCash receipt screenshot.');
+                }
+                if (($receiptFile['size'] ?? 0) < 1 || $receiptFile['size'] > 3 * 1024 * 1024) {
+                    throw new InvalidArgumentException('The GCash receipt must be 3 MB or smaller.');
+                }
+                if (!is_uploaded_file($receiptFile['tmp_name'] ?? '')) {
+                    throw new InvalidArgumentException('The GCash receipt upload is invalid.');
+                }
+                if (@getimagesize($receiptFile['tmp_name']) === false) {
+                    throw new InvalidArgumentException('The GCash receipt must be a valid image.');
+                }
+                $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($receiptFile['tmp_name']);
+                $extensionByMime = [
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                ];
+                if (!isset($extensionByMime[$mimeType])) {
+                    throw new InvalidArgumentException('The GCash receipt must be a JPG, PNG, or WEBP image.');
+                }
+                $uploadDirectory = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'receipts';
+                if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0750, true) && !is_dir($uploadDirectory)) {
+                    throw new RuntimeException('The receipt upload directory could not be created.');
+                }
+                $fileName = 'gcash_receipt_' . $junkshopAccountId . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(6)) . '.' . $extensionByMime[$mimeType];
+                $uploadedReceiptPath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
+                if (!move_uploaded_file($receiptFile['tmp_name'], $uploadedReceiptPath)) {
+                    throw new RuntimeException('The GCash receipt could not be saved.');
+                }
+                $receiptPath = 'uploads/receipts/' . $fileName;
+            }
+            $renewalStatement = $this->db->query(
+                'INSERT INTO partnership_renewals (junkshop_account_id, renewal_type, plan_type, payment_method, amount, reference_number, receipt_image, status, created_at)
+                 VALUES (:account_id, \'Renewal\', :plan_type, :method, :amount, :reference_number, :receipt_image, \'Pending Reconciliation\', CURRENT_TIMESTAMP)',
+                [
+                    'account_id' => $junkshopAccountId,
+                    'plan_type' => $planType,
+                    'method' => $method,
+                    'amount' => $amount,
+                    'reference_number' => $method === 'GCash' ? $referenceNumber : null,
+                    'receipt_image' => $receiptPath,
+                ]
+            );
+            if ($renewalStatement->rowCount() !== 1) {
+                throw new RuntimeException('Renewal queue record was not created.');
+            }
+            $renewalId = (int) $this->db->getPDO()->lastInsertId();
+            $paymentStatement = $this->db->query(
+                'INSERT INTO payment_records (junkshop_id, renewal_id, transaction_type, payment_method, amount, reference_number, receipt_image, status, created_at)
+                 VALUES (:junkshop_id, :renewal_id, :transaction_type, :payment_method, :amount, :reference_number, :receipt_image, \'Pending\', CURRENT_TIMESTAMP)',
+                [
+                    'junkshop_id' => $junkshopAccountId,
+                    'renewal_id' => $renewalId,
+                    'transaction_type' => 'Partnership Renewal (' . $planType . ')',
+                    'payment_method' => $method,
+                    'amount' => $amount,
+                    'reference_number' => $method === 'GCash' ? $referenceNumber : null,
+                    'receipt_image' => $receiptPath,
+                ]
+            );
+            if ($paymentStatement->rowCount() !== 1) {
+                throw new RuntimeException('Payment history record was not created.');
+            }
+            $this->db->commit();
+            $message = $method === 'Cash'
+                ? 'Renewal request submitted using Cash payment. Your request has been queued for Partnership Payment Reconciliation.'
+                : 'Renewal payment submitted for admin confirmation.';
+            return ['success' => true, 'message' => $message];
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            if ($uploadedReceiptPath !== null && is_file($uploadedReceiptPath)) {
+                unlink($uploadedReceiptPath);
+            }
+            error_log('Renewal submission error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'Failed to submit renewal request. Please try again.'];
         }
-        return ['success' => true, 'message' => 'Renewal payment submitted for admin confirmation.'];
     }
 
     public function getConcernCooldownHours(): int
@@ -343,6 +464,28 @@ class AdminFeatureController
         )->fetchColumn();
 
         return $createdAt !== false && $createdAt !== null ? (string) $createdAt : null;
+    }
+
+    public function isAccountExpired(int $accountId): bool
+    {
+        $isExpired = $this->db->query(
+            "SELECT CASE
+                WHEN LOWER(COALESCE(a.account_status, '')) = 'expired' THEN 1
+                WHEN COALESCE(a.account_role, r.name) = 'junkshop'
+                    AND jp.partnership_expires_at IS NOT NULL
+                    AND jp.partnership_expires_at <> '0000-00-00 00:00:00'
+                    AND jp.partnership_expires_at <= CURRENT_TIMESTAMP THEN 1
+                ELSE 0
+             END AS is_expired
+             FROM accounts a
+             JOIN roles r ON r.id = a.role_id
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id
+             WHERE a.id = :account_id
+             LIMIT 1",
+            ['account_id' => $accountId]
+        )->fetchColumn();
+
+        return (int) $isExpired === 1;
     }
 
     public function listConcerns(?int $reporterId = null): array
@@ -383,6 +526,10 @@ class AdminFeatureController
 
     public function submitConcern(int $reporterId, string $subject, string $description): array
     {
+        if ($this->isAccountExpired($reporterId)) {
+            return ['success' => false, 'message' => 'Action locked: Cannot send messages while your account is expired.'];
+        }
+
         $subject = trim($subject);
         $description = trim($description);
 

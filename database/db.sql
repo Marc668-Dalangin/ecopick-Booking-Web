@@ -456,12 +456,31 @@ CREATE TABLE IF NOT EXISTS partnership_renewals (
     id INT PRIMARY KEY AUTO_INCREMENT,
     junkshop_account_id INT NOT NULL,
     renewal_type ENUM('Registration', 'Renewal') NOT NULL DEFAULT 'Renewal',
+    plan_type VARCHAR(50) NOT NULL DEFAULT 'Monthly',
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
+    amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    rejection_reason VARCHAR(500) NULL DEFAULT NULL,
     expiry_date DATETIME NULL,
-    status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current',
+    status ENUM('Pending Reconciliation', 'Pending', 'Approved', 'Rejected', 'Current', 'Due', 'Expired') NOT NULL DEFAULT 'Pending Reconciliation',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_partnership_renewal_junkshop (junkshop_account_id),
     CONSTRAINT fk_partnership_renewal_junkshop FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_records (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    junkshop_id INT NOT NULL,
+    renewal_id INT NOT NULL,
+    transaction_type VARCHAR(100) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_payment_record_junkshop (junkshop_id),
+    INDEX idx_payment_record_renewal (renewal_id),
+    CONSTRAINT fk_payment_record_junkshop FOREIGN KEY (junkshop_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_record_renewal FOREIGN KEY (renewal_id) REFERENCES partnership_renewals(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS renewal_notification_log (
@@ -503,6 +522,15 @@ ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS partnership_expires_at DA
 ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS renewal_status ENUM('Current', 'Due', 'Expired') NOT NULL DEFAULT 'Current';
 ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_expiration_notice_sent DATETIME NULL DEFAULT NULL;
 ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS last_profile_edit DATETIME NULL DEFAULT NULL;
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) NOT NULL DEFAULT 'Monthly';
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash';
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100) NULL DEFAULT NULL;
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS receipt_image VARCHAR(255) NULL DEFAULT NULL;
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR(500) NULL DEFAULT NULL;
+ALTER TABLE partnership_renewals MODIFY COLUMN status ENUM('Pending Reconciliation', 'Pending', 'Approved', 'Rejected', 'Current', 'Due', 'Expired') NOT NULL DEFAULT 'Pending Reconciliation';
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100) NULL DEFAULT NULL;
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS receipt_image VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending';

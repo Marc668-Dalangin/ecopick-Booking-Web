@@ -2732,3 +2732,13 @@
 [21-Sep-2026 18:31:25 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
 [21-Sep-2026 18:31:26 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
 [21-Sep-2026 18:31:28 Asia/Manila] Database connection failed: SQLSTATE[HY000] [1049] Unknown database 'ecopickdb'
+[22-Sep-2026 09:06:17 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.subscription_status' in 'field list'
+[22-Sep-2026 09:06:17 Asia/Manila] Authentication status check failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.subscription_status' in 'field list'
+[22-Sep-2026 09:06:17 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.subscription_status' in 'field list'
+[22-Sep-2026 09:06:17 Asia/Manila] Authentication status check failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'jp.subscription_status' in 'field list'
+[22-Sep-2026 09:31:17 Asia/Manila] Uncaught Error: Call to undefined function COALESCE() in C:\xampp\htdocs\booking-website-lipacity\app\middleware\Auth.php:45
+[22-Sep-2026 09:45:17 Asia/Manila] Uncaught ParseError: syntax error, unexpected identifier "Expired", expecting ")" in C:\xampp\htdocs\booking-website-lipacity\app\middleware\Auth.php:32
+[22-Sep-2026 09:45:17 Asia/Manila] Uncaught ParseError: syntax error, unexpected identifier "Expired", expecting ")" in C:\xampp\htdocs\booking-website-lipacity\app\middleware\Auth.php:32
+[22-Sep-2026 10:44:47 Asia/Manila] Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'TABLE_NAME' in field list is ambiguous in C:\xampp\htdocs\booking-website-lipacity\scripts\verify_migrations.php:109
+[22-Sep-2026 12:16:15 Asia/Manila] Database error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'reference_number' in 'field list'
+[22-Sep-2026 12:16:15 Asia/Manila] Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'reference_number' in 'field list' in C:\xampp\htdocs\booking-website-lipacity\app\core\Database.php:51

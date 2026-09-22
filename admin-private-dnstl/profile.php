@@ -100,7 +100,7 @@ ob_start();
                     <input type="hidden" name="update_sms_settings" value="1">
                     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                         <div>
-                            <h5 class="fw-bold mb-1">PhilSMS API Notifications</h5>
+                            <h5 class="fw-bold mb-1">Toggle SMS Notifications</h5>
                             <p class="text-muted mb-0">Toggle platform-wide SMS dispatch for pickup alerts and status updates.</p>
                         </div>
                         <div class="form-check form-switch ms-md-auto mb-0">

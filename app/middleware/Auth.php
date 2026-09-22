@@ -5,6 +5,12 @@
 
 class Auth
 {
+    private static function isExpirationExemptRoute(): bool
+    {
+        $currentScript = basename((string) ($_SERVER['PHP_SELF'] ?? ''));
+        return in_array($currentScript, ['renewal.php', 'partnership_renewal.php', 'logout.php'], true);
+    }
+
     /**
      * Check if user is authenticated
      */
@@ -44,9 +50,16 @@ class Auth
         $isExpiredJunkshop = $account
             && $account['account_role'] === 'junkshop'
             && (int) ($account['is_expired'] ?? 0) === 1;
+        $isExpiredAccount = $account
+            && strtolower((string) ($account['account_status'] ?? '')) === 'expired';
         Session::set('is_expired', $isExpiredJunkshop);
 
-        if (!$account || ($account['account_status'] !== 'active' && !$isExpiredJunkshop)) {
+        $isAllowedExpiredRoute = self::isExpirationExemptRoute()
+            && $account
+            && $account['account_role'] === 'junkshop'
+            && in_array(strtolower((string) $account['account_status']), ['active', 'expired'], true);
+
+        if (!$account || ($account['account_status'] !== 'active' && !$isExpiredJunkshop && !$isExpiredAccount && !$isAllowedExpiredRoute)) {
             self::logout();
             return false;
         }

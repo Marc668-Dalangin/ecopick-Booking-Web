@@ -48,7 +48,7 @@ $siteFavicon = APP_URL . '/assets/images/logo.png';
                     </a>
                     <a class="nav-link <?php echo $currentPage === 'partner-prices' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/partner-junkshops.php">
                         <i class="bi bi-shop-window"></i>
-                        <span>Partner Prices</span>
+                        <span>Junkshops</span>
                     </a>
                 <?php else: ?>
                     <a class="nav-link <?php echo $currentPage === 'renewal' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/renewal.php"><i class="bi bi-arrow-repeat"></i><span>Partnership Renewal</span></a>
@@ -154,7 +154,7 @@ $siteFavicon = APP_URL . '/assets/images/logo.png';
                                 </a>
                                 <a class="nav-link <?php echo $currentPage === 'partner-prices' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/partner-junkshops.php">
                                     <i class="bi bi-shop-window"></i>
-                                    <span>Partner Prices</span>
+                                    <span>Junkshops</span>
                                 </a>
                             <?php else: ?>
                                 <a class="nav-link" href="<?php echo APP_URL; ?>/user-junkshop/renewal.php"><i class="bi bi-arrow-repeat"></i><span>Partnership Renewal</span></a>
