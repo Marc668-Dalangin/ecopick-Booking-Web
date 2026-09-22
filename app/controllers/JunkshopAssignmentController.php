@@ -20,6 +20,15 @@ class JunkshopAssignmentController
      */
     public function acceptRequest(int $assignmentId, int $junkshopAccountId): array
     {
+        $feeSummary = (new JunkshopFeeService())->getOutstandingSummary($junkshopAccountId);
+        if ($feeSummary['is_locked']) {
+            $message = 'Your account is locked from accepting new requests until your outstanding fees are settled in Partnership Renewal.';
+            $_SESSION['flash_error'] = $message;
+            $_SESSION['flash_message'] = $message;
+            $_SESSION['flash_type'] = 'danger';
+            return ['success' => false, 'message' => $message, 'fee_locked' => true, 'redirect' => APP_URL . '/user-junkshop/matched-requests.php'];
+        }
+
         $request = $this->getDirectPickupRequest($assignmentId, $junkshopAccountId);
         if ($request === null) {
             return ['success' => false, 'message' => 'Pickup request not found for this junkshop.'];

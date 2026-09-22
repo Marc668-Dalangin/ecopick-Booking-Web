@@ -55,6 +55,7 @@ require_once __DIR__ . '/helpers/UI.php';
 require_once __DIR__ . '/services/StatusLogger.php';
 require_once __DIR__ . '/services/NotificationService.php';
 require_once __DIR__ . '/services/MailerService.php';
+require_once __DIR__ . '/services/JunkshopFeeService.php';
 require_once __DIR__ . '/controllers/FeeCalculator.php';
 
 if (!function_exists('defer_after_response')) {

@@ -10,6 +10,7 @@ if (Auth::userRole() !== 'junkshop') {
 
 $controller = new AdminFeatureController();
 $db = Database::getInstance();
+$feeService = new JunkshopFeeService();
 $plans = [
     '1_month' => ['config_key' => 'renewal_fee_1_month', 'label' => '1 Month', 'description' => 'Short-term partnership renewal.'],
     '6_months' => ['config_key' => 'renewal_fee_6_months', 'label' => '6 Months', 'description' => 'Half-year partnership renewal.'],
@@ -38,6 +39,24 @@ $pendingRequest = $db->query(
 )->fetch();
 $hasPendingRequest = !empty($pendingRequest);
 $canSubmitRenewal = $isExpired && !$hasPendingRequest;
+$pendingFeePayment = $db->query(
+    "SELECT 1 FROM junkshop_fee_payments
+     WHERE junkshop_id = :junkshop_id AND status = 'Pending'
+     LIMIT 1",
+    ['junkshop_id' => Auth::userId()]
+)->fetchColumn();
+$hasPendingFeePayment = $pendingFeePayment !== false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fee_payment'])) {
+    $feedback = CSRF::verify()
+        ? ($hasPendingFeePayment
+            ? ['success' => false, 'message' => 'You currently have a payment submission pending admin verification. You may submit another payment only after your pending request is Approved or Rejected.']
+            : $controller->createFeePayment(Auth::userId(), (string) ($_POST['fee_payment_method'] ?? ''), (string) ($_POST['amount_submitted'] ?? ''), (string) ($_POST['fee_reference_number'] ?? ''), $_FILES['fee_receipt_image'] ?? null))
+        : ['success' => false, 'message' => 'Your session expired. Please try again.'];
+    $_SESSION['renewal_feedback'] = $feedback;
+    header('Location: ' . APP_URL . '/user-junkshop/renewal.php');
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['process_renewal_submit']) || isset($_POST['submit_renewal']))) {
     if (!$canSubmitRenewal) {
@@ -108,6 +127,13 @@ $payments = $db->query(
      ORDER BY created_at DESC',
     ['account_id' => Auth::userId(), 'payment_account_id' => Auth::userId()]
 )->fetchAll();
+$feeSummary = $feeService->getOutstandingSummary(Auth::userId());
+$completedTransactions = $feeService->getCompletedTransactions(Auth::userId());
+$feePayments = $db->query(
+    'SELECT payment_method, reference_number, amount_submitted, amount_deducted, status, receipt_image, created_at
+     FROM junkshop_fee_payments WHERE junkshop_id = :junkshop_id ORDER BY created_at DESC, id DESC',
+    ['junkshop_id' => Auth::userId()]
+)->fetchAll();
 
 $pageTitle = 'Partnership Renewal';
 $currentPage = 'renewal';
@@ -117,6 +143,65 @@ ob_start();
 <div class="alert alert-info d-flex align-items-center small mb-4" role="alert">
     <i class="bi bi-info-circle-fill me-2 fs-5"></i>
     <div><strong>3-Week Free Trial:</strong> Newly approved junkshop accounts receive a 3-week free trial. Standard renewal options apply after the trial expires.</div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <h2 class="h4 fw-bold mb-3">Outstanding EcoPick Fees</h2>
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Total Outstanding Balance</div><strong class="fs-4">₱<?php echo number_format($feeSummary['total_outstanding'], 2); ?></strong></div></div>
+            <div class="col-12 col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Service Fee Subtotal</div><strong>₱<?php echo number_format($feeSummary['service_fee_subtotal'], 2); ?></strong></div></div>
+            <div class="col-12 col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Commission Subtotal</div><strong>₱<?php echo number_format($feeSummary['commission_subtotal'], 2); ?></strong></div></div>
+            <div class="col-12 col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Maximum Allowed Fee Limit</div><strong>₱<?php echo number_format($feeSummary['maximum_allowed'], 2); ?></strong><div class="small text-muted mt-1">Remaining: ₱<?php echo number_format($feeSummary['remaining_allowance'], 2); ?></div></div></div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-4"><span class="small text-muted">Approved payments deducted: ₱<?php echo number_format($feeSummary['approved_fee_payments'], 2); ?></span><?php if (!$hasPendingFeePayment): ?><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#feePaymentModal">Pay Outstanding Fees</button><?php endif; ?></div>
+        <?php if ($hasPendingFeePayment): ?><div class="alert alert-warning mt-4 mb-0" role="alert">You currently have a payment submission pending admin verification. You may submit another payment only after your pending request is Approved or Rejected.</div><?php endif; ?>
+        <?php if ($feeSummary['is_locked']): ?><div class="alert alert-danger mt-4 mb-0" role="alert">Your outstanding fees have reached the maximum allowed limit. Settle your balance to accept new pickup requests.</div><?php endif; ?>
+    </div>
+</div>
+
+<div class="modal fade" id="feePaymentModal" tabindex="-1" aria-labelledby="feePaymentModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form method="post" enctype="multipart/form-data" id="feePaymentForm"><div class="modal-header"><h5 class="modal-title" id="feePaymentModalLabel">Pay Outstanding Fees</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">
+    <?php echo CSRF::field(); ?><input type="hidden" name="submit_fee_payment" value="1">
+    <div class="mb-3"><label class="form-label fw-bold" for="fee_amount_submitted">Amount to submit</label><input class="form-control" type="number" name="amount_submitted" id="fee_amount_submitted" min="0.01" max="<?php echo number_format((float) $feeSummary['total_outstanding'], 2, '.', ''); ?>" step="0.01" value="<?php echo number_format((float) $feeSummary['total_outstanding'], 2, '.', ''); ?>" required></div>
+    <div class="mb-3"><label class="form-label fw-bold" for="fee_payment_method">Payment method</label><select class="form-select" name="fee_payment_method" id="fee_payment_method" required><option value="Cash">Cash</option><option value="GCash">GCash</option></select></div>
+    <div id="feeGcashFields" class="d-none"><div class="mb-3"><label class="form-label fw-bold" for="fee_reference_number">GCash reference number</label><input class="form-control" type="text" name="fee_reference_number" id="fee_reference_number" inputmode="numeric" maxlength="13" minlength="13" pattern="[0-9]{13}" autocomplete="off"></div><div class="mb-3"><label class="form-label fw-bold" for="fee_receipt_image">Receipt screenshot</label><input class="form-control" type="file" name="fee_receipt_image" id="fee_receipt_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><div class="form-text">JPG, JPEG, PNG, or WEBP only, maximum 3 MB.</div></div></div>
+    </div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Submit Payment</button></div></form></div></div></div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-bold text-white"><i class="bi bi-table me-2"></i>Completed Transactions Contributing to Fees</h6>
+        <button class="btn btn-outline-light btn-sm fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCompletedTransactions" aria-expanded="true" aria-controls="collapseCompletedTransactions" id="btnToggleTransactions">
+            <i class="bi bi-chevron-up me-1" id="iconToggleTransactions"></i>
+            <span id="textToggleTransactions">Hide Details</span>
+        </button>
+    </div>
+    <div class="collapse show" id="collapseCompletedTransactions">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light"><tr><th>Booking</th><th>Seller</th><th>Date</th><th>Payment</th><th>Reference</th><th>Weight (kg)</th><th>Value (₱)</th><th>Pickup fee</th><th class="text-end text-success">EcoPick service fee</th><th class="text-warning-emphasis">Commission</th><th>Seller net</th></tr></thead>
+                <tbody>
+                <?php foreach ($completedTransactions as $transaction): ?>
+                    <tr>
+                        <td><?php echo Validator::escape($transaction['booking_reference']); ?></td>
+                        <td><?php echo Validator::escape($transaction['seller_name']); ?></td>
+                        <td><?php echo Validator::escape(date('M d, Y g:i A', strtotime($transaction['completed_at']))); ?></td>
+                        <td><?php echo Validator::escape($transaction['payment_method'] ?: '-'); ?></td>
+                        <td><?php echo Validator::escape($transaction['reference_number'] ?: '-'); ?></td>
+                        <td><?php echo number_format((float) $transaction['actual_weight_kg'], 2); ?></td>
+                        <td>₱<?php echo number_format((float) $transaction['final_recyclable_value'], 2); ?></td>
+                        <td>₱<?php echo number_format((float) $transaction['pickup_fee'], 2); ?></td>
+                        <td>₱<?php echo number_format((float) $transaction['ecopick_service_fee'], 2); ?></td>
+                        <td>₱<?php echo number_format((float) $transaction['transaction_commission'], 2); ?></td>
+                        <td>₱<?php echo number_format((float) $transaction['final_seller_amount'], 2); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$completedTransactions): ?><tr><td colspan="11" class="text-center text-muted py-4">No completed transactions found.</td></tr><?php endif; ?>
+                </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4">
@@ -143,7 +228,7 @@ ob_start();
                     <dt>Partnership status</dt>
                     <dd><?php echo Validator::escape($profile['renewal_status'] ?? 'Current'); ?></dd>
                     <dt>Expiry date</dt>
-                    <dd><?php echo Validator::escape($profile['partnership_expires_at'] ?? 'Not assigned'); ?></dd>
+                    <dd><?php echo Validator::escape($expDate ? $expDate->format('M d, Y g:i A') : 'Not assigned'); ?></dd>
                 </dl>
                 <form id="renewalForm" action="renewal.php" method="POST" enctype="multipart/form-data">
                     <?php echo CSRF::field(); ?>
@@ -199,7 +284,7 @@ ob_start();
                                 <td><?php echo Validator::escape($payment['payment_method'] ?: '-'); ?></td>
                                 <td><?php echo Validator::escape($payment['reference_number'] ?: '-'); ?></td>
                                 <td><?php echo Validator::escape($payment['payment_status']); ?></td>
-                                <td><?php echo Validator::escape($payment['created_at']); ?></td>
+                                <td><?php echo Validator::escape(date('M d, Y g:i A', strtotime($payment['created_at']))); ?></td>
                             </tr>
                         <?php endforeach; ?>
                         <?php if (!$payments): ?><tr><td colspan="6" class="text-center text-muted py-4">No payment records found.</td></tr><?php endif; ?>
@@ -211,6 +296,48 @@ ob_start();
     </div>
 </div>
 <script>
+    function addPaymentRecordsCollapse() {
+        const heading = Array.from(document.querySelectorAll('h4')).find(function (element) {
+            return element.textContent.trim() === 'Payment records';
+        });
+        const panel = heading?.nextElementSibling;
+        if (!heading || !panel || !panel.classList.contains('table-responsive')) return;
+        panel.id = 'paymentRecordsCollapse';
+        panel.classList.add('collapse', 'show');
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'btn btn-sm btn-outline-secondary ms-2 align-middle';
+        toggle.setAttribute('data-bs-toggle', 'collapse');
+        toggle.setAttribute('data-bs-target', '#paymentRecordsCollapse');
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-controls', 'paymentRecordsCollapse');
+        toggle.innerHTML = '<i class="bi bi-chevron-up me-1"></i> Hide Details';
+        heading.appendChild(toggle);
+        panel.addEventListener('shown.bs.collapse', function () {
+            toggle.innerHTML = '<i class="bi bi-chevron-up me-1"></i> Hide Details';
+            toggle.setAttribute('aria-expanded', 'true');
+        });
+        panel.addEventListener('hidden.bs.collapse', function () {
+            toggle.innerHTML = '<i class="bi bi-chevron-down me-1"></i> Show Details';
+            toggle.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    addPaymentRecordsCollapse();
+
+    const completedTransactionsCollapse = document.getElementById('collapseCompletedTransactions');
+    const toggleTransactionsText = document.getElementById('textToggleTransactions');
+    const toggleTransactionsIcon = document.getElementById('iconToggleTransactions');
+
+    completedTransactionsCollapse?.addEventListener('shown.bs.collapse', function () {
+        toggleTransactionsText.textContent = 'Hide Details';
+        toggleTransactionsIcon.className = 'bi bi-chevron-up me-1';
+    });
+    completedTransactionsCollapse?.addEventListener('hidden.bs.collapse', function () {
+        toggleTransactionsText.textContent = 'Show Details';
+        toggleTransactionsIcon.className = 'bi bi-chevron-down me-1';
+    });
+
     const paymentMethodInputs = document.querySelectorAll('input[name="payment_method"]');
     const gcashFields = document.getElementById('gcashFields');
     const referenceInput = document.getElementById('reference_number');
@@ -257,6 +384,22 @@ ob_start();
     document.getElementById('plan_type').addEventListener('change', function () {
         document.getElementById('plan_amount').value = this.options[this.selectedIndex].dataset.amount || '0.00';
     });
+    const feeMethod = document.getElementById('fee_payment_method');
+    const feeGcashFields = document.getElementById('feeGcashFields');
+    const feeReference = document.getElementById('fee_reference_number');
+    const feeReceipt = document.getElementById('fee_receipt_image');
+    function updateFeePaymentFields() {
+        const isGcash = feeMethod.value === 'GCash';
+        feeGcashFields.classList.toggle('d-none', !isGcash);
+        feeReference.required = isGcash;
+        feeReceipt.required = isGcash;
+        if (!isGcash) { feeReference.value = ''; feeReceipt.value = ''; }
+    }
+    feeMethod.addEventListener('change', updateFeePaymentFields);
+    feeReference.addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13); });
+    feeReceipt.addEventListener('change', function () { const file = this.files[0]; if (file && (file.size > 3 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))) { alert('Please select one JPG, JPEG, PNG, or WEBP image no larger than 3 MB.'); this.value = ''; } });
+    document.getElementById('feePaymentForm').addEventListener('submit', function (event) { if (feeMethod.value === 'GCash' && !/^\d{13}$/.test(feeReference.value)) { event.preventDefault(); alert('The GCash reference number must contain exactly 13 digits.'); } });
+    updateFeePaymentFields();
 </script>
 <?php
 $content = ob_get_clean();

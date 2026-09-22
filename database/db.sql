@@ -186,6 +186,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lat DECIMAL(10,8) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lng DECIMAL(11,8) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD INDEX IF NOT EXISTS idx_seller_junkshop_status (seller_account_id, junkshop_id, current_status);
+ALTER TABLE pickup_requests ADD INDEX IF NOT EXISTS idx_junkshop_status (junkshop_id, current_status);
 
 CREATE TABLE IF NOT EXISTS pickup_request_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -226,6 +227,17 @@ CREATE TABLE IF NOT EXISTS fee_configurations (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_fee_config_key (config_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS system_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO system_settings (setting_key, setting_value)
+VALUES ('max_junkshop_fee_threshold', '5000.00')
+ON DUPLICATE KEY UPDATE setting_key = setting_key;
 
 CREATE TABLE IF NOT EXISTS fee_settings (
     id INT NOT NULL AUTO_INCREMENT,
@@ -656,5 +668,26 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO schema_migrations (version) VALUES ('001')
 ON DUPLICATE KEY UPDATE version = VALUES(version);
+
+-- Junkshop Fee Payments Table
+CREATE TABLE IF NOT EXISTS junkshop_fee_payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    junkshop_id INT NOT NULL,
+    payment_method ENUM('Cash', 'GCash') NOT NULL DEFAULT 'GCash',
+    reference_number VARCHAR(100) NULL DEFAULT NULL,
+    receipt_image VARCHAR(255) NULL DEFAULT NULL,
+    amount_submitted DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    amount_deducted DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+    rejection_reason TEXT NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_junkshop_status (junkshop_id, status),
+    INDEX idx_reference_number (reference_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Ensure reference_number has a standard index for performant lookups (non-unique to allow re-submission if status = 'Rejected')
+ALTER TABLE junkshop_fee_payments ADD INDEX IF NOT EXISTS idx_reference_number (reference_number);
+ALTER TABLE junkshop_fee_payments ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL DEFAULT NULL AFTER status;
 
 SET FOREIGN_KEY_CHECKS = 1;

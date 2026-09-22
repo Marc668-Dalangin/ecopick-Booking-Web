@@ -167,6 +167,7 @@ if (!empty($_SESSION['is_expired'])) {
 }
 
 $dashboardController = new DashboardController();
+$feeSummary = (new JunkshopFeeService())->getOutstandingSummary(Auth::userId());
 $allowedStatuses = ['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled'];
 $selectedStatus = in_array((string) ($_GET['status'] ?? ''), $allowedStatuses, true) ? (string) $_GET['status'] : null;
 $sortOrder = strtoupper((string) ($_GET['sort'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
@@ -204,6 +205,12 @@ ob_start();
         </div>
 
         <div id="assignment-feedback" class="alert d-none" role="status" aria-live="polite"></div>
+        <?php if ($feeSummary['is_locked']): ?>
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-lock-fill me-2 fs-5"></i>
+                <div><strong>Request acceptance locked:</strong> Your outstanding fee balance has reached ₱<?php echo number_format($feeSummary['maximum_allowed'], 2); ?>. Settle it in <a href="<?php echo APP_URL; ?>/user-junkshop/renewal.php" class="alert-link">Partnership Renewal</a> before accepting new requests.</div>
+            </div>
+        <?php endif; ?>
 
         <form method="GET" class="row g-3 align-items-end mb-4" aria-label="Filter matched requests">
             <div class="col-12 col-md-6 col-lg-5"><label class="form-label fw-semibold" for="matched-status">Status</label><select class="form-select" id="matched-status" name="status" onchange="this.form.submit()"><option value="">All statuses</option><?php foreach ($allowedStatuses as $status): ?><option value="<?php echo Validator::escape($status); ?>" <?php echo $selectedStatus === $status ? 'selected' : ''; ?>><?php echo $status === 'Cancelled' ? 'Cancelled by Seller' : Validator::escape($status); ?></option><?php endforeach; ?></select></div>
@@ -265,7 +272,7 @@ ob_start();
 
                                 <?php if (in_array(($assignment['current_status'] ?? ''), ['Pending Request', 'Pending', 'Requested', 'Matched'], true) || (($assignment['assignment_status'] ?? '') === 'Matched')): ?>
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="button" class="btn btn-success accept-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Accept</button>
+                                        <?php if (!$feeSummary['is_locked']): ?><button type="button" class="btn btn-success accept-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Accept</button><?php endif; ?>
                                         <button type="button" class="btn btn-outline-danger decline-request" data-assignment-id="<?php echo (int)($assignment['assignment_id'] ?? 0); ?>">Decline</button>
                                     </div>
                                 <?php elseif (($assignment['current_status'] ?? '') === 'Accepted'): ?>
@@ -1166,7 +1173,8 @@ window.addEventListener('DOMContentLoaded', function () {
             return '<button type="button" class="btn btn-primary schedule-request" data-pickup-request-id="' + requestId + '">Set Schedule</button>';
         }
         if (status === 'Pending Request' || status === 'Pending' || status === 'Requested' || status === 'Matched') {
-            return '<button type="button" class="btn btn-success accept-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Accept</button><button type="button" class="btn btn-outline-danger decline-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Decline</button>';
+            const acceptButton = <?php echo $feeSummary['is_locked'] ? "''" : "'<button type=\\\"button\\\" class=\\\"btn btn-success accept-request\\\" data-pickup-request-id=\\\"' + requestId + '\\\" data-assignment-id=\\\"' + requestId + '\\\">Accept</button>'"; ?>;
+            return acceptButton + '<button type="button" class="btn btn-outline-danger decline-request" data-pickup-request-id="' + requestId + '" data-assignment-id="' + requestId + '">Decline</button>';
         }
         if (status === 'Scheduled') {
             return '<button type="button" class="btn btn-primary mark-for-pickup" data-pickup-request-id="' + requestId + '">Mark as For Pickup</button>';

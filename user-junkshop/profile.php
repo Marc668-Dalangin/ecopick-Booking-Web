@@ -159,7 +159,6 @@ ob_start();
                     <div class="mb-3">
                         <label class="form-label fw-bold" for="registered_email">Email Address</label>
                         <input type="email" class="form-control bg-light" id="registered_email" value="<?php echo htmlspecialchars($currentProfile['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly disabled>
-                        <small class="text-muted">Registered email addresses cannot be modified directly.</small>
                     </div>
 
                     <?php if ($role === 'seller'): ?>
@@ -306,7 +305,7 @@ ob_start();
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="gcash_account_number">GCash Account Number</label>
-                                <input type="tel" class="form-control" id="gcash_account_number" name="gcash_account_number" value="<?php echo Validator::escape($currentProfile['gcash_account_number'] ?? ''); ?>" maxlength="11" inputmode="numeric" placeholder="09XXXXXXXXX">
+                                <input type="tel" class="form-control" id="gcash_account_number" name="gcash_account_number" value="<?php echo Validator::escape($currentProfile['gcash_account_number'] ?? ''); ?>" maxlength="11" inputmode="numeric">
                                 <div class="form-text">Used for manual GCash settlement verification only.</div>
                             </div>
                         </div>

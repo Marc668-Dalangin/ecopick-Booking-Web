@@ -71,6 +71,16 @@ if ($method === 'POST') {
     if ($action === 'accept') {
         $pickupRequestId = (int) ($_POST['pickup_request_id'] ?? $_POST['assignment_id'] ?? 0);
         $result = $assignmentController->acceptRequest($pickupRequestId, $junkshopId);
+        if (!empty($result['fee_locked'])) {
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                Session::start();
+            }
+            $_SESSION['flash_error'] = $result['message'];
+            $_SESSION['flash_message'] = $result['message'];
+            $_SESSION['flash_type'] = 'danger';
+            session_write_close();
+            http_response_code(403);
+        }
         $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;

@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $controller = new AdminFeatureController();
+$feeService = new JunkshopFeeService();
 $feedback = null;
 $errorMessage = null;
 $action = (string) ($_POST['action'] ?? '');
@@ -30,6 +31,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
                 NotificationService::sendRenewalReminders();
             });
             $feedback['message'] .= ' Renewal notifications queued for background delivery.';
+        }
+    } elseif ($action === 'max_fee_threshold') {
+        $threshold = trim((string) ($_POST['max_junkshop_fee_threshold'] ?? ''));
+        if ($threshold === '' || !is_numeric($threshold) || (float) $threshold < 0) {
+            $feedback = ['success' => false, 'message' => 'Enter a valid non-negative maximum fee threshold.'];
+        } else {
+            $db = Database::getInstance();
+            $db->query(
+                'INSERT INTO system_settings (setting_key, setting_value)
+                 VALUES (:setting_key, :setting_value)
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+                [
+                    'setting_key' => 'max_junkshop_fee_threshold',
+                    'setting_value' => number_format((float) $threshold, 2, '.', ''),
+                ]
+            );
+            $feedback = ['success' => true, 'message' => 'Maximum outstanding fee threshold updated.'];
         }
     } elseif ($action === 'expiry') {
         $customExpiryDate = trim((string) ($_POST['custom_expiry_date'] ?? ''));
@@ -48,12 +66,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::verify()) {
             $feedback['message'] .= ' Renewal notifications queued for background delivery.';
         }
     } elseif ($action === 'reconcile') {
-        $rejectionReason = trim((string) ($_POST['rejection_reason'] ?? ''));
-        $customReason = trim((string) ($_POST['custom_reason'] ?? ''));
-        if ((string) ($_POST['payment_status'] ?? '') === 'Rejected' && $rejectionReason === 'Custom Reason') {
-            $rejectionReason = $customReason;
+        $rejectionReason = trim((string) ($_POST['rejection_reason'] ?? $_POST['reason_preset'] ?? ''));
+        $customReason = trim((string) ($_POST['rejection_notes'] ?? $_POST['reason_notes'] ?? ''));
+        if ((string) ($_POST['payment_status'] ?? '') === 'Rejected' && $rejectionReason === 'Other / Custom Reason' && $customReason !== '') {
+            $rejectionReason .= ': ' . $customReason;
+        } elseif ($customReason !== '') {
+            $rejectionReason .= ' - ' . $customReason;
         }
         $feedback = $controller->reconcilePartnershipPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''), $rejectionReason);
+    } elseif ($action === 'fee_reconcile') {
+        $feeReason = trim((string) ($_POST['rejection_reason'] ?? $_POST['reason_preset'] ?? ''));
+        $feeCustomReason = trim((string) ($_POST['rejection_notes'] ?? $_POST['reason_notes'] ?? ''));
+        if ($feeReason === 'Other / Custom Reason' && $feeCustomReason !== '') {
+            $feeReason .= ': ' . $feeCustomReason;
+        } elseif ($feeCustomReason !== '') {
+            $feeReason .= ' - ' . $feeCustomReason;
+        }
+        $feedback = $controller->reconcileFeePayment((int) ($_POST['fee_payment_id'] ?? $_POST['payment_id'] ?? 0), (string) ($_POST['fee_status'] ?? $_POST['payment_status'] ?? ''), (string) ($_POST['amount_deducted'] ?? '0'), $feeReason);
     } elseif ($action === 'commission') {
         $feedback = $controller->reconcileCommissionPayment((int) $_POST['payment_id'], (string) $_POST['payment_status'], (string) ($_POST['payment_reference'] ?? ''));
     }
@@ -85,12 +114,20 @@ $renewalNoticeDays = $loadRenewalData(
     static fn (): int => $controller->getRenewalNoticeDays(),
     1
 );
+$maximumFeeThreshold = $loadRenewalData(
+    static fn (): float => $feeService->getMaximumFeeThreshold(),
+    5000.00
+);
 $junkshops = $loadRenewalData(
     static fn (): array => $controller->listApprovedJunkshops(),
     []
 );
 $payments = $loadRenewalData(
     static fn (): array => $controller->listPartnershipPayments(),
+    []
+);
+$feePayments = $loadRenewalData(
+    static fn (): array => $controller->listFeePayments(),
     []
 );
 $pageTitle = 'Renewals & Payments';
@@ -121,6 +158,19 @@ ob_start();
                 <button class="btn btn-primary" type="submit">Save notification setting</button>
             </form>
         </div>
+        <div class="border rounded p-3 mb-4">
+            <h4 class="h5 fw-bold mb-1">Junkshop Outstanding Fee Threshold</h4>
+            <p class="text-muted small mb-3">Junkshops cannot accept new pickup requests when completed-transaction fees reach this limit.</p>
+            <form method="post" class="js-loading-form">
+                <?php echo CSRF::field(); ?>
+                <input type="hidden" name="action" value="max_fee_threshold">
+                <div class="mb-3">
+                    <label for="max_junkshop_fee_threshold" class="form-label fw-bold">Maximum Allowed Outstanding Fees (₱)</label>
+                    <input type="number" name="max_junkshop_fee_threshold" id="max_junkshop_fee_threshold" class="form-control" min="0" step="0.01" value="<?php echo number_format((float) $maximumFeeThreshold, 2, '.', ''); ?>" required>
+                </div>
+                <button class="btn btn-primary" type="submit">Save fee threshold</button>
+            </form>
+        </div>
         <?php if ($feedback): ?>
             <div class="alert alert-<?php echo $feedback['success'] ? 'success' : 'danger'; ?>"><?php echo Validator::escape($feedback['message']); ?></div>
         <?php endif; ?>
@@ -145,7 +195,7 @@ ob_start();
                     <tr>
                         <td class="fw-semibold"><?php echo Validator::escape($junkshop['business_name']); ?></td>
                         <td><span class="badge text-bg-<?php echo $isExpired ? 'danger' : ($junkshop['account_status'] === 'active' ? 'success' : 'secondary'); ?>"><?php echo Validator::escape(ucfirst($junkshop['display_status'])); ?></span></td>
-                        <td><?php echo Validator::escape($junkshop['partnership_expires_at'] ?: 'Not assigned'); ?></td>
+                        <td><?php echo Validator::escape($junkshop['partnership_expires_at'] ? (new DateTime($junkshop['partnership_expires_at']))->format('M d, Y g:i A') : 'Not assigned'); ?></td>
                         <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#expiryModal" data-account-id="<?php echo (int) $junkshop['account_id']; ?>" data-junkshop-name="<?php echo Validator::escape($junkshop['business_name']); ?>" data-current-expiry="<?php echo Validator::escape($junkshop['partnership_expires_at'] ?: ''); ?>">Modify Expiry</button></td>
                     </tr>
                 <?php endforeach; ?>
@@ -190,34 +240,101 @@ ob_start();
     </div></div>
 </div>
 
-<div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Partnership Payment Reconciliation</h4><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop Name / Business Name</th><th>Type of Renewal Plan</th><th>Payment Method</th><th>Amount (₱)</th><th>Reference Number</th><th>Receipt</th><th>Date and Time</th><th>Status</th><th>Actions</th></tr></thead><tbody><?php foreach ($payments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['plan_type']); ?></td><td><?php echo Validator::escape($payment['payment_method']); ?></td><td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td><td><?php echo $payment['payment_method'] === 'GCash' && $payment['reference_number'] ? Validator::escape($payment['reference_number']) : 'N/A'; ?></td><td><?php if ($payment['payment_method'] === 'GCash' && !empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View Receipt</button><?php else: ?>N/A<?php endif; ?></td><td><?php echo Validator::escape((new DateTime($payment['created_at']))->format('Y-m-d H:i:s')); ?></td><td><?php echo Validator::escape($payment['status']); ?></td><td><?php if (!in_array($payment['status'], ['Approved', 'Rejected'], true)): ?><form method="post" class="d-flex gap-2"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" value="<?php echo (int) $payment['id']; ?>"><button class="btn btn-sm btn-success" name="payment_status" value="Approved">Approve</button><button class="btn btn-sm btn-outline-danger" name="payment_status" value="Rejected">Reject</button></form><?php else: ?><span class="text-muted">Completed</span><?php endif; ?></td></tr><?php endforeach; ?><?php if (!$payments): ?><tr><td colspan="9" class="text-center text-muted py-4">No renewal requests found.</td></tr><?php endif; ?></tbody></table></div></div></div>
+<div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Partnership Payment Reconciliation</h4><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop Name / Business Name</th><th>Type of Renewal Plan</th><th>Payment Method</th><th>Amount (₱)</th><th>Reference Number</th><th>Receipt</th><th>Date and Time</th><th>Status</th><th>Actions</th></tr></thead><tbody><?php foreach ($payments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['plan_type']); ?></td><td><?php echo Validator::escape($payment['payment_method']); ?></td><td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td><td><?php echo $payment['payment_method'] === 'GCash' && $payment['reference_number'] ? Validator::escape($payment['reference_number']) : 'N/A'; ?></td><td><?php if ($payment['payment_method'] === 'GCash' && !empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View Receipt</button><?php else: ?>N/A<?php endif; ?></td><td><?php echo Validator::escape((new DateTime($payment['created_at']))->format('M d, Y g:i A')); ?></td><td><?php echo Validator::escape($payment['status']); ?></td><td><?php if (!in_array($payment['status'], ['Approved', 'Rejected'], true)): ?><form method="post" class="d-flex gap-2"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" value="<?php echo (int) $payment['id']; ?>"><button class="btn btn-sm btn-success" name="payment_status" value="Approved">Approve</button><button class="btn btn-sm btn-outline-danger" name="payment_status" value="Rejected">Reject</button></form><?php else: ?><span class="text-muted">Completed</span><?php endif; ?></td></tr><?php endforeach; ?><?php if (!$payments): ?><tr><td colspan="9" class="text-center text-muted py-4">No renewal requests found.</td></tr><?php endif; ?></tbody></table></div></div></div>
 
 <div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="receiptModalLabel">GCash Receipt</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body text-center"><img id="receiptModalImage" class="img-fluid" alt="GCash receipt"></div></div></div></div>
 
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form method="post" id="rejectForm"><div class="modal-header"><h5 class="modal-title" id="rejectModalLabel">Reject Renewal Payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" id="reject_payment_id"><input type="hidden" name="payment_status" value="Rejected"><label for="rejection_reason" class="form-label fw-bold">Reason for rejection</label><select name="rejection_reason" id="rejection_reason" class="form-select" required><option value="" selected disabled>Select a reason</option><option>GCash Reference Number does not match receipt screenshot</option><option>Uploaded receipt image is unreadable or incomplete</option><option>Payment amount does not match selected plan</option><option value="Custom Reason">Custom Reason</option></select><div id="customReasonGroup" class="mt-3 d-none"><label for="custom_reason" class="form-label fw-bold">Custom reason</label><textarea name="custom_reason" id="custom_reason" class="form-control" rows="3" maxlength="500"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Reject Payment</button></div></form></div></div></div>
 
+<div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Junkshop Fee Payment Verification</h4><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop Name / Business Name</th><th>Payment Method</th><th>Reference Number</th><th>Receipt</th><th>Amount Submitted</th><th>Date and Time</th><th>Status</th><th>Actions</th></tr></thead><tbody><?php foreach ($feePayments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['payment_method']); ?></td><td><?php echo $payment['payment_method'] === 'GCash' && $payment['reference_number'] ? Validator::escape($payment['reference_number']) : '<span class="text-muted">N/A</span>'; ?></td><td><?php if ($payment['payment_method'] === 'GCash' && !empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View Receipt</button><?php else: ?><span class="badge bg-secondary">Cash Payment</span><?php endif; ?></td><td>₱<?php echo number_format((float) $payment['amount_submitted'], 2); ?></td><td><?php echo Validator::escape((new DateTime($payment['created_at']))->format('M d, Y g:i A')); ?></td><td><?php echo Validator::escape($payment['status']); ?><?php if ($payment['status'] === 'Approved'): ?> <small class="text-muted">(₱<?php echo number_format((float) $payment['amount_deducted'], 2); ?> deducted)</small><?php endif; ?></td><td><?php if ($payment['status'] === 'Pending'): ?><form method="post" class="d-flex gap-2 align-items-center"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="fee_reconcile"><input type="hidden" name="fee_payment_id" value="<?php echo (int) $payment['id']; ?>"><input class="form-control form-control-sm" type="number" name="amount_deducted" min="0.01" max="<?php echo number_format((float) $payment['amount_submitted'], 2, '.', ''); ?>" step="0.01" placeholder="Deduction" required><button class="btn btn-sm btn-success" name="fee_status" value="Approved">Approve</button><button class="btn btn-sm btn-outline-danger" name="fee_status" value="Rejected" formnovalidate>Reject</button></form><?php else: ?><span class="text-muted">Completed</span><?php endif; ?></td></tr><?php endforeach; ?><?php if (!$feePayments): ?><tr><td colspan="8" class="text-center text-muted py-4">No junkshop fee payments found.</td></tr><?php endif; ?></tbody></table></div></div></div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    function addSectionCollapse(headingText, collapseId, buttonId, placeInHeading) {
+        const heading = Array.from(document.querySelectorAll('h4')).find(function (element) {
+            return element.textContent.trim() === headingText;
+        });
+        const panel = heading?.nextElementSibling;
+        if (!heading || !panel || !panel.classList.contains('table-responsive')) return;
+        const card = heading.closest('.card');
+        const cardBody = heading.closest('.card-body');
+        if (!card || !cardBody) return;
+        const collapse = document.createElement('div');
+        collapse.id = collapseId;
+        collapse.className = 'collapse show';
+        cardBody.classList.remove('p-4');
+        cardBody.classList.add('p-0');
+        cardBody.appendChild(collapse);
+        collapse.appendChild(panel);
+        const header = document.createElement('div');
+        header.className = 'card-header bg-white py-3 d-flex justify-content-between align-items-center';
+        header.style.cursor = 'pointer';
+        card.insertBefore(header, cardBody);
+        header.appendChild(heading);
+        heading.className = 'h5 m-0 fw-bold ' + (headingText.includes('Verification') ? 'text-success' : 'text-primary');
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.id = buttonId;
+        toggle.className = 'btn btn-sm btn-light border-0';
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-controls', collapseId);
+        toggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+        toggle.setAttribute('aria-label', 'Collapse section');
+        header.appendChild(toggle);
+        header.setAttribute('data-bs-toggle', 'collapse');
+        header.setAttribute('data-bs-target', '#' + collapseId);
+        header.setAttribute('aria-expanded', 'true');
+        header.setAttribute('aria-controls', collapseId);
+        collapse.addEventListener('shown.bs.collapse', function () {
+            toggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.setAttribute('aria-label', 'Collapse section');
+        });
+        collapse.addEventListener('hidden.bs.collapse', function () {
+            toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.setAttribute('aria-label', 'Expand section');
+        });
+    }
+
+    addSectionCollapse('Partnership Payment Reconciliation', 'partnershipPaymentsCollapse', 'togglePartnershipPayments', true);
+    addSectionCollapse('Junkshop Fee Payment Verification', 'feePaymentsCollapse', 'toggleFeePayments', true);
+
     const rejectModal = document.getElementById('rejectModal');
     const rejectPaymentId = document.getElementById('reject_payment_id');
     const rejectionReason = document.getElementById('rejection_reason');
     const customReasonGroup = document.getElementById('customReasonGroup');
     const customReason = document.getElementById('custom_reason');
+    rejectionReason.name = 'rejection_reason';
+    customReason.name = 'rejection_notes';
     document.querySelectorAll('button[name="payment_status"][value="Rejected"]').forEach(function (button) {
         button.addEventListener('click', function (event) {
-            const paymentMethod = button.closest('tr')?.children[2]?.textContent.trim();
-            if (paymentMethod === 'Cash') {
-                return;
-            }
             event.preventDefault();
+            rejectModal.querySelector('input[name="action"]').value = 'reconcile';
             rejectPaymentId.value = button.closest('form').querySelector('input[name="payment_id"]').value;
             bootstrap.Modal.getOrCreateInstance(rejectModal).show();
         });
     });
+    document.querySelectorAll('button[name="fee_status"][value="Rejected"], .js-reject-fee').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            rejectModal.querySelector('input[name="action"]').value = 'fee_reconcile';
+            rejectPaymentId.value = button.dataset.feePaymentId || button.closest('form').querySelector('input[name="fee_payment_id"]').value;
+            bootstrap.Modal.getOrCreateInstance(rejectModal).show();
+        });
+    });
+    rejectionReason.innerHTML = '<option value="" selected disabled>Select a reason</option>'
+        + '<option>Invalid / Unverifiable GCash Reference Number</option>'
+        + '<option>Blurred, Unreadable, or Fraudulent Receipt Screenshot</option>'
+        + '<option>GCash Payment Amount Mismatch / Insufficient Amount Transferred</option>'
+        + '<option>Cash Amount Mismatch / Insufficient Amount Handed Over</option>'
+        + '<option>Cash Handover Unverified / Payment Not Received at Office</option>'
+        + '<option>Duplicate Payment Submission</option>'
+        + '<option value="Other / Custom Reason">Other / Custom Reason</option>';
     rejectionReason.addEventListener('change', function () {
-        const isCustom = rejectionReason.value === 'Custom Reason';
+        const isCustom = rejectionReason.value === 'Other / Custom Reason';
         customReasonGroup.classList.toggle('d-none', !isCustom);
-        customReason.required = isCustom;
+        customReason.required = false;
         if (!isCustom) customReason.value = '';
     });
     document.querySelectorAll('.js-loading-form').forEach(function (form) {

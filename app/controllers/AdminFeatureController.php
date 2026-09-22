@@ -183,12 +183,9 @@ class AdminFeatureController
                 return ['success' => false, 'message' => 'Renewal request has already been reconciled.'];
             }
             $isCashPayment = strcasecmp((string) $renewal['payment_method'], 'Cash') === 0;
-            if ($status === 'Rejected' && !$isCashPayment && ($rejectionReason === '' || strlen($rejectionReason) > 500)) {
+            if ($status === 'Rejected' && ($rejectionReason === '' || strlen($rejectionReason) > 500)) {
                 $this->db->rollBack();
-                return ['success' => false, 'message' => 'A specific rejection reason is required for GCash payments.'];
-            }
-            if ($isCashPayment) {
-                $rejectionReason = '';
+                return ['success' => false, 'message' => 'A specific rejection reason is required for all payment methods.'];
             }
             $this->db->query(
                 'UPDATE partnership_renewals SET status = :status, rejection_reason = :rejection_reason, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
@@ -214,23 +211,33 @@ class AdminFeatureController
                 throw new RuntimeException('Partnership payment state was not persisted.');
             }
             $this->db->commit();
-            if ($status === 'Rejected' && !$isCashPayment) {
-                $emailResult = MailerService::sendRenewalRejection(
-                    (string) $renewal['email'],
-                    (string) $renewal['business_name'],
-                    (string) $renewal['plan_type'],
-                    (string) $renewal['payment_method'],
-                    (string) ($renewal['reference_number'] ?? ''),
-                    (string) $renewal['created_at'],
-                    $rejectionReason
-                );
+            try {
+                $emailResult = $status === 'Rejected'
+                    ? MailerService::sendRenewalRejection(
+                        (string) $renewal['email'],
+                        (string) $renewal['business_name'],
+                        (string) $renewal['plan_type'],
+                        (string) $renewal['payment_method'],
+                        (string) ($renewal['reference_number'] ?? ''),
+                        (string) $renewal['created_at'],
+                        $rejectionReason
+                    )
+                    : MailerService::sendRenewalApproval(
+                        (string) $renewal['email'],
+                        (string) $renewal['business_name'],
+                        (string) $renewal['plan_type'],
+                        (string) $renewal['payment_method'],
+                        (string) ($renewal['reference_number'] ?? ''),
+                        (string) $renewal['created_at'],
+                        (float) $renewal['amount']
+                    );
                 if (!$emailResult['sent']) {
-                    error_log('Renewal rejection email was not sent: ' . ($emailResult['error'] ?? 'Unknown error'));
+                    error_log('Renewal decision email was not sent: ' . ($emailResult['error'] ?? 'Unknown error'));
                 }
+            } catch (Throwable $exception) {
+                error_log('Renewal decision email dispatch error: ' . $exception->getMessage());
             }
-            return ['success' => true, 'message' => $status === 'Rejected' && $isCashPayment
-                ? 'Cash renewal request rejected. No email notification was sent.'
-                : 'Partnership renewal reconciled.'];
+            return ['success' => true, 'message' => 'Partnership renewal reconciled.'];
         } catch (Throwable $exception) {
             $this->db->rollBack();
             error_log('Partnership payment reconciliation error: ' . $exception->getMessage());
@@ -304,12 +311,20 @@ class AdminFeatureController
         }
 
         $existing = $this->db->query(
-            'SELECT EXISTS (
-                SELECT 1 FROM partnership_renewals WHERE payment_method = :method_renewal AND reference_number = :reference_renewal
+                        'SELECT EXISTS (
+                                SELECT 1 FROM partnership_renewals
+                                WHERE payment_method = :method_renewal
+                                    AND reference_number = :reference_renewal
+                                    AND status IN (\'Pending\', \'Pending Reconciliation\', \'Approved\')
             ) OR EXISTS (
                 SELECT 1 FROM pickup_requests WHERE payment_method = :method_pickup AND reference_number = :reference_pickup
             ) OR EXISTS (
                 SELECT 1 FROM transactions WHERE payment_method = :method_transaction AND reference_number = :reference_transaction
+            ) OR EXISTS (
+                SELECT 1 FROM junkshop_fee_payments
+                WHERE payment_method = :method_fee
+                  AND reference_number = :reference_fee
+                  AND status IN (\'Pending\', \'Approved\')
             ) AS duplicate_found',
             [
                 'method_renewal' => 'GCash',
@@ -318,6 +333,8 @@ class AdminFeatureController
                 'reference_pickup' => $normalizedReference,
                 'method_transaction' => 'GCash',
                 'reference_transaction' => $normalizedReference,
+                'method_fee' => 'GCash',
+                'reference_fee' => $normalizedReference,
             ]
         )->fetchColumn();
 
@@ -475,6 +492,123 @@ class AdminFeatureController
             }
             error_log('Renewal submission error: ' . $exception->getMessage());
             return ['success' => false, 'message' => $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'Failed to submit renewal request. Please try again.'];
+        }
+    }
+
+    public function listFeePayments(): array
+    {
+        $this->requireAdmin();
+        return $this->db->query(
+            "SELECT fp.*, COALESCE(jp.business_name, a.full_name, 'Unknown') AS business_name
+             FROM junkshop_fee_payments fp
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = fp.junkshop_id
+             LEFT JOIN accounts a ON a.id = fp.junkshop_id
+             ORDER BY fp.created_at DESC, fp.id DESC"
+        )->fetchAll();
+    }
+
+    public function createFeePayment(int $junkshopId, string $method, string $amount, string $referenceNumber = '', ?array $receiptFile = null): array
+    {
+        if (!Auth::check() || Auth::userRole() !== 'junkshop' || Auth::userId() !== $junkshopId) {
+            return ['success' => false, 'message' => 'You cannot create this payment record.'];
+        }
+        if (!in_array($method, ['Cash', 'GCash'], true) || !is_numeric($amount) || (float) $amount <= 0) {
+            return ['success' => false, 'message' => 'Enter a valid payment amount and method.'];
+        }
+        $amount = number_format((float) $amount, 2, '.', '');
+        $referenceNumber = trim($referenceNumber);
+        if ($method === 'GCash' && !preg_match('/^[0-9]{13}$/', $referenceNumber)) {
+            return ['success' => false, 'message' => 'The GCash reference number must contain exactly 13 digits.'];
+        }
+        if ($method === 'GCash' && $this->hasDuplicateGcashReference($referenceNumber)) {
+            return ['success' => false, 'message' => 'This GCash Reference Number has already been used in a pending or approved payment.'];
+        }
+        $pendingFeePayment = $this->db->query(
+            "SELECT 1 FROM junkshop_fee_payments
+             WHERE junkshop_id = :junkshop_id AND status = 'Pending'
+             LIMIT 1",
+            ['junkshop_id' => $junkshopId]
+        )->fetchColumn();
+        if ($pendingFeePayment !== false) {
+            return ['success' => false, 'message' => 'You currently have a payment submission pending admin verification. You may submit another payment only after your pending request is Approved or Rejected.'];
+        }
+        $receiptPath = null;
+        $uploadedPath = null;
+        try {
+            if ($method === 'GCash') {
+                if (!is_array($receiptFile) || ($receiptFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    throw new InvalidArgumentException('Upload a GCash receipt screenshot.');
+                }
+                if (($receiptFile['size'] ?? 0) < 1 || $receiptFile['size'] > 3 * 1024 * 1024 || !is_uploaded_file($receiptFile['tmp_name'] ?? '')) {
+                    throw new InvalidArgumentException('The GCash receipt must be a valid image no larger than 3 MB.');
+                }
+                $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($receiptFile['tmp_name']);
+                $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+                if (!isset($extensions[$mimeType]) || @getimagesize($receiptFile['tmp_name']) === false) {
+                    throw new InvalidArgumentException('The GCash receipt must be a JPG, PNG, or WEBP image.');
+                }
+                $uploadDirectory = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'receipts';
+                if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0750, true) && !is_dir($uploadDirectory)) {
+                    throw new RuntimeException('The receipt upload directory could not be created.');
+                }
+                $fileName = 'fee_receipt_' . $junkshopId . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(6)) . '.' . $extensions[$mimeType];
+                $uploadedPath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
+                if (!move_uploaded_file($receiptFile['tmp_name'], $uploadedPath)) {
+                    throw new RuntimeException('The GCash receipt could not be saved.');
+                }
+                $receiptPath = 'uploads/receipts/' . $fileName;
+            }
+            $this->db->query(
+                'INSERT INTO junkshop_fee_payments (junkshop_id, payment_method, reference_number, receipt_image, amount_submitted)
+                 VALUES (:junkshop_id, :payment_method, :reference_number, :receipt_image, :amount_submitted)',
+                ['junkshop_id' => $junkshopId, 'payment_method' => $method, 'reference_number' => $method === 'GCash' ? $referenceNumber : null, 'receipt_image' => $receiptPath, 'amount_submitted' => $amount]
+            );
+            return ['success' => true, 'message' => 'Fee payment submitted for admin verification.'];
+        } catch (Throwable $exception) {
+            if ($uploadedPath !== null && is_file($uploadedPath)) unlink($uploadedPath);
+            error_log('Fee payment submission error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'Failed to submit fee payment. Please try again.'];
+        }
+    }
+
+    public function reconcileFeePayment(int $paymentId, string $status, string $deductedAmount = '0', string $rejectionReason = ''): array
+    {
+        $this->requireAdmin();
+        if (!in_array($status, ['Approved', 'Rejected'], true)) return ['success' => false, 'message' => 'Invalid fee payment status.'];
+        if ($status === 'Approved' && (!is_numeric($deductedAmount) || (float) $deductedAmount <= 0)) return ['success' => false, 'message' => 'Enter a valid deduction amount.'];
+        $rejectionReason = trim($rejectionReason);
+        if ($status === 'Rejected' && $rejectionReason === '') return ['success' => false, 'message' => 'Select a rejection reason.'];
+        if (strlen($rejectionReason) > 1000) return ['success' => false, 'message' => 'The rejection reason is too long.'];
+        try {
+            $this->db->beginTransaction();
+            $payment = $this->db->query('SELECT id, amount_submitted, status FROM junkshop_fee_payments WHERE id = :id FOR UPDATE', ['id' => $paymentId])->fetch();
+            if (!$payment || $payment['status'] !== 'Pending') {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Fee payment was not found or has already been reconciled.'];
+            }
+            $deductedAmount = $status === 'Approved' ? number_format((float) $deductedAmount, 2, '.', '') : '0.00';
+            if ($status === 'Approved' && (float) $deductedAmount > (float) $payment['amount_submitted']) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'The deduction cannot exceed the submitted amount.'];
+            }
+            $this->db->query(
+                'UPDATE junkshop_fee_payments SET status = :status, amount_deducted = :amount_deducted, rejection_reason = :rejection_reason, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
+                ['status' => $status, 'amount_deducted' => $deductedAmount, 'rejection_reason' => $status === 'Rejected' ? $rejectionReason : null, 'id' => $paymentId]
+            );
+            $this->db->commit();
+            try {
+                $emailResult = MailerService::sendJunkshopPaymentNotification($paymentId, $status, (float) $deductedAmount, $rejectionReason);
+                if (!$emailResult['sent']) {
+                    error_log('Fee payment decision email was not sent: ' . ($emailResult['error'] ?? 'Unknown error'));
+                }
+            } catch (Throwable $exception) {
+                error_log('Fee payment decision email dispatch error: ' . $exception->getMessage());
+            }
+            return ['success' => true, 'message' => $status === 'Approved' ? 'Fee payment approved and deducted from the outstanding balance.' : 'Fee payment rejected.'];
+        } catch (Throwable $exception) {
+            $this->db->rollBack();
+            error_log('Fee payment reconciliation error: ' . $exception->getMessage());
+            return ['success' => false, 'message' => 'Fee payment reconciliation failed.'];
         }
     }
 
