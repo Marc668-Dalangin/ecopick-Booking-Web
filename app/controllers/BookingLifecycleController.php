@@ -90,8 +90,8 @@ class BookingLifecycleController
         } else {
             $collectorFirstName = trim((string) $collectorFirstName);
             $collectorLastName = trim((string) $collectorLastName);
-            if (!preg_match('/^[A-Z]+$/', $collectorFirstName) || !preg_match('/^[A-Z]+$/', $collectorLastName)) {
-                return ['success' => false, 'message' => 'Collector first and last names must contain uppercase letters only.'];
+            if (strlen($collectorFirstName) > 25 || strlen($collectorLastName) > 25 || !preg_match('/^[A-Z]+(?: [A-Z]+)*$/', $collectorFirstName) || !preg_match('/^[A-Z]+(?: [A-Z]+)*$/', $collectorLastName)) {
+                return ['success' => false, 'message' => 'Collector first and last names must contain uppercase letters and single spaces only, with a maximum of 25 characters each.'];
             }
             $collectorName = $collectorFirstName . ' ' . $collectorLastName;
         }
@@ -215,8 +215,41 @@ class BookingLifecycleController
         return ['success' => true, 'message' => 'Final settlement preview ready.', 'data' => $settlement];
     }
 
-    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = '', ?float $actualPricePerKg = null): array
+    private function hasDuplicateGcashReference(string $referenceNumber, ?int $currentPickupRequestId = null): bool
     {
+        $normalizedReference = preg_replace('/\D+/', '', trim($referenceNumber));
+        if (!preg_match('/^[0-9]{13}$/', $normalizedReference)) {
+            return false;
+        }
+
+        $currentRequestId = $currentPickupRequestId ?? -1;
+        $existing = $this->db->query(
+            'SELECT EXISTS (
+                SELECT 1 FROM partnership_renewals WHERE reference_number = :reference_renewal
+            ) OR EXISTS (
+                SELECT 1 FROM pickup_requests WHERE reference_number = :reference_pickup AND id != :current_pickup_request_id_pickup
+            ) OR EXISTS (
+                SELECT 1 FROM transactions WHERE reference_number = :reference_transaction AND pickup_request_id != :current_pickup_request_id_transaction
+            ) AS duplicate_found',
+            [
+                'reference_renewal' => $normalizedReference,
+                'reference_pickup' => $normalizedReference,
+                'current_pickup_request_id_pickup' => $currentRequestId,
+                'reference_transaction' => $normalizedReference,
+                'current_pickup_request_id_transaction' => $currentRequestId,
+            ]
+        )->fetchColumn();
+
+        return (bool) $existing;
+    }
+
+    public function completeTransaction(int $pickupRequestId, int $junkshopAccountId, array $materialSettlements, string $paymentMethod = 'Cash', string $paymentStatus = 'Paid', string $paymentReference = '', string $materialConditionNotes = '', $actualPricePerKg = null, ?array $receiptFile = null): array
+    {
+        if (is_array($actualPricePerKg)) {
+            $receiptFile = $actualPricePerKg;
+            $actualPricePerKg = null;
+        }
+
         $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'For Pickup');
         if ($pickupRequest === null) {
             return ['success' => false, 'message' => 'Pickup request not found.'];
@@ -231,6 +264,33 @@ class BookingLifecycleController
             return ['success' => false, 'message' => 'No accepted junkshop assignment was found for this request.'];
         }
 
+        $paymentMethod = strtoupper($paymentMethod) === 'GCASH' ? 'GCash' : 'Cash';
+        if (!in_array($paymentStatus, ['Paid', 'Unpaid'], true) || $paymentStatus === 'Unpaid') {
+            return ['success' => false, 'message' => "Invalid Action: Cannot complete transaction while payment status is 'Unpaid'. Please verify payment before completing."];
+        }
+        $normalizedReference = preg_replace('/\D+/', '', trim((string) $paymentReference));
+        $receiptPath = null;
+
+        if ($paymentMethod === 'GCash') {
+            if (!preg_match('/^[0-9]{13}$/', $normalizedReference)) {
+                return ['success' => false, 'message' => 'The GCash reference number must contain exactly 13 digits.'];
+            }
+            if ($this->hasDuplicateGcashReference($normalizedReference, $pickupRequestId)) {
+                return ['success' => false, 'message' => "Invalid Reference Number: The GCash Reference Number '{$normalizedReference}' has already been submitted and recorded in the system. Duplicate reference numbers are not allowed."];
+            }
+            if (!empty($receiptFile)) {
+                $receiptPath = $this->storeTransactionReceipt($pickupRequestId, $receiptFile);
+                if ($receiptPath === null) {
+                    return ['success' => false, 'message' => 'Please upload a valid GCash receipt image under 3 MB in JPG, PNG, or WEBP format.'];
+                }
+            } else {
+                return ['success' => false, 'message' => 'A GCash receipt screenshot is required.'];
+            }
+        } elseif ($paymentReference !== '') {
+            $normalizedReference = '';
+            $receiptPath = null;
+        }
+
         $preparedMaterials = $this->prepareMaterialSettlements($pickupRequestId, (int) $assignment['junkshop_id'], $materialSettlements, $actualPricePerKg);
         if (!$preparedMaterials['success']) {
             return $preparedMaterials;
@@ -242,7 +302,7 @@ class BookingLifecycleController
         if ($totalActualWeight < 3) {
             return ['success' => false, 'message' => 'The total actual weight must be at least 3 kg to complete this transaction.'];
         }
-        if ($paymentMethod !== 'Cash' || !in_array($paymentStatus, ['Paid'], true)) {
+        if (!in_array($paymentMethod, ['Cash', 'GCash'], true) || !in_array($paymentStatus, ['Paid', 'Unpaid'], true) || ($paymentMethod === 'Cash' && $paymentStatus !== 'Paid')) {
             return ['success' => false, 'message' => 'A valid payment method and payment status are required.'];
         }
 
@@ -252,7 +312,7 @@ class BookingLifecycleController
         try {
             $this->db->beginTransaction();
             $rowCount = $this->db->query(
-                'INSERT INTO transactions (pickup_request_id, junkshop_id, seller_id, actual_weight_kg, material_condition_notes, final_recyclable_value, pickup_fee, ecopick_service_fee, final_seller_amount, transaction_commission, payment_method, payment_status, payment_reference) VALUES (:pickup_request_id, :junkshop_id, :seller_id, :actual_weight_kg, :material_condition_notes, :final_recyclable_value, :pickup_fee, :ecopick_service_fee, :final_seller_amount, :transaction_commission, :payment_method, :payment_status, :payment_reference)',
+                'INSERT INTO transactions (pickup_request_id, junkshop_id, seller_id, actual_weight_kg, material_condition_notes, final_recyclable_value, pickup_fee, ecopick_service_fee, final_seller_amount, transaction_commission, payment_method, payment_status, payment_reference, reference_number, receipt_image) VALUES (:pickup_request_id, :junkshop_id, :seller_id, :actual_weight_kg, :material_condition_notes, :final_recyclable_value, :pickup_fee, :ecopick_service_fee, :final_seller_amount, :transaction_commission, :payment_method, :payment_status, :payment_reference, :reference_number, :receipt_image)',
                 [
                     'pickup_request_id' => $pickupRequestId,
                     'junkshop_id' => (int) $assignment['junkshop_id'],
@@ -266,7 +326,9 @@ class BookingLifecycleController
                     'transaction_commission' => number_format((float) $settlement['transaction_commission'], 2, '.', ''),
                     'payment_method' => $paymentMethod,
                     'payment_status' => $paymentStatus,
-                    'payment_reference' => $paymentReference !== '' ? trim($paymentReference) : null,
+                    'payment_reference' => $paymentMethod === 'GCash' ? $normalizedReference : null,
+                    'reference_number' => $paymentMethod === 'GCash' ? $normalizedReference : null,
+                    'receipt_image' => $receiptPath,
                 ]
             )->rowCount();
 
@@ -318,7 +380,7 @@ class BookingLifecycleController
 
             {
                 $statusStatement = $this->db->query(
-                    'UPDATE pickup_requests SET current_status = :status, admin_viewed_report = 0, final_recyclable_value = :final_recyclable_value, pickup_collection_fee = :pickup_collection_fee, ecopick_service_fee = :ecopick_service_fee, final_amount_paid = :final_amount_paid, payment_method = :payment_method, payment_status = :payment_status, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                    'UPDATE pickup_requests SET current_status = :status, admin_viewed_report = 0, final_recyclable_value = :final_recyclable_value, pickup_collection_fee = :pickup_collection_fee, ecopick_service_fee = :ecopick_service_fee, final_amount_paid = :final_amount_paid, payment_method = :payment_method, payment_status = :payment_status, reference_number = :reference_number, receipt_image = :receipt_image, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                     [
                         'status' => 'Completed',
                         'final_recyclable_value' => number_format((float) $settlement['final_recyclable_value'], 2, '.', ''),
@@ -327,6 +389,8 @@ class BookingLifecycleController
                         'final_amount_paid' => number_format((float) $settlement['final_seller_amount'], 2, '.', ''),
                         'payment_method' => $paymentMethod,
                         'payment_status' => $paymentStatus,
+                        'reference_number' => $paymentMethod === 'GCash' ? $normalizedReference : null,
+                        'receipt_image' => $receiptPath,
                         'pickup_request_id' => $pickupRequestId,
                         'expected_status' => 'For Pickup',
                     ]
@@ -347,7 +411,7 @@ class BookingLifecycleController
                     'amount' => number_format((float) $settlement['final_seller_amount'], 2, '.', ''),
                     'payment_method' => $paymentMethod,
                     'payment_status' => $paymentStatus,
-                    'payment_reference' => $paymentReference !== '' ? trim($paymentReference) : null,
+                    'payment_reference' => $paymentMethod === 'GCash' ? $normalizedReference : null,
                     'paid_status' => in_array($paymentStatus, ['Paid', 'Confirmed'], true) ? 1 : 0,
                     'confirmed_status' => $paymentStatus === 'Confirmed' ? 1 : 0,
                     'recorded_by_account_id' => $junkshopAccountId,
@@ -361,7 +425,7 @@ class BookingLifecycleController
                     'amount' => number_format((float) $settlement['transaction_commission'], 2, '.', ''),
                     'payment_method' => $paymentMethod,
                     'payment_status' => $paymentStatus,
-                    'payment_reference' => $paymentReference !== '' ? trim($paymentReference) : null,
+                    'payment_reference' => $paymentMethod === 'GCash' ? $normalizedReference : null,
                     'paid_status' => in_array($paymentStatus, ['Paid', 'Confirmed'], true) ? 1 : 0,
                     'confirmed_status' => $paymentStatus === 'Confirmed' ? 1 : 0,
                     'recorded_by_account_id' => $junkshopAccountId,
@@ -379,6 +443,48 @@ class BookingLifecycleController
             error_log('Complete transaction error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to complete the transaction.'];
         }
+    }
+
+    private function storeTransactionReceipt(int $pickupRequestId, array $file): ?string
+    {
+        if (empty($file['tmp_name']) || !is_file($file['tmp_name'])) {
+            return null;
+        }
+
+        $size = (int) ($file['size'] ?? 0);
+        if ($size <= 0 || $size > 3 * 1024 * 1024) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+        if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            return null;
+        }
+
+        $directory = __DIR__ . '/../../uploads/transaction_receipts';
+        if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            return null;
+        }
+
+        $safeName = 'tx_receipt_' . $pickupRequestId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $targetPath = $directory . DIRECTORY_SEPARATOR . $safeName;
+        $tmpPath = (string) ($file['tmp_name'] ?? '');
+        $saved = false;
+
+        if ($tmpPath !== '' && is_file($tmpPath)) {
+            if (function_exists('is_uploaded_file') && is_uploaded_file($tmpPath)) {
+                $saved = @move_uploaded_file($tmpPath, $targetPath);
+            }
+            if (!$saved) {
+                $saved = @copy($tmpPath, $targetPath);
+            }
+        }
+
+        if (!$saved) {
+            return null;
+        }
+
+        return 'uploads/transaction_receipts/' . $safeName;
     }
 
     private function getPickupRequestById(int $pickupRequestId, int $junkshopAccountId, string $currentStatus = 'Accepted'): ?array

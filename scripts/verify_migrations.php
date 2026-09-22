@@ -29,7 +29,7 @@ $expectedTables = [
 ];
 
 $expectedColumns = [
-    'pickup_requests' => ['id', 'booking_reference', 'seller_account_id', 'current_status'],
+    'pickup_requests' => ['id', 'booking_reference', 'seller_account_id', 'current_status', 'payment_method', 'reference_number', 'receipt_image'],
     'junkshop_assignments' => ['id', 'pickup_request_id', 'junkshop_id', 'status', 'distance_km'],
     'fee_configurations' => ['id', 'config_key', 'config_value', 'description'],
     'fee_settings' => ['id', 'expiration_notice_lead_days', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_encryption'],

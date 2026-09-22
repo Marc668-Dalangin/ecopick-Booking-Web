@@ -190,7 +190,7 @@ ob_start();
                 <h4 class="fw-bold mb-3">Payment records</h4>
                 <div class="table-responsive">
                     <table class="table align-middle">
-                        <thead><tr><th>Type</th><th>Amount</th><th>Method</th><th>Reference</th><th>Receipt</th><th>Status</th><th>Submitted</th></tr></thead>
+                        <thead><tr><th>Type</th><th>Amount</th><th>Method</th><th>Reference</th><th>Status</th><th>Submitted</th></tr></thead>
                         <tbody>
                         <?php foreach ($payments as $payment): ?>
                             <tr>
@@ -198,12 +198,11 @@ ob_start();
                                 <td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td>
                                 <td><?php echo Validator::escape($payment['payment_method'] ?: '-'); ?></td>
                                 <td><?php echo Validator::escape($payment['reference_number'] ?: '-'); ?></td>
-                                <td><?php if (!empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#userReceiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View receipt</button><?php else: ?>-<?php endif; ?></td>
                                 <td><?php echo Validator::escape($payment['payment_status']); ?></td>
                                 <td><?php echo Validator::escape($payment['created_at']); ?></td>
                             </tr>
                         <?php endforeach; ?>
-                        <?php if (!$payments): ?><tr><td colspan="7" class="text-center text-muted py-4">No payment records found.</td></tr><?php endif; ?>
+                        <?php if (!$payments): ?><tr><td colspan="6" class="text-center text-muted py-4">No payment records found.</td></tr><?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -211,7 +210,6 @@ ob_start();
         </div>
     </div>
 </div>
-<div class="modal fade" id="userReceiptModal" tabindex="-1" aria-labelledby="userReceiptModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="userReceiptModalLabel">GCash Receipt</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body text-center"><img id="userReceiptModalImage" class="img-fluid" alt="GCash receipt"></div></div></div></div>
 <script>
     const paymentMethodInputs = document.querySelectorAll('input[name="payment_method"]');
     const gcashFields = document.getElementById('gcashFields');
@@ -253,14 +251,6 @@ ob_start();
             alert('Please select one JPG, PNG, or WEBP receipt image no larger than 3 MB.');
             this.value = '';
         }
-    });
-    const userReceiptModal = document.getElementById('userReceiptModal');
-    const userReceiptModalImage = document.getElementById('userReceiptModalImage');
-    userReceiptModal.addEventListener('show.bs.modal', function (event) {
-        userReceiptModalImage.src = event.relatedTarget.getAttribute('data-receipt-url');
-    });
-    userReceiptModal.addEventListener('hidden.bs.modal', function () {
-        userReceiptModalImage.removeAttribute('src');
     });
     updatePaymentFields();
 

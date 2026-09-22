@@ -296,6 +296,34 @@ class AdminFeatureController
         }
     }
 
+    private function hasDuplicateGcashReference(string $referenceNumber): bool
+    {
+        $normalizedReference = preg_replace('/\D+/', '', trim($referenceNumber));
+        if (!preg_match('/^[0-9]{13}$/', $normalizedReference)) {
+            return false;
+        }
+
+        $existing = $this->db->query(
+            'SELECT EXISTS (
+                SELECT 1 FROM partnership_renewals WHERE payment_method = :method_renewal AND reference_number = :reference_renewal
+            ) OR EXISTS (
+                SELECT 1 FROM pickup_requests WHERE payment_method = :method_pickup AND reference_number = :reference_pickup
+            ) OR EXISTS (
+                SELECT 1 FROM transactions WHERE payment_method = :method_transaction AND reference_number = :reference_transaction
+            ) AS duplicate_found',
+            [
+                'method_renewal' => 'GCash',
+                'reference_renewal' => $normalizedReference,
+                'method_pickup' => 'GCash',
+                'reference_pickup' => $normalizedReference,
+                'method_transaction' => 'GCash',
+                'reference_transaction' => $normalizedReference,
+            ]
+        )->fetchColumn();
+
+        return (bool) $existing;
+    }
+
     public function createRenewalPayment(int $junkshopAccountId, string $method, string $planKey = 'renewal_fee_1_month', string $referenceNumber = '', ?array $receiptFile = null): array
     {
         if (!Auth::check() || Auth::userRole() !== 'junkshop' || Auth::userId() !== $junkshopAccountId) {
@@ -314,6 +342,9 @@ class AdminFeatureController
         $referenceNumber = trim($referenceNumber);
         if ($method === 'GCash' && !preg_match('/^[0-9]{13}$/', $referenceNumber)) {
             return ['success' => false, 'message' => 'The GCash reference number must contain exactly 13 digits.'];
+        }
+        if ($method === 'GCash' && $this->hasDuplicateGcashReference($referenceNumber)) {
+            return ['success' => false, 'message' => 'This GCash Reference Number has already been used. Duplicate reference numbers are not allowed.'];
         }
         $plans = [
             'renewal_fee_1_month' => '1 Month',
@@ -631,6 +662,9 @@ class AdminFeatureController
                 "SELECT t.id AS transaction_id, t.junkshop_id, t.actual_weight_kg, t.ecopick_service_fee,
                     t.final_recyclable_value, t.pickup_fee, t.transaction_commission,
                     t.final_seller_amount, t.completed_at, pr.booking_reference,
+                    COALESCE(t.payment_method, pr.payment_method) AS payment_method,
+                    COALESCE(t.reference_number, pr.reference_number) AS reference_number,
+                    COALESCE(t.receipt_image, pr.receipt_image) AS receipt_image,
                     seller.full_name AS seller_name, seller.email AS seller_email,
                     seller.mobile_number AS seller_mobile
              FROM transactions t

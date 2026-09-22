@@ -267,6 +267,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     payment_method ENUM('Cash', 'GCash') NULL,
     payment_status ENUM('Unpaid', 'Paid', 'Confirmed') NOT NULL DEFAULT 'Unpaid',
     payment_reference VARCHAR(100) NULL,
+    reference_number VARCHAR(100) NULL,
+    receipt_image VARCHAR(255) NULL,
     payment_confirmed_at DATETIME NULL,
     payment_confirmed_by_account_id INT NULL,
     completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -535,6 +537,12 @@ ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS contact_number VARCHAR(20) 
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_name VARCHAR(255) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending';
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS sms_error_message TEXT NULL DEFAULT NULL;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash';
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100) NULL DEFAULT NULL;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS receipt_image VARCHAR(255) NULL DEFAULT NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100) NULL DEFAULT NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100) NULL DEFAULT NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS receipt_image VARCHAR(255) NULL DEFAULT NULL;
 -- Preserve every pickup lifecycle state when older installations are migrated.
 ALTER TABLE pickup_requests MODIFY COLUMN current_status ENUM('Pending Request', 'Pending', 'Matched', 'Requested', 'Accepted', 'Declined', 'Rematched', 'Scheduled', 'For Pickup', 'Completed', 'Cancelled', 'Cancelled by Seller', 'Cancelled by Junkshop') NOT NULL DEFAULT 'Pending Request';
 ALTER TABLE concerns ADD COLUMN IF NOT EXISTS is_read_admin TINYINT(1) NOT NULL DEFAULT 0;

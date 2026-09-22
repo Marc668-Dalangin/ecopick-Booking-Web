@@ -192,18 +192,131 @@ try {
     assertTrue(($settlementPreview['success'] ?? false) === true, 'Settlement preview should be available');
     assertTrue(isset($settlementPreview['data']['final_seller_amount']), 'Settlement preview should include final seller amount');
 
+    $pdo->query("UPDATE pickup_requests SET payment_status = 'Unpaid' WHERE id = $requestId");
     $unpaidCompletion = $lifecycleController->completeTransaction($requestId, $junkshopId, $materialSettlements, 'Cash', 'Unpaid', '', 'Material in good condition');
     assertTrue(($unpaidCompletion['success'] ?? true) === false, 'Unpaid transactions must not be marked completed');
+    assertTrue((string) ($unpaidCompletion['message'] ?? '') === "Invalid Action: Cannot complete transaction while payment status is 'Unpaid'. Please verify payment before completing.", 'Unpaid payment status rejection message must be explicit');
 
     $completeResult = $lifecycleController->completeTransaction($requestId, $junkshopId, $materialSettlements, 'Cash', 'Paid', 'TEST-PAYMENT-001', 'Material in good condition');
     assertTrue(($completeResult['success'] ?? false) === true, 'Transaction should complete successfully');
 
-    $transactionCount = (int) $pdo->query("SELECT COUNT(*) FROM transactions WHERE pickup_request_id = $requestId")->fetchColumn();
+    $gcashRequestResult = $pickupController->createRequest($sellerId, [
+        'items' => [
+            [ 'material_id' => $materialId, 'estimated_weight' => 7.5 ],
+            [ 'material_id' => $secondMaterialId, 'estimated_weight' => 4.5 ],
+        ],
+        'junkshop_id' => $junkshopId,
+        'contact_number' => '639123456789',
+        'pickup_address' => '456 Another Seller Street',
+        'approximate_distance_km' => 3.8,
+        'seller_lat' => '13.950000',
+        'seller_lng' => '121.180000',
+        'preferred_pickup_date' => date('Y-m-d', strtotime('+4 days')),
+        'preferred_pickup_time' => '11:00 AM',
+        'notes' => 'GCash lifecycle verification request',
+    ]);
+    assertTrue(($gcashRequestResult['success'] ?? false) === true, 'A fresh pickup request should be created for the GCash verification');
+    $gcashRequestId = (int) ($gcashRequestResult['request']['id'] ?? 0);
+    assertTrue($gcashRequestId > 0, 'GCash verification request should have valid id');
+
+    $gcashAssignmentRow = $pdo->query("SELECT id, status FROM junkshop_assignments WHERE pickup_request_id = $gcashRequestId ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    assertTrue($gcashAssignmentRow !== false, 'GCash request should create an assignment');
+    $gcashAcceptResult = $assignmentController->acceptRequest((int) $gcashAssignmentRow['id'], $junkshopId);
+    assertTrue(($gcashAcceptResult['success'] ?? false) === true, 'GCash verification request should be accepted');
+    $gcashScheduleResult = $lifecycleController->schedulePickup($gcashRequestId, $junkshopId, date('Y-m-d', strtotime('+5 days')), '01:00 PM');
+    assertTrue(($gcashScheduleResult['success'] ?? false) === true, 'GCash verification request should schedule successfully');
+    $gcashForPickupResult = $lifecycleController->markForPickup($gcashRequestId, $junkshopId);
+    assertTrue(($gcashForPickupResult['success'] ?? false) === true, 'GCash verification request should move to For Pickup');
+
+    $gcashItems = $pdo->query("SELECT id FROM pickup_request_items WHERE pickup_request_id = $gcashRequestId ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
+    $gcashSettlements = [];
+    foreach ($gcashItems as $itemId) {
+        $gcashSettlements[] = [
+            'pickup_request_item_id' => (int) $itemId,
+            'actual_weight_kg' => 5.0,
+            'accepted' => true,
+        ];
+    }
+
+    $gcashTempPath = tempnam(sys_get_temp_dir(), 'ecopick_gcash_');
+    file_put_contents($gcashTempPath, 'PNGDATA');
+    $gcashReceipt = [
+        'name' => 'receipt.png',
+        'type' => 'image/png',
+        'tmp_name' => $gcashTempPath,
+        'error' => 0,
+        'size' => filesize($gcashTempPath),
+    ];
+    $pdo->query("UPDATE pickup_requests SET payment_status = 'Unpaid' WHERE id = $gcashRequestId");
+    $blockedUnpaidCompletion = $lifecycleController->completeTransaction($gcashRequestId, $junkshopId, $gcashSettlements, 'GCash', 'Unpaid', '1234567890123', 'Blocked unpaid verification', $gcashReceipt);
+    assertTrue(($blockedUnpaidCompletion['success'] ?? true) === false, 'Completion must be rejected while the record is still marked as Unpaid');
+    assertTrue((string) ($blockedUnpaidCompletion['message'] ?? '') === "Invalid Action: Cannot complete transaction while payment status is 'Unpaid'. Please verify payment before completing.", 'Unpaid payment status rejection message must be explicit');
+
+    $gcashCompletion = $lifecycleController->completeTransaction($gcashRequestId, $junkshopId, $gcashSettlements, 'GCash', 'Paid', '1234567890123', 'GCash payment proof', $gcashReceipt);
+    assertTrue(($gcashCompletion['success'] ?? false) === true, 'GCash transaction should complete successfully with a valid 13-digit reference and receipt');
+    $gcashReference = (string) $pdo->query("SELECT reference_number FROM pickup_requests WHERE id = $gcashRequestId LIMIT 1")->fetchColumn();
+    $gcashReceiptPath = (string) $pdo->query("SELECT receipt_image FROM pickup_requests WHERE id = $gcashRequestId LIMIT 1")->fetchColumn();
+    assertTrue($gcashReference === '1234567890123', 'GCash reference should be stored exactly as 13 digits');
+    assertTrue($gcashReceiptPath !== '' && $gcashReceiptPath !== '0', 'GCash receipt path should be persisted');
+
+    $duplicateGcashRequestResult = $pickupController->createRequest($sellerId, [
+        'items' => [
+            [ 'material_id' => $materialId, 'estimated_weight' => 6.0 ],
+            [ 'material_id' => $secondMaterialId, 'estimated_weight' => 4.0 ],
+        ],
+        'junkshop_id' => $junkshopId,
+        'contact_number' => '639123456789',
+        'pickup_address' => '789 Duplicate Seller Street',
+        'approximate_distance_km' => 2.4,
+        'seller_lat' => '13.960000',
+        'seller_lng' => '121.190000',
+        'preferred_pickup_date' => date('Y-m-d', strtotime('+6 days')),
+        'preferred_pickup_time' => '09:30 AM',
+        'notes' => 'Duplicate GCash reference check',
+    ]);
+    assertTrue(($duplicateGcashRequestResult['success'] ?? false) === true, 'A second pickup request should be created for duplicate-reference testing');
+    $duplicateGcashRequestId = (int) ($duplicateGcashRequestResult['request']['id'] ?? 0);
+    assertTrue($duplicateGcashRequestId > 0, 'Duplicate reference test request should have valid id');
+
+    $duplicateGcashAssignmentRow = $pdo->query("SELECT id, status FROM junkshop_assignments WHERE pickup_request_id = $duplicateGcashRequestId ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    assertTrue($duplicateGcashAssignmentRow !== false, 'Duplicate-reference test request should create an assignment');
+    $duplicateGcashAcceptResult = $assignmentController->acceptRequest((int) $duplicateGcashAssignmentRow['id'], $junkshopId);
+    assertTrue(($duplicateGcashAcceptResult['success'] ?? false) === true, 'Duplicate-reference test request should be accepted');
+    $duplicateGcashScheduleResult = $lifecycleController->schedulePickup($duplicateGcashRequestId, $junkshopId, date('Y-m-d', strtotime('+7 days')), '10:00 AM');
+    assertTrue(($duplicateGcashScheduleResult['success'] ?? false) === true, 'Duplicate-reference test request should schedule successfully');
+    $duplicateGcashForPickupResult = $lifecycleController->markForPickup($duplicateGcashRequestId, $junkshopId);
+    assertTrue(($duplicateGcashForPickupResult['success'] ?? false) === true, 'Duplicate-reference test request should move to For Pickup');
+
+    $duplicateGcashItems = $pdo->query("SELECT id FROM pickup_request_items WHERE pickup_request_id = $duplicateGcashRequestId ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
+    $duplicateGcashSettlements = [];
+    foreach ($duplicateGcashItems as $itemId) {
+        $duplicateGcashSettlements[] = [
+            'pickup_request_item_id' => (int) $itemId,
+            'actual_weight_kg' => 4.0,
+            'accepted' => true,
+        ];
+    }
+
+    $duplicateGcashTempPath = tempnam(sys_get_temp_dir(), 'ecopick_dup_gcash_');
+    file_put_contents($duplicateGcashTempPath, 'PNGDATA');
+    $duplicateGcashReceipt = [
+        'name' => 'duplicate_receipt.png',
+        'type' => 'image/png',
+        'tmp_name' => $duplicateGcashTempPath,
+        'error' => 0,
+        'size' => filesize($duplicateGcashTempPath),
+    ];
+    $pdo->query("UPDATE pickup_requests SET payment_status = 'Paid' WHERE id = $duplicateGcashRequestId");
+    $duplicateGcashCompletion = $lifecycleController->completeTransaction($duplicateGcashRequestId, $junkshopId, $duplicateGcashSettlements, 'GCash', 'Paid', '1234567890123', 'Duplicate GCash payment proof', $duplicateGcashReceipt);
+    assertTrue(($duplicateGcashCompletion['success'] ?? true) === false, 'Duplicate GCash reference numbers must be rejected');
+    assertTrue((string) ($duplicateGcashCompletion['message'] ?? '') === "Invalid Reference Number: The GCash Reference Number '1234567890123' has already been submitted and recorded in the system. Duplicate reference numbers are not allowed.", 'Duplicate rejection message must match the required wording');
+
+    $transactionCount = (int) $pdo->query("SELECT COUNT(*) FROM transactions WHERE pickup_request_id = $gcashRequestId")->fetchColumn();
     assertTrue($transactionCount === 1, 'Exactly one transaction should be created');
-    $transactionMaterialCount = (int) $pdo->query("SELECT COUNT(*) FROM transaction_materials tm JOIN transactions t ON t.id = tm.transaction_id WHERE t.pickup_request_id = $requestId AND tm.accepted = 1")->fetchColumn();
+    $transactionMaterialCount = (int) $pdo->query("SELECT COUNT(*) FROM transaction_materials tm JOIN transactions t ON t.id = tm.transaction_id WHERE t.pickup_request_id = $gcashRequestId AND tm.accepted = 1")->fetchColumn();
     assertTrue($transactionMaterialCount === 2, 'Both accepted materials should be recorded in settlement');
 
-    $requestStatus = (string) $pdo->query("SELECT current_status FROM pickup_requests WHERE id = $requestId LIMIT 1")->fetchColumn();
+    $requestStatus = (string) $pdo->query("SELECT current_status FROM pickup_requests WHERE id = $gcashRequestId LIMIT 1")->fetchColumn();
     assertTrue($requestStatus === 'Completed', 'Pickup request should end as Completed');
 
     $auditRows = $pdo->query("SELECT previous_status, new_status FROM booking_status_history WHERE pickup_request_id = $requestId ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);

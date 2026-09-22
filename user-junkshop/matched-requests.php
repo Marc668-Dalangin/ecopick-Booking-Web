@@ -1,6 +1,143 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/controllers/DashboardController.php';
+
+$db = Database::getInstance();
+$pdo = $db->getPDO();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_complete_transaction'])) {
+    $requestId = intval($_POST['request_id'] ?? 0);
+    $paymentMethod = trim((string) ($_POST['payment_method'] ?? 'Cash'));
+    $paymentStatus = trim((string) ($_POST['payment_status'] ?? 'Unpaid'));
+    $referenceNumber = null;
+    $receiptImagePath = null;
+    $uploadedTempPath = null;
+    $uploadedTargetPath = null;
+
+    if ($requestId <= 0) {
+        $_SESSION['flash_message'] = 'Invalid transaction request ID.';
+        $_SESSION['flash_type'] = 'danger';
+        $_SESSION['flash_error'] = $_SESSION['flash_message'];
+        header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+        exit;
+    }
+
+    $statusStmt = $pdo->prepare('SELECT id FROM pickup_requests WHERE id = :id LIMIT 1');
+    $statusStmt->execute([':id' => $requestId]);
+    if (!$statusStmt->fetch(PDO::FETCH_ASSOC) || !in_array($paymentStatus, ['Unpaid', 'Paid'], true) || $paymentStatus === 'Unpaid') {
+        $_SESSION['flash_message'] = "Invalid Action: Cannot complete transaction while payment status is 'Unpaid'. Please verify payment before completing.";
+        $_SESSION['flash_type'] = 'danger';
+        $_SESSION['flash_error'] = $_SESSION['flash_message'];
+        header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+        exit;
+    }
+
+    if ($paymentMethod === 'GCash') {
+        $referenceNumber = trim((string) ($_POST['reference_number'] ?? ''));
+        if (!preg_match('/^[0-9]{13}$/', $referenceNumber)) {
+            $_SESSION['flash_message'] = 'Invalid GCash Reference Number. Must be exactly 13 numeric digits.';
+            $_SESSION['flash_type'] = 'danger';
+            $_SESSION['flash_error'] = $_SESSION['flash_message'];
+            header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+            exit;
+        }
+
+        $dupStmt1 = $pdo->prepare('SELECT id FROM pickup_requests WHERE reference_number = :ref AND id != :current_id LIMIT 1');
+        $dupStmt1->execute([':ref' => $referenceNumber, ':current_id' => $requestId]);
+        $dupStmt2 = $pdo->prepare('SELECT id FROM partnership_renewals WHERE reference_number = :ref LIMIT 1');
+        $dupStmt2->execute([':ref' => $referenceNumber]);
+        $dupStmt3 = $pdo->prepare('SELECT id FROM transactions WHERE reference_number = :ref AND pickup_request_id != :current_id LIMIT 1');
+        $dupStmt3->execute([':ref' => $referenceNumber, ':current_id' => $requestId]);
+        if ($dupStmt1->fetch() || $dupStmt2->fetch() || $dupStmt3->fetch()) {
+            if (!empty($_FILES['receipt_image']['tmp_name']) && is_file($_FILES['receipt_image']['tmp_name'])) {
+                @unlink($_FILES['receipt_image']['tmp_name']);
+            }
+            $_SESSION['flash_message'] = "Invalid Reference Number: The GCash Reference Number '{$referenceNumber}' has already been submitted and recorded in the system. Duplicate reference numbers are not allowed.";
+            $_SESSION['flash_type'] = 'danger';
+            $_SESSION['flash_error'] = $_SESSION['flash_message'];
+            header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+            exit;
+        }
+
+        if (!isset($_FILES['receipt_image']) || $_FILES['receipt_image']['error'] !== UPLOAD_ERR_OK) {
+            $_SESSION['flash_message'] = 'Please upload a valid GCash receipt screenshot.';
+            $_SESSION['flash_type'] = 'danger';
+            $_SESSION['flash_error'] = $_SESSION['flash_message'];
+            header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+            exit;
+        }
+
+        $receiptFile = $_FILES['receipt_image'];
+        if ($receiptFile['size'] > 3 * 1024 * 1024) {
+            $_SESSION['flash_message'] = 'Receipt photo exceeds the 3MB maximum file size limit.';
+            $_SESSION['flash_type'] = 'danger';
+            $_SESSION['flash_error'] = $_SESSION['flash_message'];
+            header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+            exit;
+        }
+
+        $uploadDir = __DIR__ . '/../uploads/transaction_receipts/';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            $_SESSION['flash_message'] = 'Failed to prepare the upload directory for the GCash receipt.';
+            $_SESSION['flash_type'] = 'danger';
+            $_SESSION['flash_error'] = $_SESSION['flash_message'];
+            header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+            exit;
+        }
+
+        $ext = strtolower(pathinfo((string) $receiptFile['name'], PATHINFO_EXTENSION));
+        $filename = 'tx_receipt_' . $requestId . '_' . time() . '.' . $ext;
+        $uploadedTargetPath = $uploadDir . $filename;
+        if (!move_uploaded_file($receiptFile['tmp_name'], $uploadedTargetPath)) {
+            $_SESSION['flash_message'] = 'Failed to store uploaded receipt image on the server.';
+            $_SESSION['flash_type'] = 'danger';
+            $_SESSION['flash_error'] = $_SESSION['flash_message'];
+            header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+            exit;
+        }
+        $receiptImagePath = 'uploads/transaction_receipts/' . $filename;
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $stmtUpdate = $pdo->prepare(
+            'UPDATE pickup_requests
+             SET payment_method = :payment_method,
+                 payment_status = :payment_status,
+                 reference_number = :reference_number,
+                 receipt_image = :receipt_image,
+                 current_status = :status,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id'
+        );
+        $stmtUpdate->execute([
+            ':payment_method' => $paymentMethod,
+            ':payment_status' => 'Paid',
+            ':reference_number' => $referenceNumber,
+            ':receipt_image' => $receiptImagePath,
+            ':status' => 'Completed',
+            ':id' => $requestId,
+        ]);
+        $pdo->commit();
+
+        $_SESSION['flash_message'] = "Transaction completed successfully via {$paymentMethod}!";
+        $_SESSION['flash_type'] = 'success';
+        $_SESSION['flash_success'] = $_SESSION['flash_message'];
+        header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php?status=completed');
+        exit;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        if (!empty($uploadedTargetPath) && file_exists($uploadedTargetPath)) {
+            @unlink($uploadedTargetPath);
+        }
+        error_log('Complete Transaction Error: ' . $e->getMessage());
+        $_SESSION['flash_message'] = 'Database Error: ' . $e->getMessage();
+        $_SESSION['flash_type'] = 'danger';
+        $_SESSION['flash_error'] = $_SESSION['flash_message'];
+        header('Location: ' . APP_URL . '/user-junkshop/matched-requests.php');
+        exit;
+    }
+}
 
 if (!Auth::check()) {
     header('Location: ' . APP_URL . '/user-junkshop/login.php');
@@ -196,7 +333,7 @@ ob_start();
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label" for="payment-method-<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">Payment method</label>
-                                            <select class="form-select" id="payment-method-<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" name="payment_method" required><option value="Cash">Cash</option><option value="GCash">GCash</option></select>
+                                            <select class="form-select" id="payment-method-<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" name="payment_method" required onchange="toggleCompleteGcashFields(this.value)"><option value="Cash" selected>Cash Payment</option><option value="GCash">GCash Payment</option></select>
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label" for="payment-status-<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>">Payment status</label>
@@ -204,6 +341,20 @@ ob_start();
                                         </div>
                                         <div class="col-md-2 d-flex align-items-end">
                                             <button type="submit" class="btn btn-success w-100">Complete</button>
+                                        </div>
+                                        <div class="col-12">
+                                            <div id="complete_gcash_container_<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" class="border rounded p-3 bg-light mb-3" style="display: none;">
+                                                <div class="mb-3">
+                                                    <label for="complete_reference_no_<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" class="form-label font-weight-bold">GCash Reference Number <span class="text-danger">*</span></label>
+                                                    <input type="text" name="reference_number" id="complete_reference_no_<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" class="form-control" inputmode="numeric" maxlength="13" placeholder="e.g. 1002345678901" oninput="sanitizeCompleteRef(this)">
+                                                    <small class="text-muted">Must be exactly 13 numeric digits.</small>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="complete_receipt_file_<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" class="form-label font-weight-bold">Upload GCash Receipt Screenshot <span class="text-danger">*</span></label>
+                                                    <input type="file" name="receipt_image" id="complete_receipt_file_<?php echo (int)($assignment['pickup_request_id'] ?? 0); ?>" class="form-control" accept="image/jpeg,image/png,image/webp" onchange="validateCompleteReceiptSize(this)">
+                                                    <small class="text-muted">Upload 1 clear screenshot (Max size: 3MB).</small>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="col-12">
                                             <div class="card border-0 bg-light">
@@ -611,21 +762,38 @@ window.addEventListener('DOMContentLoaded', function () {
         }
         const firstModal = document.createElement('div');
         firstModal.className = 'modal fade';
-        firstModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form novalidate><div class="modal-header"><h5 class="modal-title">Collector Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="text-muted small">Enter the collector who will handle this pickup.</p><div class="mb-3"><label class="form-label" for="collector-first-name">First Name</label><input type="text" class="form-control" id="collector-first-name" maxlength="50" pattern="[A-Z]+" autocomplete="off" required></div><div><label class="form-label" for="collector-last-name">Last Name</label><input type="text" class="form-control" id="collector-last-name" maxlength="50" pattern="[A-Z]+" autocomplete="off" required></div><div class="invalid-feedback">Use uppercase letters only, without spaces or symbols.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Proceed</button></div></form></div></div>';
+        firstModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form novalidate><div class="modal-header"><h5 class="modal-title">Collector Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="alert alert-danger d-none mb-3" data-modal-error role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i><span data-modal-error-text></span></div><p class="text-muted small">Enter the collector who will handle this pickup.</p><div class="mb-3"><label class="form-label" for="collector-first-name">First Name</label><input type="text" class="form-control" id="collector-first-name" maxlength="25" pattern="[A-Z]+(?: [A-Z]+)*" autocomplete="off" required></div><div><label class="form-label" for="collector-last-name">Last Name</label><input type="text" class="form-control" id="collector-last-name" maxlength="25" pattern="[A-Z]+(?: [A-Z]+)*" autocomplete="off" required></div><div class="invalid-feedback">Use uppercase letters and single spaces only, with no leading or trailing spaces.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Proceed</button></div></form></div></div>';
         document.body.appendChild(firstModal);
         const firstInstance = bootstrap.Modal.getOrCreateInstance(firstModal);
         const form = firstModal.querySelector('form');
         const inputs = Array.from(firstModal.querySelectorAll('input'));
-        inputs.forEach(function (input) {
-            input.addEventListener('input', function () {
-                input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '');
-                input.setCustomValidity(/^[A-Z]+$/.test(input.value) ? '' : 'Use uppercase letters only.');
-            });
+        const collectorError = firstModal.querySelector('[data-modal-error]');
+        const collectorErrorText = firstModal.querySelector('[data-modal-error-text]');
+        const showCollectorError = function (message) {
+            if (collectorErrorText) collectorErrorText.textContent = message;
+            collectorError?.classList.remove('d-none');
+        };
+        function sanitizeFirstName(input) {
+            input.value = input.value.replace(/[^A-Za-z ]/g, '').replace(/\s+/g, ' ').toUpperCase().slice(0, 25);
+        }
+
+        function sanitizeLastName(input) {
+            input.value = input.value.replace(/[^A-Za-z ]/g, '').replace(/\s+/g, ' ').toUpperCase().slice(0, 25);
+        }
+
+        inputs[0].addEventListener('input', function () {
+            sanitizeFirstName(inputs[0]);
+            inputs[0].setCustomValidity(/^[A-Z]+(?: [A-Z]+)*$/.test(inputs[0].value) ? '' : 'Use uppercase letters and single spaces only.');
+        });
+        inputs[1].addEventListener('input', function () {
+            sanitizeLastName(inputs[1]);
+            inputs[1].setCustomValidity(/^[A-Z]+(?: [A-Z]+)*$/.test(inputs[1].value) ? '' : 'Use uppercase letters and single spaces only.');
         });
         form.addEventListener('submit', function (event) {
             event.preventDefault();
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
+                showCollectorError('Please enter valid collector names using letters and single spaces only, with no leading or trailing spaces.');
                 return;
             }
             const collectorName = inputs[0].value + ' ' + inputs[1].value;
@@ -655,7 +823,9 @@ window.addEventListener('DOMContentLoaded', function () {
                     const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'mark-for-pickup', pickup_request_id: requestId, collector_first_name: inputs[0].value, collector_last_name: inputs[1].value }, controller.signal);
                     const resultPayload = await result.json();
                     if (!resultPayload.success) {
-                        showFeedback(resultPayload.message || 'Unable to mark this pickup.', false);
+                        secondInstance.hide();
+                        firstInstance.show();
+                        showCollectorError(resultPayload.message || 'Unable to mark this pickup.');
                         clearModalActionLoading(confirmButton);
                         return;
                     }
@@ -747,16 +917,30 @@ window.addEventListener('DOMContentLoaded', function () {
                 : '<label class="form-label">Buying Price per kg (₱) (Custom Material)</label><input type="number" step="0.01" min="0" class="form-control actual-price-input" name="actual_price_per_kg" id="' + priceInputId + '" data-item-id="' + itemId + '" required>';
             return '<div class="row g-2 mb-2 settlement-material-row align-items-end" data-item-id="' + itemId + '"><div class="col-md-3 material-name"><label class="form-label">' + escapeHtml(parts[1] || 'Material') + '</label><input class="form-control" value="' + escapeHtml(parts[2] || '') + ' kg estimated" readonly></div><div class="col-md-3 material-entry-field"><label class="form-label">Actual Weight (kg)</label><input class="form-control actual-weight-input actual-weight" data-item-id="' + itemId + '" type="number" min="0" step="0.01" required></div><div class="col-md-3 material-entry-field">' + priceMarkup + '</div><div class="col-md-2 material-entry-field"><label class="form-label">Condition</label><input class="form-control material-condition" type="text" maxlength="120" placeholder="Good, Mixed, Contaminated"></div><div class="col-md-1 d-flex gap-1 mb-1"><button type="button" class="btn btn-sm btn-outline-danger remove-material" title="Remove material"><i class="bi bi-trash"></i><span class="visually-hidden">Remove</span></button><button type="button" class="btn btn-sm btn-outline-secondary undo-material" title="Undo removal" style="display: none;"><i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden">Undo</span></button></div></div>';
         }).join('');
+        const currentPaymentStatus = String(request.payment_status || '').trim() === 'Paid' ? 'Paid' : 'Unpaid';
         const modal = document.createElement('div');
         modal.className = 'modal fade';
-        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form id="completion-form"><div class="modal-header"><h5 class="modal-title">Complete Transaction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="small text-muted mb-3">Enter the actual weight and condition received for each material.</div>' + rows + '<div class="row g-3 mt-2"><div class="col-md-4"><label class="form-label">Pickup collection fee</label><div class="form-control-plaintext fw-bold">₱' + Number(request.pickup_fee || 0).toFixed(2) + ' <small class="text-muted">(Auto-calculated from Pickup Request)</small></div></div><div class="col-md-4"><label class="form-label">Payment method</label><select class="form-select" name="payment_method" required><option value="Cash">Cash</option></select></div><div class="col-md-4"><label class="form-label">Payment status</label><select class="form-select" name="payment_status" required><option value="Unpaid">Unpaid</option><option value="Paid">Paid</option></select></div></div><div class="d-flex flex-column gap-2 mt-3 small"><div class="d-flex justify-content-between align-items-center gap-3"><span>Actual recyclable value</span><strong class="live-final-value">₱0.00</strong></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Pickup / Collection fee</span><span class="text-danger live-pickup-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Ecopick service fee</span><span class="text-danger live-service-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3 border-top pt-2 mt-1"><strong>Final net amount</strong><strong class="live-net-amount">₱0.00</strong></div></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Complete Transaction</button></div></form></div></div>';
+        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form id="completeTransactionForm" method="POST" action="matched_requests.php" enctype="multipart/form-data"><div class="modal-header"><h5 class="modal-title">Complete Transaction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="small text-muted mb-3">Enter the actual weight and condition received for each material.</div>' + rows + '<div class="row g-3 mt-2"><div class="col-md-4"><label class="form-label">Pickup collection fee</label><div class="form-control-plaintext fw-bold">₱' + Number(request.pickup_fee || 0).toFixed(2) + ' <small class="text-muted">(Auto-calculated from Pickup Request)</small></div></div><div class="col-md-4"><label class="form-label">Payment method</label><select class="form-select" name="payment_method" required onchange="toggleCompleteGcashFields(this.value)"><option value="Cash" selected>Cash Payment</option><option value="GCash">GCash Payment</option></select></div><div class="col-md-4"><label class="form-label">Payment status</label><select class="form-select" name="payment_status" required><option value="Unpaid">Unpaid</option><option value="Paid">Paid</option></select></div></div><div id="complete_gcash_container" class="border rounded p-3 bg-light mb-3" style="display: none;"><div class="mb-3"><label for="complete_reference_no" class="form-label font-weight-bold">GCash Reference Number <span class="text-danger">*</span></label><input type="text" name="reference_number" id="complete_reference_no" class="form-control" inputmode="numeric" maxlength="13" placeholder="e.g. 1002345678901" oninput="sanitizeCompleteRef(this)"><small class="text-muted">Must be exactly 13 numeric digits.</small></div><div class="mb-3"><label for="complete_receipt_file" class="form-label font-weight-bold">Upload GCash Receipt Screenshot <span class="text-danger">*</span></label><input type="file" name="receipt_image" id="complete_receipt_file" class="form-control" accept="image/jpeg,image/png,image/webp" onchange="validateCompleteReceiptSize(this)"><small class="text-muted">Upload 1 clear screenshot (Max size: 3MB).</small></div></div><div class="d-flex flex-column gap-2 mt-3 small"><div class="d-flex justify-content-between align-items-center gap-3"><span>Actual recyclable value</span><strong class="live-final-value">₱0.00</strong></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Pickup / Collection fee</span><span class="text-danger live-pickup-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3"><span>Ecopick service fee</span><span class="text-danger live-service-fee">- ₱0.00</span></div><div class="d-flex justify-content-between align-items-center gap-3 border-top pt-2 mt-1"><strong>Final net amount</strong><strong class="live-net-amount">₱0.00</strong></div></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Complete Transaction</button></div></form></div></div>';
+        modal.innerHTML = modal.innerHTML.replace('<div class="modal-body">', '<div class="modal-body"><div id="modal_error_alert" class="alert alert-danger d-none mb-3" role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i><span id="modal_error_text"></span></div>');
         const actualWeight = Number(request.actual_weight || 0);
         const actualWeightSummary = document.createElement('div');
         actualWeightSummary.className = 'd-flex justify-content-between align-items-center bg-light rounded p-3 mb-3';
         actualWeightSummary.innerHTML = '<span class="fw-semibold">Actual Weight</span><strong class="badge ' + (actualWeight > 0 ? 'bg-success' : 'bg-secondary') + ' font-monospace fs-6">' + (actualWeight > 0 ? actualWeight.toFixed(2) + ' kg' : 'Pending Weight') + '</strong>';
         modal.querySelector('.modal-body')?.prepend(actualWeightSummary);
         document.body.appendChild(modal);
+        const paymentStatusSelect = modal.querySelector('[name="payment_status"]');
+        if (paymentStatusSelect) paymentStatusSelect.value = currentPaymentStatus;
         const instance = bootstrap.Modal.getOrCreateInstance(modal);
+        const modalErrorAlert = modal.querySelector('#modal_error_alert');
+        const modalErrorText = modal.querySelector('#modal_error_text');
+        const showModalError = function (message) {
+            if (modalErrorText) modalErrorText.textContent = message;
+            modalErrorAlert?.classList.remove('d-none');
+        };
+        const clearModalError = function () {
+            modalErrorAlert?.classList.add('d-none');
+            if (modalErrorText) modalErrorText.textContent = '';
+        };
         instance.show();
         const confirmModal = document.createElement('div');
         confirmModal.className = 'modal fade';
@@ -764,10 +948,11 @@ window.addEventListener('DOMContentLoaded', function () {
         confirmModal.setAttribute('tabindex', '-1');
         confirmModal.setAttribute('aria-labelledby', 'completeTransactionModalLabel');
         confirmModal.setAttribute('aria-hidden', 'true');
-        confirmModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="completeTransactionModalLabel">Confirm Transaction Completion</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>Are you sure you want to finalize and mark this transaction as completed? This action cannot be undone.</p><dl class="row mb-0 small"><dt class="col-7">Final material payout</dt><dd class="col-5 text-end" data-confirm-final-payout>₱0.00</dd><dt class="col-7">Pickup fee</dt><dd class="col-5 text-end" data-confirm-pickup-fee>- ₱0.00</dd><dt class="col-7">EcoPick service fee</dt><dd class="col-5 text-end" data-confirm-service-fee>- ₱0.00</dd></dl></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Review Details</button><button type="button" id="btn-final-complete-submit" class="btn btn-success">Yes, Complete Transaction</button></div></div></div>';
+        confirmModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form id="completeTransactionConfirmForm" method="POST" action="matched_requests.php" enctype="multipart/form-data"><div class="modal-header"><h5 class="modal-title" id="completeTransactionModalLabel">Confirm Transaction Completion</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><input type="hidden" name="request_id" value="' + String(requestId) + '"><input type="hidden" name="submit_complete_transaction" value="1"><input type="hidden" name="payment_method" id="confirm_payment_method" value="Cash"><input type="hidden" name="payment_status" id="confirm_payment_status" value="Paid"><input type="hidden" name="reference_number" id="confirm_reference_number" value=""><input type="hidden" name="receipt_image" id="confirm_receipt_image" value=""><p>Are you sure you want to finalize and mark this transaction as completed? This action cannot be undone.</p><dl class="row mb-0 small"><dt class="col-7">Final material payout</dt><dd class="col-5 text-end" data-confirm-final-payout>₱0.00</dd><dt class="col-7">Pickup fee</dt><dd class="col-5 text-end" data-confirm-pickup-fee>- ₱0.00</dd><dt class="col-7">EcoPick service fee</dt><dd class="col-5 text-end" data-confirm-service-fee>- ₱0.00</dd></dl></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Review Details</button><button type="submit" id="btn-final-complete-submit" class="btn btn-success">Yes, Complete Transaction</button></div></form></div></div>';
         document.body.appendChild(confirmModal);
         const confirmInstance = bootstrap.Modal.getOrCreateInstance(confirmModal);
         let completionConfirmed = false;
+        let completionSubmitting = false;
         const formatMoney = value => '₱' + Number(value || 0).toFixed(2);
         const updatePreview = function () {
             const actualRecyclableValue = Array.from(modal.querySelectorAll('.actual-weight-input')).reduce((total, input) => {
@@ -798,54 +983,176 @@ window.addEventListener('DOMContentLoaded', function () {
             row.querySelector('.undo-material').style.display = isRemoving ? '' : 'none';
             updatePreview();
         });
-        modal.querySelector('form').addEventListener('submit', async function (event) {
-            event.preventDefault();
-            if (!event.target.checkValidity()) { event.target.classList.add('was-validated'); return; }
-            const activeActualWeight = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).reduce((total, input) => total + (Number.isFinite(Number(input.value)) ? Number(input.value) : 0), 0);
-            if (activeActualWeight < 3) {
-                showFeedback('The total actual weight must be at least 3 kg to complete this transaction.', false);
-                return;
-            }
-            const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), buying_price_per_kg: Number(modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]')?.value || 0), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
-            if (!completionConfirmed) {
-                confirmModal.querySelector('[data-confirm-final-payout]').textContent = modal.querySelector('.live-final-value').textContent;
-                confirmModal.querySelector('[data-confirm-pickup-fee]').textContent = modal.querySelector('.live-pickup-fee').textContent;
-                confirmModal.querySelector('[data-confirm-service-fee]').textContent = modal.querySelector('.live-service-fee').textContent;
-                confirmInstance.show();
-                return;
-            }
-            completionConfirmed = false;
-            const confirmSubmitButton = confirmModal.querySelector('#btn-final-complete-submit');
-            const controller = new AbortController();
-            const safetyTimeout = window.setTimeout(function () {
-                controller.abort();
-                clearModalActionLoading(confirmSubmitButton);
-                showFeedback('The transaction completion request timed out. Please try again.', false);
-            }, 10000);
-            setModalActionLoading(confirmSubmitButton, 'Processing...');
-            try {
-                const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
-                const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'complete-transaction', pickup_request_id: requestId, actual_price_per_kg: firstPrice, material_settlements: JSON.stringify(materialSettlements), payment_method: modal.querySelector('[name="payment_method"]').value, payment_status: modal.querySelector('[name="payment_status"]').value }, controller.signal);
-                const resultPayload = await result.json();
-                if (!resultPayload.success) { showFeedback(resultPayload.message || 'Unable to complete this transaction.', false); clearModalActionLoading(confirmSubmitButton); return; }
-                removeSellerMap(requestId);
-                instance.hide();
-                showSuccessAndReload(resultPayload.message);
-            } catch (error) {
-                if (error?.name !== 'AbortError') {
-                    showFeedback('Unable to complete this transaction right now. Please try again.', false);
+        const completeGcashContainer = modal.querySelector('#complete_gcash_container');
+        const completeReferenceInput = modal.querySelector('#complete_reference_no');
+        const completeReceiptInput = modal.querySelector('#complete_receipt_file');
+        const maxReceiptSize = 3 * 1024 * 1024;
+        const allowedReceiptTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+        function toggleCompleteGcashFields(method) {
+            const isGcash = String(method || 'Cash') === 'GCash';
+            if (!completeGcashContainer) return;
+            completeGcashContainer.style.display = isGcash ? 'block' : 'none';
+
+            if (completeReferenceInput) {
+                completeReferenceInput.disabled = !isGcash;
+                completeReferenceInput.required = isGcash;
+                if (!isGcash) {
+                    completeReferenceInput.value = '';
+                    completeReferenceInput.removeAttribute('required');
                 }
-                clearModalActionLoading(confirmSubmitButton);
-            } finally {
-                window.clearTimeout(safetyTimeout);
-                clearModalActionLoading(confirmSubmitButton);
             }
+            if (completeReceiptInput) {
+                completeReceiptInput.disabled = !isGcash;
+                completeReceiptInput.required = isGcash;
+                if (!isGcash) {
+                    completeReceiptInput.value = '';
+                    completeReceiptInput.removeAttribute('required');
+                }
+            }
+
+            const confirmPaymentMethod = document.getElementById('confirm_payment_method');
+            if (confirmPaymentMethod) confirmPaymentMethod.value = String(method || 'Cash');
+        }
+
+        function sanitizeCompleteRef(input) {
+            if (!input) return;
+            input.value = String(input.value || '').replace(/[^0-9]/g, '').slice(0, 13);
+        }
+
+        function validateCompleteReceiptSize(fileInput) {
+            if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+            const file = fileInput.files[0];
+            if (file.size > maxReceiptSize || !allowedReceiptTypes.includes(file.type)) {
+                showModalError('Please upload a single JPG, PNG, or WEBP receipt image under 3 MB.');
+                fileInput.value = '';
+            }
+        }
+
+        if (completeReferenceInput) {
+            completeReferenceInput.addEventListener('input', function () { sanitizeCompleteRef(this); });
+        }
+        if (completeReceiptInput) {
+            completeReceiptInput.addEventListener('change', function () { validateCompleteReceiptSize(this); });
+        }
+        modal.querySelector('[name="payment_method"]').addEventListener('change', function (event) {
+            toggleCompleteGcashFields(event.target.value);
         });
-        confirmModal.querySelector('#btn-final-complete-submit').addEventListener('click', function () {
-            completionConfirmed = true;
-            confirmInstance.hide();
-            modal.querySelector('form').requestSubmit();
-        });
+        toggleCompleteGcashFields(modal.querySelector('[name="payment_method"]').value);
+
+        const completionForm = modal.querySelector('form');
+        if (completionForm) {
+            completionForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                if (completionSubmitting) return;
+                clearModalError();
+                const paymentMethodSelect = completionForm.querySelector('[name="payment_method"]');
+                const paymentStatusSelect = completionForm.querySelector('[name="payment_status"]');
+                const paymentMethod = paymentMethodSelect ? paymentMethodSelect.value : 'Cash';
+                const paymentStatus = paymentStatusSelect ? paymentStatusSelect.value : 'Paid';
+
+                if (!completionForm.checkValidity()) {
+                    completionForm.classList.add('was-validated');
+                    return;
+                }
+
+                if (paymentStatus === 'Unpaid') {
+                    showModalError("Invalid Action: Cannot complete transaction while payment status is 'Unpaid'. Please verify payment before completing.");
+                    return;
+                }
+
+                if (paymentMethod === 'GCash') {
+                    if (!completeReferenceInput || !/^\d{13}$/.test(completeReferenceInput.value || '')) {
+                        showModalError('The GCash reference number must contain exactly 13 digits.');
+                        completeReferenceInput?.focus();
+                        return;
+                    }
+                    if (!completeReceiptInput || !completeReceiptInput.files || completeReceiptInput.files.length === 0) {
+                        showModalError('Please upload a valid GCash receipt screenshot.');
+                        completeReceiptInput?.focus();
+                        return;
+                    }
+                }
+
+                const activeActualWeight = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).reduce((total, input) => total + (Number.isFinite(Number(input.value)) ? Number(input.value) : 0), 0);
+                if (activeActualWeight < 3) {
+                    showModalError('The total actual weight must be at least 3 kg to complete this transaction.');
+                    return;
+                }
+
+                const materialSettlements = Array.from(modal.querySelectorAll('.actual-weight-input:not(:disabled)')).map(input => ({ pickup_request_item_id: Number(input.dataset.itemId), actual_weight_kg: Number(input.value), buying_price_per_kg: Number(modal.querySelector('.actual-price-input[data-item-id="' + input.dataset.itemId + '"]')?.value || 0), material_condition: input.closest('.settlement-material-row')?.querySelector('.material-condition')?.value || '', accepted: Number(input.value) > 0 }));
+
+                if (!completionConfirmed) {
+                    const payoutNode = confirmModal.querySelector('[data-confirm-final-payout]');
+                    const pickupFeeNode = confirmModal.querySelector('[data-confirm-pickup-fee]');
+                    const serviceFeeNode = confirmModal.querySelector('[data-confirm-service-fee]');
+                    if (payoutNode) payoutNode.textContent = modal.querySelector('.live-final-value')?.textContent || '₱0.00';
+                    if (pickupFeeNode) pickupFeeNode.textContent = modal.querySelector('.live-pickup-fee')?.textContent || '- ₱0.00';
+                    if (serviceFeeNode) serviceFeeNode.textContent = modal.querySelector('.live-service-fee')?.textContent || '- ₱0.00';
+                    confirmInstance.show();
+                    return;
+                }
+
+                completionConfirmed = false;
+                completionSubmitting = true;
+                const confirmSubmitButton = confirmModal.querySelector('#btn-final-complete-submit');
+                const controller = new AbortController();
+                const safetyTimeout = window.setTimeout(function () {
+                    controller.abort();
+                    completionSubmitting = false;
+                    clearModalActionLoading(confirmSubmitButton);
+                    instance.show();
+                    showModalError('The transaction completion request timed out. Please try again.');
+                }, 10000);
+                setModalActionLoading(confirmSubmitButton, 'Processing...');
+                confirmInstance.hide();
+                instance.hide();
+                try {
+                    const firstPrice = materialSettlements[0]?.buying_price_per_kg ?? '';
+                    const formData = new FormData();
+                    formData.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>');
+                    formData.append('action', 'complete-transaction');
+                    formData.append('pickup_request_id', String(requestId));
+                    formData.append('actual_price_per_kg', String(firstPrice));
+                    formData.append('material_settlements', JSON.stringify(materialSettlements));
+                    formData.append('payment_method', paymentMethod);
+                    formData.append('payment_status', paymentStatus);
+                    formData.append('reference_number', paymentMethod === 'GCash' && completeReferenceInput ? completeReferenceInput.value : '');
+                    if (paymentMethod === 'GCash' && completeReceiptInput && completeReceiptInput.files && completeReceiptInput.files[0]) {
+                        formData.append('receipt_image', completeReceiptInput.files[0]);
+                    }
+                    const result = await fetch(apiUrl, { method: 'POST', body: formData, credentials: 'same-origin', signal: controller.signal });
+                    const resultPayload = await result.json();
+                    if (!resultPayload.success) { completionSubmitting = false; instance.show(); showModalError(resultPayload.message || 'Unable to complete this transaction.'); clearModalActionLoading(confirmSubmitButton); return; }
+                    removeSellerMap(requestId);
+                    showSuccessAndReload(resultPayload.message);
+                } catch (error) {
+                    completionSubmitting = false;
+                    if (error?.name !== 'AbortError') {
+                        instance.show();
+                        showModalError('Unable to complete this transaction right now. Please try again.');
+                    }
+                    clearModalActionLoading(confirmSubmitButton);
+                } finally {
+                    window.clearTimeout(safetyTimeout);
+                    clearModalActionLoading(confirmSubmitButton);
+                }
+            });
+        }
+
+        const confirmSubmitButton = confirmModal.querySelector('#btn-final-complete-submit');
+        const confirmForm = confirmModal.querySelector('#completeTransactionConfirmForm');
+        if (confirmForm) {
+            confirmForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                if (completionSubmitting) return;
+                completionConfirmed = true;
+                confirmInstance.hide();
+                if (completionForm) {
+                    completionForm.requestSubmit();
+                }
+            });
+        }
         modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
         confirmModal.addEventListener('hidden.bs.modal', function () { confirmModal.remove(); });
     }

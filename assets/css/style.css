@@ -20,6 +20,58 @@ body {
     line-height: 1.6;
 }
 
+/* Prevent image flickering and layout shifts inside modals */
+.modal,
+.modal-dialog,
+.modal-content,
+.modal img,
+.modal-body img {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+.modal img,
+.modal-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.receipt-modal-body,
+[id^="receiptModal-"] .modal-body,
+[id^="adminReceiptModal-"] .modal-body,
+[id^="adminPrivateReceiptModal-"] .modal-body {
+    min-height: 300px;
+    max-height: 75vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #f8f9fa;
+}
+
+.receipt-modal-body img,
+[id^="receiptModal-"] .modal-body img,
+[id^="adminReceiptModal-"] .modal-body img,
+[id^="adminPrivateReceiptModal-"] .modal-body img {
+    width: auto;
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    will-change: transform;
+}
+
+.modal {
+    overflow-y: auto !important;
+}
+
+.modal-backdrop {
+    backface-visibility: hidden;
+}
+
 h1, h2, h3, h4, h5, h6 {
     color: var(--dark-text);
     font-weight: 700;

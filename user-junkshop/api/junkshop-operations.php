@@ -120,8 +120,9 @@ if ($method === 'POST') {
         $materialSettlements = json_decode((string) ($_POST['material_settlements'] ?? '[]'), true);
         $paymentMethod = trim((string) ($_POST['payment_method'] ?? 'Cash'));
         $paymentStatus = trim((string) ($_POST['payment_status'] ?? 'Paid'));
-        $paymentReference = trim((string) ($_POST['payment_reference'] ?? ''));
+        $paymentReference = trim((string) ($_POST['payment_reference'] ?? $_POST['reference_number'] ?? ''));
         $actualPricePerKg = isset($_POST['actual_price_per_kg']) ? max(0.0, (float) $_POST['actual_price_per_kg']) : null;
+        $receiptFile = $_FILES['receipt_image'] ?? null;
         $notes = trim((string) ($_POST['condition'] ?? $_POST['material_condition'] ?? $_POST['material_condition_notes'] ?? ''));
         $conditionLines = [];
         if (is_array($materialSettlements)) {
@@ -136,7 +137,7 @@ if ($method === 'POST') {
         if (!empty($conditionLines)) {
             $notes = implode("\n", $conditionLines);
         }
-        $result = $bookingLifecycleController->completeTransaction($requestId, $junkshopId, is_array($materialSettlements) ? $materialSettlements : [], $paymentMethod, $paymentStatus, $paymentReference, $notes, $actualPricePerKg);
+        $result = $bookingLifecycleController->completeTransaction($requestId, $junkshopId, is_array($materialSettlements) ? $materialSettlements : [], $paymentMethod, $paymentStatus, $paymentReference, $notes, $actualPricePerKg, $receiptFile);
         $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
