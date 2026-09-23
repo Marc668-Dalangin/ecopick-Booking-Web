@@ -33,15 +33,17 @@ function formatPhilippineMobileNumber(string $rawNumber): ?string
     return null;
 }
 
-function buildPickupSmsMessage(string $bookingReference, string $collectorName, string $junkshopBusinessName, float $netAmount): string
+function buildPickupSmsMessage(string $bookingReference, string $collectorName, string $junkshopBusinessName, float $netAmount, string $collectorContactNumber): string
 {
     $bookingReference = trim(preg_replace('/\s+/', ' ', $bookingReference) ?: '');
     $collectorName = trim(preg_replace('/\s+/', ' ', $collectorName) ?: '');
     $junkshopBusinessName = trim(preg_replace('/\s+/', ' ', $junkshopBusinessName) ?: '');
+    $collectorContactNumber = trim($collectorContactNumber);
 
     return "EcoPick: Your booking {$bookingReference} is now For Pickup. Your recyclable materials will be collected by {$collectorName} from {$junkshopBusinessName}.\n"
         . 'Estimated Amount to receive: ₱' . number_format($netAmount, 2, '.', '') . ".\n"
-        . "Note: The estimated amount may change. The final amount will be determined after the actual assessment and weighing of your recyclable materials. Please have your materials ready for collection.\n"
+        . "Note: The estimated amount may change. The final amount will be determined after the actual assessment and weighing of your recyclable materials.\n"
+        . "Please have your materials ready for collection. For further inquiries regarding your pickup, please contact the collector, {$collectorName}, at {$collectorContactNumber}.\n"
         . 'Thank you for using EcoPick!';
 }
 

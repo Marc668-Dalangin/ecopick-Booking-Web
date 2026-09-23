@@ -769,11 +769,12 @@ window.addEventListener('DOMContentLoaded', function () {
         }
         const firstModal = document.createElement('div');
         firstModal.className = 'modal fade';
-        firstModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form novalidate><div class="modal-header"><h5 class="modal-title">Collector Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="alert alert-danger d-none mb-3" data-modal-error role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i><span data-modal-error-text></span></div><p class="text-muted small">Enter the collector who will handle this pickup.</p><div class="mb-3"><label class="form-label" for="collector-first-name">First Name</label><input type="text" class="form-control" id="collector-first-name" maxlength="25" pattern="[A-Z]+(?: [A-Z]+)*" autocomplete="off" required></div><div><label class="form-label" for="collector-last-name">Last Name</label><input type="text" class="form-control" id="collector-last-name" maxlength="25" pattern="[A-Z]+(?: [A-Z]+)*" autocomplete="off" required></div><div class="invalid-feedback">Use uppercase letters and single spaces only, with no leading or trailing spaces.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Proceed</button></div></form></div></div>';
+        firstModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form novalidate><div class="modal-header"><h5 class="modal-title">Collector Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="alert alert-danger d-none mb-3" data-modal-error role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i><span data-modal-error-text></span></div><p class="text-muted small">Enter the collector who will handle this pickup.</p><div class="mb-3"><label class="form-label" for="collector-first-name">First Name</label><input type="text" class="form-control" id="collector-first-name" maxlength="25" pattern="[A-Z]+(?: [A-Z]+)*" autocomplete="off" required></div><div class="mb-3"><label class="form-label" for="collector-last-name">Last Name</label><input type="text" class="form-control" id="collector-last-name" maxlength="25" pattern="[A-Z]+(?: [A-Z]+)*" autocomplete="off" required><div class="invalid-feedback">Use uppercase letters and single spaces only, with no leading or trailing spaces.</div></div><div><label class="form-label" for="collector-contact-number">Contact Number</label><div class="input-group"><span class="input-group-text bg-light fw-bold text-primary">+639</span><input type="tel" class="form-control" id="collector-contact-number" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" autocomplete="tel" required></div></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Proceed</button></div></form></div></div>';
         document.body.appendChild(firstModal);
         const firstInstance = bootstrap.Modal.getOrCreateInstance(firstModal);
         const form = firstModal.querySelector('form');
         const inputs = Array.from(firstModal.querySelectorAll('input'));
+        const contactInput = firstModal.querySelector('#collector-contact-number');
         const collectorError = firstModal.querySelector('[data-modal-error]');
         const collectorErrorText = firstModal.querySelector('[data-modal-error-text]');
         const showCollectorError = function (message) {
@@ -796,18 +797,22 @@ window.addEventListener('DOMContentLoaded', function () {
             sanitizeLastName(inputs[1]);
             inputs[1].setCustomValidity(/^[A-Z]+(?: [A-Z]+)*$/.test(inputs[1].value) ? '' : 'Use uppercase letters and single spaces only.');
         });
+        contactInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+            this.setCustomValidity(/^[0-9]{9}$/.test(this.value) ? '' : 'Enter exactly 9 digits after the +639 prefix.');
+        });
         form.addEventListener('submit', function (event) {
             event.preventDefault();
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
-                showCollectorError('Please enter valid collector names using letters and single spaces only, with no leading or trailing spaces.');
+                showCollectorError('Please enter valid collector names and a 9-digit collector contact number.');
                 return;
             }
             const collectorName = inputs[0].value + ' ' + inputs[1].value;
             const netAmount = getEstimatedNetAmount(request);
             const secondModal = document.createElement('div');
             secondModal.className = 'modal fade';
-            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an SMS notification when the platform SMS setting is enabled.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
+            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Contact number</dt><dd class="col-6 text-end">+639' + escapeHtml(contactInput.value) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an SMS notification when the platform SMS setting is enabled.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
             firstModal.dataset.keepOpen = 'true';
             firstInstance.hide();
             document.body.appendChild(secondModal);
@@ -827,7 +832,7 @@ window.addEventListener('DOMContentLoaded', function () {
                 }, 10000);
                 setModalActionLoading(confirmButton, 'Processing...');
                 try {
-                    const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'mark-for-pickup', pickup_request_id: requestId, collector_first_name: inputs[0].value, collector_last_name: inputs[1].value }, controller.signal);
+                    const result = await sendFormData({ _csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo CSRF::token(); ?>', action: 'mark-for-pickup', pickup_request_id: requestId, collector_first_name: inputs[0].value, collector_last_name: inputs[1].value, collector_contact_number: contactInput.value }, controller.signal);
                     const resultPayload = await result.json();
                     if (!resultPayload.success) {
                         secondInstance.hide();

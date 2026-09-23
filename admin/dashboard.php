@@ -24,7 +24,6 @@ $activePage = 'dashboard';
 ob_start();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="small text-muted">Auto-refresh every 3 seconds</div>
     <div class="small text-muted" aria-live="polite" id="last-updated">Last updated just now</div>
 </div>
 <div class="row g-4 mb-4">

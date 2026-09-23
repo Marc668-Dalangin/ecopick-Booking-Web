@@ -74,7 +74,7 @@ class BookingLifecycleController
         }
     }
 
-    public function markForPickup(int $pickupRequestId, int $junkshopAccountId, ?string $collectorFirstName = null, ?string $collectorLastName = null): array
+    public function markForPickup(int $pickupRequestId, int $junkshopAccountId, ?string $collectorFirstName = null, ?string $collectorLastName = null, ?string $collectorContactNumber = null): array
     {
         $pickupRequest = $this->getPickupRequestById($pickupRequestId, $junkshopAccountId, 'Scheduled');
         if ($pickupRequest === null) {
@@ -95,13 +95,19 @@ class BookingLifecycleController
             }
             $collectorName = $collectorFirstName . ' ' . $collectorLastName;
         }
+        $collectorContactNumber = trim((string) $collectorContactNumber);
+        if (!preg_match('/^[0-9]{9}$/', $collectorContactNumber)) {
+            return ['success' => false, 'message' => 'Collector contact number must contain exactly 9 digits after the +639 prefix.'];
+        }
+        $collectorContactNumber = '+639' . $collectorContactNumber;
 
         try {
             $statement = $this->db->query(
-                'UPDATE pickup_requests SET current_status = :status, collector_name = :collector_name, sms_status = :sms_status, sms_error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
+                'UPDATE pickup_requests SET current_status = :status, collector_name = :collector_name, collector_contact_number = :collector_contact_number, sms_status = :sms_status, sms_error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :pickup_request_id AND current_status = :expected_status',
                 [
                     'status' => 'For Pickup',
                     'collector_name' => $collectorName,
+                    'collector_contact_number' => $collectorContactNumber,
                     'sms_status' => 'Pending',
                     'pickup_request_id' => $pickupRequestId,
                     'expected_status' => 'Scheduled',
@@ -121,7 +127,8 @@ class BookingLifecycleController
                     (string) ($pickupRequest['booking_reference'] ?? ('ECP-' . $pickupRequestId)),
                     $collectorName,
                     (string) ($pickupRequest['junkshop_business_name'] ?? 'EcoPick Partner Junkshop'),
-                    $netAmount
+                    $netAmount,
+                    $collectorContactNumber
                 ),
                 $this->db->getPDO()
             );

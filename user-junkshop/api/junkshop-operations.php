@@ -110,7 +110,8 @@ if ($method === 'POST') {
             $requestId,
             $junkshopId,
             (string) ($_POST['collector_first_name'] ?? ''),
-            (string) ($_POST['collector_last_name'] ?? '')
+            (string) ($_POST['collector_last_name'] ?? ''),
+            (string) ($_POST['collector_contact_number'] ?? '')
         );
         $result['data'] = ['requests' => $dashboardController->getPendingJunkshopRequests($junkshopId)];
         echo json_encode($result, JSON_UNESCAPED_UNICODE);

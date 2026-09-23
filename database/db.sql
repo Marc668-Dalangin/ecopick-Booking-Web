@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
     payment_status ENUM('Unpaid', 'Paid', 'Confirmed') NULL,
     contact_number VARCHAR(20) NULL DEFAULT NULL,
     collector_name VARCHAR(255) NULL DEFAULT NULL,
+    collector_contact_number VARCHAR(13) NULL DEFAULT NULL,
     sms_status ENUM('Pending', 'Sent', 'Failed', 'Disabled') NOT NULL DEFAULT 'Pending',
     sms_error_message TEXT NULL DEFAULT NULL,
     pickup_address VARCHAR(255) NOT NULL,
@@ -185,6 +186,7 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
 
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lat DECIMAL(10,8) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_lng DECIMAL(11,8) NULL DEFAULT NULL;
+ALTER TABLE pickup_requests ADD COLUMN IF NOT EXISTS collector_contact_number VARCHAR(13) NULL DEFAULT NULL;
 ALTER TABLE pickup_requests ADD INDEX IF NOT EXISTS idx_seller_junkshop_status (seller_account_id, junkshop_id, current_status);
 ALTER TABLE pickup_requests ADD INDEX IF NOT EXISTS idx_junkshop_status (junkshop_id, current_status);
 
