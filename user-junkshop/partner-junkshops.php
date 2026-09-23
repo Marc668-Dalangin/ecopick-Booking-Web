@@ -245,7 +245,7 @@ ob_start();
                             <span class="badge bg-primary-subtle text-primary" id="selected-material-weight-total">0.0 kg</span>
                         </div>
                         <div id="selected-materials-list" class="d-flex flex-column gap-2"></div>
-                        <div id="material-selection-error" class="invalid-feedback d-block d-none" role="alert">Minimum total estimated weight for pickup is 5 kg.</div>
+                        <div id="material-selection-error" class="invalid-feedback d-block d-none" role="alert" aria-live="polite">Minimum pickup weight requirement is 5 kg. Please enter 5 kg or more to schedule a pickup.</div>
                     </div>
 
                     <div class="card border-0 bg-light-subtle mb-4">
@@ -409,6 +409,8 @@ ob_start();
         const approximateDistanceInput = document.getElementById('approximate_distance_km');
         const contactNumberInput = document.getElementById('contact_number');
         const locationErrorNote = document.getElementById('location-error-note');
+        const minimumPickupWeightKg = 5;
+        const minimumPickupWeightMessage = 'Minimum pickup weight requirement is 5 kg. Please enter 5 kg or more to schedule a pickup.';
         const locationErrorMessage = '<strong>Location Access Required:</strong> Please ensure your device GPS is turned ON in settings and location permissions are ALLOWED for this website in your browser settings. Once enabled, reload the page to view your location and exact distance.';
         let selectedPrices = {};
         let distanceInKm = 0;
@@ -725,6 +727,9 @@ ob_start();
                 materialTotal += weight * price;
             });
 
+            materialSelectionError.textContent = minimumPickupWeightMessage;
+            materialSelectionError.classList.toggle('d-none', totalWeight === 0 || totalWeight >= minimumPickupWeightKg);
+
             document.getElementById('selected-material-weight-total').textContent = totalWeight.toFixed(1) + ' kg';
             const pickupFee = calculatePickupFee(distanceInKm, perKmRate);
             const serviceFee = materialTotal * (serviceFeePct / 100);
@@ -876,9 +881,10 @@ ob_start();
             const totalEstimatedWeight = Array.from(document.querySelectorAll('.material-weight-input')).reduce(function (total, input) {
                 return total + (Number(input.value) || 0);
             }, 0);
-            if (!checkedMaterials.length || totalEstimatedWeight < 5) {
+            if (!checkedMaterials.length || totalEstimatedWeight < minimumPickupWeightKg) {
                 materialSelectionError.classList.remove('d-none');
-                showStatus('Minimum total estimated weight for pickup is 5 kg.', false, []);
+                materialSelectionError.textContent = minimumPickupWeightMessage;
+                showStatus(minimumPickupWeightMessage, false, []);
                 return;
             }
 

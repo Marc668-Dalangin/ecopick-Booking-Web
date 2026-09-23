@@ -9,6 +9,9 @@ require_once __DIR__ . '/../../includes/philsms_service.php';
 
 class PickupRequestController
 {
+    private const MINIMUM_PICKUP_WEIGHT_KG = 5.0;
+    private const MINIMUM_PICKUP_WEIGHT_MESSAGE = 'Minimum pickup weight requirement is 5 kg. Please enter 5 kg or more to schedule a pickup.';
+
     private $db;
     private $photoDirectory;
 
@@ -41,15 +44,18 @@ class PickupRequestController
         }
 
         if (!empty($errors)) {
-            return ['success' => false, 'message' => 'Please correct the highlighted fields.', 'validation_errors' => $errors];
+            $message = in_array(self::MINIMUM_PICKUP_WEIGHT_MESSAGE, $errors, true)
+                ? self::MINIMUM_PICKUP_WEIGHT_MESSAGE
+                : 'Please correct the highlighted fields.';
+            return ['success' => false, 'message' => $message, 'validation_errors' => $errors];
         }
 
         $totalEstimatedWeight = array_sum(array_map(
             static fn (array $item): float => (float) $item['estimated_weight'],
             $normalized['items']
         ));
-        if ($totalEstimatedWeight < 5) {
-            return ['success' => false, 'message' => 'Minimum estimated weight for pickup is 5 kg.', 'validation_errors' => []];
+        if ($totalEstimatedWeight < self::MINIMUM_PICKUP_WEIGHT_KG) {
+            return ['success' => false, 'message' => self::MINIMUM_PICKUP_WEIGHT_MESSAGE, 'validation_errors' => []];
         }
 
         try {
@@ -506,8 +512,8 @@ class PickupRequestController
                 static fn (array $item): float => (float) ($item['estimated_weight'] ?? 0),
                 $data['items']
             ));
-            if ($totalWeight < 5.0) {
-                $errors[] = 'Minimum total estimated weight for pickup is 5 kg.';
+            if ($totalWeight < self::MINIMUM_PICKUP_WEIGHT_KG) {
+                $errors[] = self::MINIMUM_PICKUP_WEIGHT_MESSAGE;
             }
         }
 
