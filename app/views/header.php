@@ -3,13 +3,45 @@
  * Header Template
  */
 $siteFavicon = APP_URL . '/assets/images/logo.png';
+$siteTitle = !empty($isHomepage)
+    ? 'EcoPick Lipa City - Recyclable Scrap Collection & Local Junkshops'
+    : (isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') . ' - EcoPick' : 'EcoPick - Recyclable Scrap Collection in Lipa City');
+$siteDescription = !empty($isHomepage)
+    ? 'EcoPick Lipa City connects scrap sellers with verified local junkshops across Lipa City, Batangas. Schedule hassle-free recyclable collection and get paid fair prices.'
+    : 'EcoPick connects sellers with verified junkshops and recyclable material services in Lipa City, Batangas.';
+$siteUrl = APP_URL . '/';
+$siteImage = APP_URL . '/assets/images/logo.png';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') . ' - EcoPick' : 'EcoPick - Connect Sellers with Junkshops'; ?></title>
+    <title><?php echo $siteTitle; ?></title>
+    <meta name="description" content="<?php echo htmlspecialchars($siteDescription, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php if (!empty($isHomepage)): ?>
+        <meta name="keywords" content="ecopick lipa city, ecopick, junkshop lipa city, scrap collector lipa, recycling lipa city batangas, bakal bote lipa">
+        <meta name="author" content="EcoPick Operations Team">
+        <meta name="robots" content="index, follow">
+        <meta name="geo.region" content="PH-BTG">
+        <meta name="geo.placename" content="Lipa City, Batangas, Philippines">
+        <meta name="geo.position" content="13.9419;121.1644">
+        <meta name="ICBM" content="13.9419, 121.1644">
+        <link rel="canonical" href="<?php echo htmlspecialchars($siteUrl, ENT_QUOTES, 'UTF-8'); ?>">
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="EcoPick Lipa City - Recyclable Scrap Collection & Junkshops">
+        <meta property="og:description" content="Turn your household and business scrap into cash with verified junkshops in Lipa City, Batangas.">
+        <meta property="og:url" content="<?php echo htmlspecialchars($siteUrl, ENT_QUOTES, 'UTF-8'); ?>">
+        <meta property="og:image" content="<?php echo htmlspecialchars($siteImage, ENT_QUOTES, 'UTF-8'); ?>">
+        <meta property="og:locale" content="en_PH">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="EcoPick Lipa City - Recyclable Scrap Collection">
+        <meta name="twitter:description" content="Book recyclable pickup with verified junkshops in Lipa City, Batangas.">
+        <meta name="twitter:image" content="<?php echo htmlspecialchars($siteImage, ENT_QUOTES, 'UTF-8'); ?>">
+        <?php if (!empty($homepageSchema)): ?>
+            <script type="application/ld+json"><?php echo json_encode($homepageSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
+        <?php endif; ?>
+    <?php endif; ?>
     <link rel="icon" type="image/png" sizes="256x256" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="apple-touch-icon" sizes="180x180" href="<?php echo htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8'); ?>">
     

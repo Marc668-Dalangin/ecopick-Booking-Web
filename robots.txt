@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin-private-dnstl/
+Disallow: /api/
+Disallow: /app/
+Disallow: /database/
+Disallow: /storage/
+Disallow: /uploads/
+Disallow: /user-junkshop/
+
+Sitemap: https://ecopick.rf.gd/sitemap.xml

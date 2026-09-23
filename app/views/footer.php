@@ -12,7 +12,7 @@
                         <i class="bi bi-recycling"></i> EcoPick
                     </h5>
                     <p class="small mb-3">
-                        Connecting sellers of recyclable materials with verified local junkshops in Lipa City.
+                        Connecting sellers of recyclable materials with verified local junkshops across Lipa City, Batangas.
                     </p>
                     <p class="small mb-0">
                         EcoPick is a facilitator platform. Junkshops handle collection, weighing, and payment.

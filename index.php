@@ -25,6 +25,35 @@ $approvedJunkshops = Database::getInstance()->query(
 )->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = '';
+$isHomepage = true;
+$homepageSchema = [
+    '@context' => 'https://schema.org',
+    '@type' => 'RecyclingCenter',
+    'name' => 'EcoPick Lipa City',
+    'url' => APP_URL . '/',
+    'image' => APP_URL . '/assets/images/logo.png',
+    'description' => 'EcoPick connects scrap sellers with verified local junkshops across Lipa City, Batangas.',
+    'email' => 'ecopicklipacity@gmail.com',
+    'areaServed' => [
+        '@type' => 'City',
+        'name' => 'Lipa City',
+        'containedInPlace' => [
+            '@type' => 'AdministrativeArea',
+            'name' => 'Batangas, Philippines',
+        ],
+    ],
+    'address' => [
+        '@type' => 'PostalAddress',
+        'addressLocality' => 'Lipa City',
+        'addressRegion' => 'Batangas',
+        'addressCountry' => 'PH',
+    ],
+    'geo' => [
+        '@type' => 'GeoCoordinates',
+        'latitude' => 13.9419,
+        'longitude' => 121.1644,
+    ],
+];
 ?>
 <?php require_once __DIR__ . '/app/views/header.php'; ?>
 
@@ -36,7 +65,7 @@ $pageTitle = '';
                 <div class="mb-4">
                     <h1 class="display-4 fw-bold mb-4" style="color: var(--dark-text);">
                         <i class="bi bi-recycling" style="color: var(--primary-green);"></i> 
-                        Connect Your Recyclables with Trusted Junkshops
+                        EcoPick - Recyclable Scrap Collection in Lipa City
                     </h1>
                     <p class="fs-5 text-muted mx-auto mb-5" style="max-width: 600px;">
                         EcoPick connects you with verified local junkshops in Lipa City. Sell your recyclable materials easily and get paid fairly.
@@ -65,7 +94,7 @@ $pageTitle = '';
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3 text-success">How EcoPick Works</h2>
+                <h2 class="fw-bold mb-3 text-success">How EcoPick Recycling Works in Lipa City</h2>
                 <p class="text-muted fs-5">
                     A simple, transparent process that benefits both sellers and verified junkshops
                 </p>
