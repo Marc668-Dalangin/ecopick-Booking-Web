@@ -662,12 +662,15 @@ ob_start();
             applySellerFilters();
         }
 
+        const materialPollers = new Map();
         function fetchLatestMaterials(junkshopId) {
+            if (document.hidden || materialPollers.get(String(junkshopId))) return Promise.resolve();
             const card = cards.find(function (candidate) {
                 return candidate.dataset.junkshopId === String(junkshopId);
             });
             if (!card) return Promise.resolve();
 
+            materialPollers.set(String(junkshopId), true);
             return fetch(materialsApiUrl + '?junkshop_id=' + encodeURIComponent(junkshopId), {
                 credentials: 'same-origin',
                 cache: 'no-store'
@@ -685,6 +688,9 @@ ob_start();
                 })
                 .catch(function (error) {
                     console.error('Failed to refresh junkshop materials:', error);
+                })
+                .finally(function () {
+                    materialPollers.delete(String(junkshopId));
                 });
         }
 
@@ -704,7 +710,7 @@ ob_start();
         cards.forEach(function (card) { junkshopVisibility.observe(card); });
         setInterval(function () {
             activeJunkshops.forEach(function (junkshopId) { fetchLatestMaterials(junkshopId); });
-        }, 5000);
+        }, 12000);
 
         function formatMoney(value) {
             return '₱' + Number(value || 0).toFixed(2);
@@ -792,7 +798,10 @@ ob_start();
             button.innerHTML = '<i class="bi bi-plus-circle"></i> Request Pickup';
         }
 
+        let pendingRequestStatesPolling = false;
         async function refreshPendingRequestStates() {
+            if (document.hidden || pendingRequestStatesPolling) return;
+            pendingRequestStatesPolling = true;
             try {
                 const response = await fetch(pendingStatusesUrl, { credentials: 'same-origin', cache: 'no-store' });
                 const payload = await response.json();
@@ -807,6 +816,8 @@ ob_start();
                 });
             } catch (error) {
                 console.warn('Unable to refresh pickup request statuses.', error);
+            } finally {
+                pendingRequestStatesPolling = false;
             }
         }
 
@@ -963,7 +974,7 @@ ob_start();
         const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         dateField.min = localToday;
         refreshPendingRequestStates();
-        window.setInterval(refreshPendingRequestStates, 7000);
+        window.setInterval(refreshPendingRequestStates, 12000);
     });
 </script>
 <?php

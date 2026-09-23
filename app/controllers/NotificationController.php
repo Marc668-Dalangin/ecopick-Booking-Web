@@ -5,7 +5,7 @@ class NotificationController
     public function __construct() { $this->db = Database::getInstance(); }
     public function listForUser(int $accountId): array
     {
-        return $this->db->query('SELECT id, title, message, link_url, read_at, created_at FROM notifications WHERE recipient_account_id = :account_id ORDER BY created_at DESC LIMIT 100', ['account_id' => $accountId])->fetchAll();
+        return $this->db->query("SELECT id, title, message, link_url, read_at, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+08:00') AS created_at FROM notifications WHERE recipient_account_id = :account_id ORDER BY created_at DESC LIMIT 100", ['account_id' => $accountId])->fetchAll();
     }
     public function unreadCount(int $accountId): int
     {
@@ -15,7 +15,7 @@ class NotificationController
     {
         $limit = max(1, min($limit, 50));
         return $this->db->query(
-            'SELECT id, title, message, link_url, read_at, created_at FROM notifications WHERE recipient_account_id = :account_id AND read_at IS NULL ORDER BY created_at DESC LIMIT ' . $limit,
+            "SELECT id, title, message, link_url, read_at, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+08:00') AS created_at FROM notifications WHERE recipient_account_id = :account_id AND read_at IS NULL ORDER BY created_at DESC LIMIT " . $limit,
             ['account_id' => $accountId]
         )->fetchAll();
     }

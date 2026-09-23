@@ -3,12 +3,17 @@
  * Shared dashboard shell for seller and junkshop users.
  */
 require_once __DIR__ . '/../controllers/NotificationController.php';
+require_once __DIR__ . '/../controllers/DashboardController.php';
 
 $userDisplayName = $userDisplayName ?? Auth::userName();
 $userRole = Auth::userRole();
 $currentPage = $currentPage ?? 'dashboard';
 $notificationCount = (int) (new NotificationController())->unreadCount(Auth::userId());
 $isExpiredJunkshop = $userRole === 'junkshop' && (bool) ($_SESSION['is_expired'] ?? false);
+$matchedRequestCount = 0;
+if ($userRole === 'junkshop' && !$isExpiredJunkshop) {
+    $matchedRequestCount = (new DashboardController())->getJunkshopRequestCount(Auth::userId());
+}
 $siteFavicon = APP_URL . '/assets/images/logo.png';
 ?>
 <!DOCTYPE html>
@@ -58,7 +63,7 @@ $siteFavicon = APP_URL . '/assets/images/logo.png';
                     </a>
                     <a class="nav-link <?php echo $currentPage === 'matched-requests' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/matched-requests.php">
                         <i class="bi bi-broadcast"></i>
-                        <span>Matched Requests <span id="matched-requests-badge" class="badge bg-danger rounded-pill ms-2" style="display: none;">0</span></span>
+                        <span>Matched Requests <?php if ($matchedRequestCount > 0): ?><span id="matched-requests-badge" class="badge bg-danger rounded-pill ms-2"><?php echo $matchedRequestCount; ?></span><?php endif; ?></span>
                     </a>
                     <a class="nav-link <?php echo $currentPage === 'completed-transactions' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/completed-transactions.php">
                         <i class="bi bi-journal-check"></i>
@@ -164,7 +169,7 @@ $siteFavicon = APP_URL . '/assets/images/logo.png';
                                 </a>
                                 <a class="nav-link <?php echo $currentPage === 'matched-requests' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/matched-requests.php">
                                     <i class="bi bi-broadcast"></i>
-                                    <span>Matched Requests <span class="badge bg-danger rounded-pill ms-2" data-matched-requests-badge style="display: none;">0</span></span>
+                                    <span>Matched Requests <?php if ($matchedRequestCount > 0): ?><span class="badge bg-danger rounded-pill ms-2" data-matched-requests-badge><?php echo $matchedRequestCount; ?></span><?php endif; ?></span>
                                 </a>
                                 <a class="nav-link <?php echo $currentPage === 'completed-transactions' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/user-junkshop/completed-transactions.php">
                                     <i class="bi bi-journal-check"></i>
@@ -194,12 +199,6 @@ $siteFavicon = APP_URL . '/assets/images/logo.png';
         window.ecopickCsrfToken = '<?php echo Validator::escape(CSRF::token()); ?>';
     </script>
     <script src="<?php echo APP_URL; ?>/assets/js/notifications.js"></script>
-    <?php if ($userRole === 'junkshop'): ?>
-        <script>
-            window.ecopickPendingRequestsCountUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_pending_requests_count.php';
-        </script>
-        <script src="<?php echo APP_URL; ?>/assets/js/matched-requests-badge.js"></script>
-    <?php endif; ?>
     <script src="<?php echo APP_URL; ?>/assets/js/main.js"></script>
 </body>
 </html>

@@ -208,7 +208,7 @@ ob_start();
             window.EcoPickLiveUpdates.startPolling({
                 key: 'admin-dashboard',
                 url: '<?php echo APP_URL; ?>/admin-private-dnstl/api/dashboard.php',
-                interval: 3000,
+                interval: 12000,
                 onSuccess: function (payload) {
                     if (payload && payload.session_expired && payload.redirect) {
                         window.location.href = payload.redirect;

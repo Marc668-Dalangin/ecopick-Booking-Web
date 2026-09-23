@@ -1,8 +1,11 @@
 (function () {
     const countUrl = window.EcoPickAdmin?.pendingCountUrl;
+    let isPollingActive = false;
 
     window.fetchPendingJunkshopCount = async function fetchPendingJunkshopCount() {
-        if (!countUrl) return;
+        if (!countUrl || document.hidden || isPollingActive) return;
+
+        isPollingActive = true;
 
         try {
             const response = await fetch(countUrl, {
@@ -21,11 +24,13 @@
             });
         } catch (error) {
             console.error('Unable to refresh pending junkshop count:', error);
+        } finally {
+            isPollingActive = false;
         }
     };
 
     document.addEventListener('DOMContentLoaded', function () {
         window.fetchPendingJunkshopCount();
-        window.setInterval(window.fetchPendingJunkshopCount, 5000);
+        window.setInterval(window.fetchPendingJunkshopCount, 12000);
     });
 })();

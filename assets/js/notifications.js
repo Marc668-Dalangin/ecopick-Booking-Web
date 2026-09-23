@@ -112,29 +112,48 @@
         persistNotificationRead(notificationId);
     }
 
-    function dateKeyFromValue(value) {
-        const date = new Date(String(value || '').replace(' ', 'T'));
-        if (Number.isNaN(date.getTime())) return '';
+    function parseNotificationDate(value) {
+        if (value instanceof Date) return value;
 
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return year + '-' + month + '-' + day;
+        const rawValue = String(value || '').trim();
+        if (!rawValue) return null;
+
+        const normalizedValue = rawValue.includes('T') ? rawValue : rawValue.replace(' ', 'T');
+        const timezoneAwareValue = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalizedValue)
+            ? normalizedValue
+            : normalizedValue + '+08:00';
+        const date = new Date(timezoneAwareValue);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function dateKeyFromValue(value) {
+        const date = parseNotificationDate(value);
+        if (!date) return '';
+
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).formatToParts(date).reduce((result, part) => {
+            if (part.type !== 'literal') result[part.type] = part.value;
+            return result;
+        }, {});
+
+        return parts.year + '-' + parts.month + '-' + parts.day;
     }
 
     function dateLabel(dateKey) {
         const today = dateKeyFromValue(new Date());
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterday = dateKeyFromValue(yesterdayDate);
+        const yesterday = dateKeyFromValue(new Date(Date.now() - 86400000));
 
         if (dateKey === today) return 'Today';
         if (dateKey === yesterday) return 'Yesterday';
 
-        const date = new Date(dateKey + 'T00:00:00');
-        return Number.isNaN(date.getTime())
-            ? dateKey
-            : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const date = parseNotificationDate(dateKey + 'T00:00:00');
+        return date
+            ? new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(date)
+            : dateKey;
     }
 
     function openNotificationDropdown() {
@@ -145,13 +164,11 @@
     }
 
     function formatNotificationTimestamp(value) {
-        const rawValue = String(value || '');
-        const normalizedValue = rawValue.includes('T') ? rawValue : rawValue.replace(' ', 'T') + 'Z';
-        const timestamp = new Date(normalizedValue);
-        if (Number.isNaN(timestamp.getTime())) return '';
+        const timestamp = parseNotificationDate(value);
+        if (!timestamp) return '';
 
-        const date = timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const time = timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const date = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(timestamp);
+        const time = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: true }).format(timestamp);
         return date + ' &bull; <strong>' + escapeHtml(time) + '</strong>';
     }
 
@@ -258,7 +275,7 @@
         window.EcoPickLiveUpdates.startPolling({
             key: 'global-notifications',
             url: window.ecopickNotificationUrl || '/api/notifications/fetch-latest.php',
-            interval: 3000,
+            interval: 12000,
             onSuccess: function (payload) {
                 const data = payload.data || {};
                 const currentUnreadCount = Number(data.unread_count || 0);

@@ -296,7 +296,7 @@ ob_start();
             window.EcoPickLiveUpdates.startPolling({
                 key: 'admin-junkshop-approvals',
                 url: '<?php echo APP_URL; ?>/admin-private-dnstl/api/junkshop-approvals.php',
-                interval: 5000,
+                interval: 12000,
                 onSuccess: function (payload) {
                     if (payload && payload.session_expired && payload.redirect) {
                         window.location.href = payload.redirect;

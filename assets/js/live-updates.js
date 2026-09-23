@@ -6,7 +6,7 @@
             key: options.key || options.url || 'live-update',
             url: options.url,
             method: options.method || 'GET',
-            interval: Number(options.interval || 5000),
+            interval: Math.max(10000, Number(options.interval || 10000)),
             skipWhenEditing: options.skipWhenEditing !== false,
             headers: options.headers || {},
             body: options.body || null,
@@ -63,9 +63,11 @@
             return;
         }
 
-        if (document.hidden || (options.skipWhenEditing && shouldSkipRefresh())) {
+        if (document.hidden || options.inFlight || (options.skipWhenEditing && shouldSkipRefresh())) {
             return;
         }
+
+        options.inFlight = true;
 
         const requestOptions = {
             method: options.method,
@@ -95,6 +97,9 @@
                 if (options.onError) {
                     options.onError({ success: false, message: 'Unable to refresh data.', error: error.message || 'network_error' }, null);
                 }
+            })
+            .finally(() => {
+                options.inFlight = false;
             });
     }
 
@@ -108,7 +113,8 @@
 
         const instance = {
             ...normalized,
-            timerId: null
+            timerId: null,
+            inFlight: false
         };
 
         const tick = () => runPoller(instance);

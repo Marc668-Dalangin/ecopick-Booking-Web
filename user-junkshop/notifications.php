@@ -9,6 +9,16 @@ $controller->markRead(Auth::userId());
 $pageTitle = 'Notifications';
 $currentPage = 'notifications';
 $userDisplayName = Auth::userName();
+$notificationTimezone = new DateTimeZone('Asia/Manila');
+$parseNotificationDate = static function (string $value) use ($notificationTimezone): ?DateTimeImmutable {
+	if ($value === '') return null;
+
+	try {
+		return new DateTimeImmutable($value, $notificationTimezone);
+	} catch (Exception $exception) {
+		return null;
+	}
+};
 ob_start();
 ?>
 <div class="card border-0 shadow-sm">
@@ -22,7 +32,8 @@ ob_start();
 				$groupedNotifications = [];
 				foreach ($notifications as $notification) {
 					$createdAt = (string) ($notification['created_at'] ?? '');
-					$dateKey = strtotime($createdAt) !== false ? date('Y-m-d', strtotime($createdAt)) : date('Y-m-d');
+					$createdDate = $parseNotificationDate($createdAt);
+					$dateKey = $createdDate?->format('Y-m-d') ?? (new DateTimeImmutable('now', $notificationTimezone))->format('Y-m-d');
 					$groupedNotifications[$dateKey][] = $notification;
 				}
 				krsort($groupedNotifications);
@@ -42,7 +53,7 @@ ob_start();
 					?>
 					<div class="notification-date-group border-bottom pb-2 mb-3" data-date-group="<?php echo Validator::escape($dateKey); ?>">
 						<button type="button" class="notification-toggle btn btn-link text-body text-decoration-none d-flex align-items-center justify-content-between w-100 px-0 py-2" data-bs-toggle="collapse" data-bs-target="#<?php echo $groupId; ?>" aria-expanded="<?php echo $groupHasUnread ? 'true' : 'false'; ?>">
-							<span class="fw-semibold"><?php echo date('M j, Y', strtotime($dateKey)); ?></span>
+							<span class="fw-semibold"><?php echo Validator::escape(DateTimeImmutable::createFromFormat('!Y-m-d', $dateKey, $notificationTimezone)->format('M j, Y')); ?></span>
 							<span class="d-flex align-items-center gap-2 text-muted">
 								<?php if ($groupHasUnread): ?><span class="badge bg-danger rounded-pill" data-date-unread-badge data-unread-count="<?php echo $unreadCount; ?>"><?php echo $unreadCount; ?> unread</span><?php endif; ?>
 								<span class="small"><?php echo count($dateNotifications); ?> item<?php echo count($dateNotifications) === 1 ? '' : 's'; ?></span>
@@ -53,13 +64,13 @@ ob_start();
 							<div class="list-group list-group-flush mt-2">
 								<?php foreach ($dateNotifications as $notification): ?>
 									<?php
-										$notificationDate = strtotime((string) $notification['created_at']);
+										$notificationDate = $parseNotificationDate((string) ($notification['created_at'] ?? ''));
 										$isUnread = !isset($notification['read_at']) || $notification['read_at'] === null || trim((string) $notification['read_at']) === '';
 									?>
 									<a class="list-group-item list-group-item-action px-0 notification-item <?php echo $isUnread ? 'notification-unread bg-light' : ''; ?>" href="<?php echo Validator::escape($notification['link_url'] ?: '#'); ?>" data-notification-id="<?php echo (int) $notification['id']; ?>" data-created-at="<?php echo Validator::escape((string) ($notification['created_at'] ?? '')); ?>" data-is-unread="<?php echo $isUnread ? '1' : '0'; ?>">
 										<div class="d-flex justify-content-between align-items-start gap-3">
 											<strong><?php echo Validator::escape($notification['title']); ?></strong>
-											<span class="small text-muted text-nowrap"><strong><?php echo date('h:i A', $notificationDate); ?></strong></span>
+											<span class="small text-muted text-nowrap"><strong><?php echo $notificationDate?->format('h:i A') ?? 'N/A'; ?></strong></span>
 										</div>
 										<div class="text-muted"><?php echo Validator::escape($notification['message']); ?></div>
 									</a>

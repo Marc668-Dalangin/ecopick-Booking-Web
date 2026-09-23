@@ -249,13 +249,25 @@ class NotificationService
 
     private static function formatDate(?string $date): string
     {
-        $timestamp = $date ? strtotime($date) : false;
-        return $timestamp ? date('M d, Y', $timestamp) : 'the confirmed date';
+        if (!$date) {
+            return 'the confirmed date';
+        }
+
+        $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $date, new DateTimeZone(APP_TIMEZONE));
+        return $parsedDate ? $parsedDate->format('M d, Y') : 'the confirmed date';
     }
 
     private static function formatTime(?string $time): string
     {
-        $timestamp = $time ? strtotime($time) : false;
-        return $timestamp ? date('g:i A', $timestamp) : 'the confirmed time';
+        if (!$time) {
+            return 'the confirmed time';
+        }
+
+        $timezone = new DateTimeZone(APP_TIMEZONE);
+        $parsedTime = DateTimeImmutable::createFromFormat('!H:i:s', $time, $timezone)
+            ?: DateTimeImmutable::createFromFormat('!H:i', $time, $timezone)
+            ?: DateTimeImmutable::createFromFormat('!g:i A', strtoupper($time), $timezone);
+
+        return $parsedTime ? $parsedTime->format('g:i A') : 'the confirmed time';
     }
 }

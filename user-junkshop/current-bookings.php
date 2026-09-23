@@ -107,9 +107,15 @@ window.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.live-distance').forEach(function (node) {
             const bookingId = String(node.dataset.bookingId);
             if (liveDistancePollers.has(bookingId)) return;
-            const poll = function () { fetch('<?php echo APP_URL; ?>/user-junkshop/api/get_live_distance.php?booking_id=' + encodeURIComponent(node.dataset.bookingId), { credentials: 'same-origin' }).then(response => response.json()).then(payload => { if (payload.distance_km !== null && payload.distance_km !== undefined) node.textContent = 'Junkshop is currently ' + Number(payload.distance_km).toFixed(2) + ' km away'; }).catch(function () {}); };
-            poll();
-            liveDistancePollers.set(bookingId, window.setInterval(poll, 10000));
+            const poll = function () { return fetch('<?php echo APP_URL; ?>/user-junkshop/api/get_live_distance.php?booking_id=' + encodeURIComponent(node.dataset.bookingId), { credentials: 'same-origin' }).then(response => response.json()).then(payload => { if (payload.distance_km !== null && payload.distance_km !== undefined) node.textContent = 'Junkshop is currently ' + Number(payload.distance_km).toFixed(2) + ' km away'; }).catch(function () {}); };
+            let isPollingActive = false;
+            const safePoll = function () {
+                if (document.hidden || isPollingActive) return;
+                isPollingActive = true;
+                poll().finally(function () { isPollingActive = false; });
+            };
+            safePoll();
+            liveDistancePollers.set(bookingId, window.setInterval(safePoll, 12000));
         });
     }
 
@@ -158,7 +164,7 @@ window.addEventListener('DOMContentLoaded', function () {
             } catch (requestError) { error.textContent = 'Unable to submit payment proof right now.'; }
         });
     });
-    if (window.EcoPickLiveUpdates) window.EcoPickLiveUpdates.startPolling({ key: 'seller-current-bookings', url: apiUrl, interval: 5000, onSuccess: payload => { if (payload.success) { renderRequests(payload.data.requests); decorateRenderedRequests(payload.data.requests); renderJunkshopNames(payload.data.requests); } } });
+    if (window.EcoPickLiveUpdates) window.EcoPickLiveUpdates.startPolling({ key: 'seller-current-bookings', url: apiUrl, interval: 12000, onSuccess: payload => { if (payload.success) { renderRequests(payload.data.requests); decorateRenderedRequests(payload.data.requests); renderJunkshopNames(payload.data.requests); } } });
 });
 </script>
 <?php

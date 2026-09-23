@@ -420,7 +420,6 @@ ob_start();
     </div>
 </div>
 <script>
-window.ecopickMatchedRequestsApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/get_matched_requests.php';
 window.addEventListener('DOMContentLoaded', function () {
     const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/junkshop-operations.php';
     const matchedRequestsApiUrl = <?php echo json_encode(APP_URL . '/user-junkshop/api/get_matched_requests.php' . ($selectedStatus !== null || $sortOrder !== 'DESC' ? '?' . http_build_query(array_filter(['status' => $selectedStatus, 'sort' => $sortOrder], static fn ($value): bool => $value !== null)) : ''), JSON_UNESCAPED_SLASHES); ?>;
@@ -447,17 +446,6 @@ window.addEventListener('DOMContentLoaded', function () {
     let previousRequestKeys = new Set();
     let hasLoadedRequests = false;
 
-    function updateMatchedRequestBadges(count, hasNewRequest) {
-        const safeCount = Math.max(0, Number.parseInt(count, 10) || 0);
-        document.querySelectorAll('#matched-requests-badge, [data-matched-requests-badge]').forEach(function (badge) {
-            badge.textContent = String(safeCount);
-            badge.style.display = safeCount > 0 ? 'inline-block' : 'none';
-            if (hasNewRequest) {
-                badge.classList.add('pulse');
-                window.setTimeout(function () { badge.classList.remove('pulse'); }, 2000);
-            }
-        });
-    }
     let locationUpdateInProgress = false;
     let lastGeocodedJunkshopLocation = null;
 
@@ -573,7 +561,7 @@ window.addEventListener('DOMContentLoaded', function () {
             return;
         }
         const updateCurrentLocation = function () {
-            if (locationUpdateInProgress) return;
+            if (document.hidden || locationUpdateInProgress) return;
             navigator.geolocation.getCurrentPosition(function (position) {
                 const junkshopLat = Number.parseFloat(position.coords.latitude);
                 const junkshopLng = Number.parseFloat(position.coords.longitude);
@@ -1226,7 +1214,10 @@ window.addEventListener('DOMContentLoaded', function () {
         initializeSellerMaps();
     }
 
+    let matchedRequestsPolling = false;
     async function fetchMatchedRequests() {
+        if (document.hidden || matchedRequestsPolling) return;
+        matchedRequestsPolling = true;
         try {
             const response = await fetch(matchedRequestsApiUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             const payload = await response.json();
@@ -1247,17 +1238,18 @@ window.addEventListener('DOMContentLoaded', function () {
             }
             previousRequestKeys = requestKeys;
             hasLoadedRequests = true;
-            updateMatchedRequestBadges(payload.data?.count || 0, hasNewRequest);
             requests.forEach(function (request) {
                 if (request.current_status === 'For Pickup') startLiveLocationWatch(getPickupRequestId(request), request.seller_lat, request.seller_lng);
             });
         } catch (error) {
             showFeedback(error.message || 'Unable to refresh matched requests.', false);
+        } finally {
+            matchedRequestsPolling = false;
         }
     }
 
     fetchMatchedRequests();
-    window.setInterval(fetchMatchedRequests, 5000);
+    window.setInterval(fetchMatchedRequests, 12000);
 
     document.querySelectorAll('.schedule-form').forEach(form => {
         form.addEventListener('submit', async function (event) {

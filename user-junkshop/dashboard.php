@@ -217,7 +217,7 @@ ob_start();
             window.EcoPickLiveUpdates.startPolling({
                 key: 'junkshop-status',
                 url: '<?php echo APP_URL; ?>/user-junkshop/api/status.php',
-                interval: 5000,
+                interval: 12000,
                 onSuccess: function (payload) {
                     if (payload && payload.session_expired && payload.redirect) {
                         window.location.href = payload.redirect;
