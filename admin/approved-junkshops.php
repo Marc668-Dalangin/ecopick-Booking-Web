@@ -75,6 +75,7 @@ ob_start();
                                     <button type="button" class="btn btn-sm <?php echo $accountStatus === 'active' ? 'btn-outline-danger' : 'btn-outline-success'; ?>" data-account-action="<?php echo $accountStatus === 'active' ? 'deactivate' : 'activate'; ?>"><i class="bi <?php echo $accountStatus === 'active' ? 'bi-person-slash' : 'bi-person-check'; ?>"></i> <?php echo $accountStatus === 'active' ? 'Deactivate' : 'Activate'; ?></button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" data-account-action="delete"><i class="bi bi-trash"></i> Delete</button>
                                 </td>
+                                <td><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#junkshopDetailsModal<?php echo (int) $junkshop['account_id']; ?>"><i class="bi bi-eye"></i> View Full Details</button></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -83,6 +84,25 @@ ob_start();
         <?php endif; ?>
     </div>
 </div>
+<?php foreach ($approvedJunkshops as $junkshop): ?>
+    <div class="modal fade" id="junkshopDetailsModal<?php echo (int) $junkshop['account_id']; ?>" tabindex="-1" aria-labelledby="junkshopDetailsModalLabel<?php echo (int) $junkshop['account_id']; ?>" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="junkshopDetailsModalLabel<?php echo (int) $junkshop['account_id']; ?>"><i class="bi bi-shop-window me-2"></i><?php echo Validator::escape($junkshop['business_name'] ?? ''); ?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <?php foreach (['contact_person' => 'Contact Person', 'email' => 'Email', 'mobile_number' => 'Mobile', 'address' => 'Address', 'operating_schedule' => 'Operating Schedule', 'business_permit_reference' => 'Permit Reference', 'gcash_account_name' => 'GCash Account Name', 'gcash_account_number' => 'GCash Account Number', 'partnership_expires_at' => 'Partnership Expires', 'renewal_status' => 'Renewal Status'] as $field => $label): ?>
+                            <div class="col-md-6"><div class="small text-muted"><?php echo $label; ?></div><div class="fw-semibold"><?php echo Validator::escape($junkshop[$field] ?? 'Not provided'); ?></div></div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endforeach; ?>
 <div class="modal fade" id="confirmJunkshopAccountDeleteModal" tabindex="-1" aria-labelledby="confirmJunkshopAccountDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

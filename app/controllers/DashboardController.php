@@ -14,6 +14,20 @@ class DashboardController
         $this->db = Database::getInstance();
     }
 
+    public function getProfileCooldownDays(): int
+    {
+        try {
+            $value = $this->db->query(
+                'SELECT setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1',
+                ['setting_key' => 'profile_cooldown_days']
+            )->fetchColumn();
+            return $value === false ? 30 : max(0, (int) $value);
+        } catch (Throwable $e) {
+            error_log('Profile cooldown setting read error: ' . $e->getMessage());
+            return 30;
+        }
+    }
+
     public function getAdminStats()
     {
         try {
@@ -135,6 +149,26 @@ class DashboardController
             return ['success' => false, 'message' => 'This account cannot be deleted.'];
         }
 
+        $references = $this->db->query(
+            "SELECT TABLE_NAME, COLUMN_NAME
+             FROM information_schema.KEY_COLUMN_USAGE
+             WHERE CONSTRAINT_SCHEMA = DATABASE()
+               AND REFERENCED_TABLE_NAME = 'accounts'
+                             AND REFERENCED_COLUMN_NAME = 'id'
+                             AND TABLE_NAME NOT IN ('sellers', 'junkshop_profiles')"
+        )->fetchAll();
+        foreach ($references as $reference) {
+            $tableName = str_replace('`', '``', (string) $reference['TABLE_NAME']);
+            $columnName = str_replace('`', '``', (string) $reference['COLUMN_NAME']);
+            $linkedCount = $this->db->query(
+                "SELECT COUNT(*) FROM `{$tableName}` WHERE `{$columnName}` = :account_id",
+                ['account_id' => $accountId]
+            )->fetchColumn();
+            if ((int) $linkedCount > 0) {
+                return ['success' => false, 'message' => 'This account cannot be deleted because it has linked records.'];
+            }
+        }
+
         $statement = $this->db->query(
             "DELETE FROM accounts WHERE id = :account_id AND account_role IN ('seller', 'junkshop')",
             ['account_id' => $accountId]
@@ -151,7 +185,9 @@ class DashboardController
         return $this->db->query(
             "SELECT jp.account_id, jp.business_name, a.full_name AS contact_person, a.email, a.mobile_number,
                     jp.complete_address AS address, jp.operating_schedule, jp.business_permit_reference,
-                    jp.created_at AS registration_date, jp.approval_status AS status
+                    jp.gcash_account_name, jp.gcash_account_number, jp.latitude, jp.longitude,
+                    jp.partnership_expires_at, jp.renewal_status, jp.created_at AS registration_date,
+                    jp.approval_status AS status, a.account_status
              FROM junkshop_profiles jp
              JOIN accounts a ON a.id = jp.account_id
              WHERE jp.approval_status = 'approved'
@@ -207,7 +243,7 @@ class DashboardController
     {
         return $this->db->query(
             "SELECT a.id AS account_id, a.username, a.full_name, a.email, a.mobile_number, a.account_status,
-                    sp.address, sp.barangay, a.created_at, NULLIF(sp.updated_at, sp.created_at) AS profile_updated_at
+                    sp.address, sp.barangay, a.created_at, sp.last_profile_edit AS profile_updated_at
              FROM accounts a
                  LEFT JOIN sellers sp ON sp.account_id = a.id
              WHERE a.id = :account_id AND a.role_id = (SELECT id FROM roles WHERE name = 'seller')",
@@ -231,10 +267,11 @@ class DashboardController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Seller account not found'];
             }
-            if ($account['last_profile_edit'] !== null
-                && strtotime((string) $account['last_profile_edit']) > strtotime('-7 days')) {
+            $cooldownDays = $this->getProfileCooldownDays();
+            $profileUpdatedAt = $account['last_profile_edit'] !== null ? strtotime((string) $account['last_profile_edit']) : false;
+            if ($profileUpdatedAt !== false && $cooldownDays > 0 && $profileUpdatedAt + ($cooldownDays * 86400) > time()) {
                 $this->db->rollBack();
-                return ['success' => false, 'message' => 'Profile edits are locked for 7 days after an update.'];
+                return ['success' => false, 'message' => 'Profile updates are restricted until ' . date('F j, Y', $profileUpdatedAt + ($cooldownDays * 86400)) . '.'];
             }
             $this->db->query(
                 'UPDATE accounts SET full_name = :full_name, mobile_number = :mobile_number, updated_at = CURRENT_TIMESTAMP WHERE id = :account_id',
@@ -289,10 +326,11 @@ class DashboardController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop account not found'];
             }
-            if ($account['last_profile_edit'] !== null
-                && strtotime((string) $account['last_profile_edit']) > strtotime('-7 days')) {
+            $cooldownDays = $this->getProfileCooldownDays();
+            $profileUpdatedAt = $account['last_profile_edit'] !== null ? strtotime((string) $account['last_profile_edit']) : false;
+            if ($profileUpdatedAt !== false && $cooldownDays > 0 && $profileUpdatedAt + ($cooldownDays * 86400) > time()) {
                 $this->db->rollBack();
-                return ['success' => false, 'message' => 'Profile edits are locked for 7 days after an update.'];
+                return ['success' => false, 'message' => 'Profile updates are restricted until ' . date('F j, Y', $profileUpdatedAt + ($cooldownDays * 86400)) . '.'];
             }
             $this->db->query(
                 'UPDATE accounts SET full_name = :account_owner_name, mobile_number = :mobile_number, updated_at = CURRENT_TIMESTAMP WHERE id = :account_id',

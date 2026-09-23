@@ -16,6 +16,7 @@ $controller = new DashboardController();
 $role = Auth::userRole();
 $userId = Auth::userId();
 $isExpiredJunkshop = $role === 'junkshop' && !empty($_SESSION['is_expired']);
+$profileCooldownDays = $controller->getProfileCooldownDays();
 $errors = [];
 $successMessage = '';
 
@@ -68,8 +69,9 @@ if ($role === 'seller') {
             $address = trim((string)($_POST['complete_address'] ?? ''));
             $schedule = trim((string)($_POST['operating_schedule'] ?? ''));
             $permit = trim((string)($_POST['business_permit_reference'] ?? ''));
-            $gcashAccountName = trim((string)($_POST['gcash_account_name'] ?? ''));
-            $gcashAccountNumber = preg_replace('/\D+/', '', trim((string)($_POST['gcash_account_number'] ?? '')));
+            $gcashAccountName = strtoupper(trim((string)($_POST['gcash_account_name'] ?? '')));
+            $gcashAccountNumberSuffix = trim((string)($_POST['gcash_account_number_suffix'] ?? ''));
+            $gcashAccountNumber = $gcashAccountNumberSuffix === '' ? '' : '+639' . $gcashAccountNumberSuffix;
             $latitudeInput = trim((string)($_POST['latitude'] ?? ''));
             $longitudeInput = trim((string)($_POST['longitude'] ?? ''));
             $latitude = $latitudeInput === '' ? null : filter_var($latitudeInput, FILTER_VALIDATE_FLOAT);
@@ -82,8 +84,9 @@ if ($role === 'seller') {
             if (!Validator::required($address)) $errors[] = 'Business address is required.';
             if (!Validator::required($schedule)) $errors[] = 'Operating schedule is required.';
             if (!Validator::required($permit)) $errors[] = 'Permit reference is required.';
-            if ($gcashAccountName !== '' && strlen($gcashAccountName) > 120) $errors[] = 'GCash account name is too long.';
-            if ($gcashAccountNumber !== '' && !preg_match('/^09\d{9}$/', $gcashAccountNumber)) $errors[] = 'GCash account number must be an 11-digit Philippine mobile number.';
+            if (!Validator::required($gcashAccountName)) $errors[] = 'GCash account name is required.';
+            if (strlen($gcashAccountName) < 2 || strlen($gcashAccountName) > 30 || !preg_match('/^(?=[A-Z .]{2,30}$)(?!.*\..*\.)(?!.* {2,})[A-Z]+(?:\.[A-Z]*)?(?: [A-Z]+(?:\.[A-Z]*)?)*$/', $gcashAccountName)) $errors[] = 'GCash account name must use uppercase letters, single spaces, and at most one dot.';
+            if (!preg_match('/^[0-9]{9}$/', $gcashAccountNumberSuffix)) $errors[] = 'GCash account number must contain exactly 9 digits after +639.';
             if ($latitudeInput !== '' && ($latitude === false || !is_finite((float) $latitude) || $latitude < -90 || $latitude > 90)) $errors[] = 'Latitude must be between -90 and 90.';
             if ($longitudeInput !== '' && ($longitude === false || !is_finite((float) $longitude) || $longitude < -180 || $longitude > 180)) $errors[] = 'Longitude must be between -180 and 180.';
             if (($latitudeInput === '') !== ($longitudeInput === '')) $errors[] = 'Both latitude and longitude are required for a saved location.';
@@ -103,8 +106,9 @@ if ($role === 'seller') {
 }
 
 $profileUpdatedAt = !empty($currentProfile['profile_updated_at']) ? strtotime((string) $currentProfile['profile_updated_at']) : false;
-$profileCooldownActive = $profileUpdatedAt !== false && $profileUpdatedAt > strtotime('-7 days');
-$profileCooldownUntil = $profileCooldownActive ? $profileUpdatedAt + (7 * 24 * 60 * 60) : null;
+$profileCooldownUntil = $profileUpdatedAt !== false && $profileCooldownDays > 0 ? $profileUpdatedAt + ($profileCooldownDays * 24 * 60 * 60) : null;
+$profileCooldownActive = $profileCooldownUntil !== null && $profileCooldownUntil > time();
+$profileCooldownRemainingDays = $profileCooldownActive ? max(1, (int) ceil(($profileCooldownUntil - time()) / 86400)) : 0;
 $profileFormLocked = $isExpiredJunkshop || $profileCooldownActive;
 
 $pageTitle = 'Profile';
@@ -140,7 +144,7 @@ ob_start();
                     <div class="alert alert-warning" role="alert">Your profile is read-only while your partnership subscription is expired.</div>
                 <?php endif; ?>
                 <?php if ($profileCooldownActive): ?>
-                    <div class="alert alert-info" role="alert">Profile information edits are locked until <?php echo Validator::escape(date('M d, Y g:i A', $profileCooldownUntil)); ?>. You can update your profile again after the 7-day cooldown. Shop operational status can still be changed.</div>
+                    <div class="alert alert-info" role="alert">You can edit your profile again in <?php echo $profileCooldownRemainingDays; ?> day(s) (Next available date: <?php echo Validator::escape(date('F j, Y', $profileCooldownUntil)); ?>).</div>
                 <?php endif; ?>
 
                 <?php if (!empty($errors)): ?>
@@ -299,14 +303,20 @@ ob_start();
                                 <label class="form-label" for="business_permit_reference">Permit/Registration Reference</label>
                                 <input type="text" class="form-control" id="business_permit_reference" name="business_permit_reference" value="<?php echo Validator::escape($currentProfile['business_permit_reference'] ?? ''); ?>" required>
                             </div>
+                            <?php
+                            $storedGcashNumber = trim((string)($currentProfile['gcash_account_number'] ?? ''));
+                            $gcashNumberSuffix = str_starts_with($storedGcashNumber, '+639') ? substr($storedGcashNumber, 4) : (str_starts_with($storedGcashNumber, '639') ? substr($storedGcashNumber, 3) : (str_starts_with($storedGcashNumber, '09') ? substr($storedGcashNumber, 2) : $storedGcashNumber));
+                            ?>
                             <div class="col-md-6">
-                                <label class="form-label" for="gcash_account_name">GCash Account Name</label>
-                                <input type="text" class="form-control" id="gcash_account_name" name="gcash_account_name" value="<?php echo Validator::escape($currentProfile['gcash_account_name'] ?? ''); ?>" maxlength="120">
+                                <label class="form-label fw-bold" for="gcash_account_name">GCash Account Name <span class="text-danger">*</span></label>
+                                <input type="text" name="gcash_account_name" id="gcash_account_name" class="form-control text-uppercase" maxlength="30" value="<?php echo Validator::escape($currentProfile['gcash_account_name'] ?? ''); ?>" required oninput="sanitizeGCashName(this)">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="gcash_account_number">GCash Account Number</label>
-                                <input type="tel" class="form-control" id="gcash_account_number" name="gcash_account_number" value="<?php echo Validator::escape($currentProfile['gcash_account_number'] ?? ''); ?>" maxlength="11" inputmode="numeric">
-                                <div class="form-text">Used for manual GCash settlement verification only.</div>
+                                <label class="form-label fw-bold" for="gcash_account_number_suffix">GCash Account Number <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light fw-bold text-primary">+639</span>
+                                    <input type="text" name="gcash_account_number_suffix" id="gcash_account_number_suffix" class="form-control" maxlength="9" value="<?php echo Validator::escape($gcashNumberSuffix); ?>" required inputmode="numeric" oninput="sanitizeGCashNumber(this)">
+                                </div>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -323,6 +333,30 @@ ob_start();
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    function sanitizeGCashName(input) {
+        // 1. Force Uppercase
+        let val = input.value.toUpperCase();
+
+        // 2. Allow only A-Z, space, and dot
+        val = val.replace(/[^A-Z .]/g, '');
+
+        // 3. Prevent consecutive double spaces
+        val = val.replace(/ {2,}/g, ' ');
+
+        // 4. Ensure at most 1 dot total in the whole string
+        const firstDot = val.indexOf('.');
+        if (firstDot !== -1) {
+            val = val.slice(0, firstDot + 1) + val.slice(firstDot + 1).replace(/\./g, '');
+        }
+
+        // 5. Enforce 30 character max length
+        input.value = val.slice(0, 30);
+    }
+
+    function sanitizeGCashNumber(input) {
+        input.value = input.value.replace(/[^0-9]/g, '').slice(0, 9);
+    }
+
     function validateMobileSuffix(input) {
         if (!input) return false;
         const value = input.value.trim();

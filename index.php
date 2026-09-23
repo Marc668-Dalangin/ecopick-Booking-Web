@@ -65,7 +65,7 @@ $pageTitle = '';
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3">How EcoPick Works</h2>
+                <h2 class="fw-bold mb-3 text-success">How EcoPick Works</h2>
                 <p class="text-muted fs-5">
                     A simple, transparent process that benefits both sellers and verified junkshops
                 </p>
@@ -163,97 +163,81 @@ $pageTitle = '';
 
 <!-- Recyclable Materials Section -->
 <section id="materials" class="py-5 py-md-7" style="background: var(--light-bg);">
-    <div class="container-lg">
-        <div class="row mb-5">
-            <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3">Recyclable Materials We Accept</h2>
-                <p class="text-muted fs-5">
-                    Learn what materials you can recycle and why they matter
-                </p>
-            </div>
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-success">Recyclable Material Categories</h2>
+            <p class="text-muted fs-6">Explore the types of materials accepted and processed across registered junkshops.</p>
         </div>
 
         <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="display-4 mb-3" style="color: #3498db;">
-                            <i class="bi bi-cup"></i>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="badge bg-success-subtle text-success p-3 rounded-circle mb-3">
+                            <i class="bi bi-box-seam fs-2"></i>
                         </div>
-                        <h5 class="card-title fw-bold mb-2">Plastic</h5>
-                        <p class="text-muted small">
-                            PET bottles, HDPE containers, and various plastic materials can be recycled and repurposed
-                        </p>
+                        <h5 class="card-title fw-bold text-dark">Cardboard</h5>
+                        <p class="card-text text-muted small">Corrugated boxes, packaging board, and clean paperboard suitable for bulk processing.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="display-4 mb-3" style="color: #8b7355;">
-                            <i class="bi bi-newspaper"></i>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="badge bg-primary-subtle text-primary p-3 rounded-circle mb-3">
+                            <i class="bi bi-cup-straw fs-2"></i>
                         </div>
-                        <h5 class="card-title fw-bold mb-2">Paper & Cardboard</h5>
-                        <p class="text-muted small">
-                            Newspapers, magazines, cardboard boxes, and paper products are highly recyclable
-                        </p>
+                        <h5 class="card-title fw-bold text-dark">Glass</h5>
+                        <p class="card-text text-muted small">Intact and sorted glass bottles, jars, and glass containers across clear and colored varieties.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="display-4 mb-3" style="color: #c0392b;">
-                            <i class="bi bi-box"></i>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="badge bg-warning-subtle text-warning p-3 rounded-circle mb-3">
+                            <i class="bi bi-tools fs-2"></i>
                         </div>
-                        <h5 class="card-title fw-bold mb-2">Metal</h5>
-                        <p class="text-muted small">
-                            Aluminum cans, steel cans, and other metal materials have significant value
-                        </p>
+                        <h5 class="card-title fw-bold text-dark">Metal</h5>
+                        <p class="card-text text-muted small">Ferrous and non-ferrous scrap metals including aluminum cans, copper, brass, and iron items.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="display-4 mb-3" style="color: #16a085;">
-                            <i class="bi bi-cup-hot"></i>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="badge bg-info-subtle text-info p-3 rounded-circle mb-3">
+                            <i class="bi bi-file-earmark-text fs-2"></i>
                         </div>
-                        <h5 class="card-title fw-bold mb-2">Glass</h5>
-                        <p class="text-muted small">
-                            Glass bottles and containers can be recycled indefinitely without loss of quality
-                        </p>
+                        <h5 class="card-title fw-bold text-dark">Paper</h5>
+                        <p class="card-text text-muted small">Clean office paper, newspapers, magazines, cartons, and sorted white ledger sheets.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="display-4 mb-3" style="color: #7f8c8d;">
-                            <i class="bi bi-cpu"></i>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="badge bg-danger-subtle text-danger p-3 rounded-circle mb-3">
+                            <i class="bi bi-recycle fs-2"></i>
                         </div>
-                        <h5 class="card-title fw-bold mb-2">E-Waste</h5>
-                        <p class="text-muted small">
-                            Electronics and electrical equipment contain valuable materials and require proper disposal
-                        </p>
+                        <h5 class="card-title fw-bold text-dark">Plastic</h5>
+                        <p class="card-text text-muted small">PET bottles, HDPE jugs, rigid plastic containers, and clean recyclable polymers.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="display-4 mb-3" style="color: #2c3e50;">
-                            <i class="bi bi-plus-circle"></i>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="badge bg-secondary-subtle text-secondary p-3 rounded-circle mb-3">
+                            <i class="bi bi-grid-3x3-gap fs-2"></i>
                         </div>
-                        <h5 class="card-title fw-bold mb-2">Other Materials</h5>
-                        <p class="text-muted small">
-                            Textiles, rubber, and other recyclable materials can be properly processed
-                        </p>
+                        <h5 class="card-title fw-bold text-dark">Other Materials</h5>
+                        <p class="card-text text-muted small">E-waste, rubber, scrap tires, batteries, and non-standard industrial recyclable items.</p>
                     </div>
                 </div>
             </div>
@@ -267,7 +251,7 @@ $pageTitle = '';
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3">Verified Partner Junkshops</h2>
+                <h2 class="fw-bold mb-3 text-success">Verified Partner Junkshops</h2>
                 <p class="text-muted fs-5">
                     Trust our verified partners to provide fair assessment and payment
                 </p>
@@ -322,7 +306,7 @@ $pageTitle = '';
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3">Waste Segregation Tips</h2>
+                <h2 class="fw-bold mb-3 text-success">Waste Segregation Tips</h2>
                 <p class="text-muted fs-5">
                     Learn how to properly separate and prepare your recyclable materials
                 </p>
@@ -388,7 +372,7 @@ $pageTitle = '';
             <div class="col-lg-10 mx-auto">
                 <div class="card border-0" style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-teal) 100%);">
                     <div class="card-body p-5 text-center text-white">
-                        <h2 class="fw-bold mb-3">Ready to Start?</h2>
+                        <h2 class="fw-bold mb-3 text-white">Ready to Start?</h2>
                         <p class="fs-5 mb-5">
                             Join EcoPick today and turn your recyclable materials into value
                         </p>
@@ -417,7 +401,7 @@ $pageTitle = '';
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3">Get in Touch</h2>
+                <h2 class="fw-bold mb-3 text-success">Get in Touch</h2>
                 <p class="text-muted fs-5">
                     Have questions? We'd love to hear from you
                 </p>

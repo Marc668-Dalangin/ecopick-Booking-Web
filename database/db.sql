@@ -239,6 +239,11 @@ INSERT INTO system_settings (setting_key, setting_value)
 VALUES ('max_junkshop_fee_threshold', '5000.00')
 ON DUPLICATE KEY UPDATE setting_key = setting_key;
 
+-- Profile Update Cooldown Setting (Default 30 Days)
+INSERT INTO system_settings (setting_key, setting_value, updated_at)
+VALUES ('profile_cooldown_days', '30', NOW())
+ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
+
 CREATE TABLE IF NOT EXISTS fee_settings (
     id INT NOT NULL AUTO_INCREMENT,
     pickup_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,

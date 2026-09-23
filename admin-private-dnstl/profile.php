@@ -14,6 +14,10 @@ if (Auth::userRole() !== 'admin') {
 $pdo = Database::getInstance()->getPDO();
 $settings = $pdo->query('SELECT philsms_api_token, philsms_endpoint, philsms_sender_id, sms_enabled FROM fee_settings WHERE id = 1')->fetch(PDO::FETCH_ASSOC) ?: [];
 $sms_enabled = (int) ($settings['sms_enabled'] ?? 1);
+$profileCooldownSetting = $pdo->prepare('SELECT setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1');
+$profileCooldownSetting->execute([':setting_key' => 'profile_cooldown_days']);
+$profileCooldownValue = $profileCooldownSetting->fetchColumn();
+$profile_cooldown_days = max(0, (int) ($profileCooldownValue === false ? 30 : $profileCooldownValue));
 $systemAlert = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_sms_settings'])) {
@@ -38,6 +42,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_sms_settings']
         $_SESSION['flash_message'] = 'PhilSMS settings updated successfully.';
         header('Location: profile.php');
         exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile_cooldown'])) {
+    if (!CSRF::verify($_POST['_csrf_token'] ?? '')) {
+        $systemAlert = ['type' => 'danger', 'message' => 'Security token expired. Please try again.'];
+    } else {
+        $profile_cooldown_days = filter_var($_POST['profile_cooldown_days'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        if ($profile_cooldown_days === false) {
+            $systemAlert = ['type' => 'danger', 'message' => 'Profile update cooldown must be a non-negative whole number.'];
+            $profile_cooldown_days = 30;
+        } else {
+            $stmt = $pdo->prepare(
+                "INSERT INTO system_settings (setting_key, setting_value, updated_at)
+                 VALUES (:setting_key, :setting_value, NOW())
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()"
+            );
+            $stmt->execute([':setting_key' => 'profile_cooldown_days', ':setting_value' => (string) $profile_cooldown_days]);
+            $_SESSION['flash_message'] = 'Profile update cooldown updated successfully.';
+            header('Location: profile.php');
+            exit;
+        }
     }
 }
 
@@ -92,6 +118,25 @@ ob_start();
 </div>
 
 <div class="row g-4 mt-1">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="post" action="">
+                    <?php echo CSRF::field(); ?>
+                    <input type="hidden" name="update_profile_cooldown" value="1">
+                    <label class="form-label fw-bold" for="profile_cooldown_days">Profile Update Cooldown (in Days)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="profile_cooldown_days" name="profile_cooldown_days" min="0" step="1" value="<?php echo (int) $profile_cooldown_days; ?>" required>
+                        <span class="input-group-text">days</span>
+                    </div>
+                    <div class="form-text">Sellers and junkshops must wait this many days between profile detail updates.</div>
+                    <div class="mt-3 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Cooldown</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">

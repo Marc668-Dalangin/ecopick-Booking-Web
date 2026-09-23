@@ -438,6 +438,14 @@ ob_start();
             return R * c;
         }
 
+        function calculatePickupFee(distanceKm, baseRatePerKm) {
+            const parsedDistance = parseFloat(distanceKm) || 0;
+            const parsedRate = parseFloat(baseRatePerKm) || 0;
+            const effectiveKm = Math.max(1, Math.ceil(parsedDistance));
+
+            return effectiveKm * parsedRate;
+        }
+
         function calculateDistance() {
             const sellerLat = parseFloat(sellerLatInput.value);
             const sellerLng = parseFloat(sellerLngInput.value);
@@ -718,8 +726,7 @@ ob_start();
             });
 
             document.getElementById('selected-material-weight-total').textContent = totalWeight.toFixed(1) + ' kg';
-            const wholeKm = Math.floor(distanceInKm);
-            const pickupFee = wholeKm * perKmRate;
+            const pickupFee = calculatePickupFee(distanceInKm, perKmRate);
             const serviceFee = materialTotal * (serviceFeePct / 100);
             const estimatedTotal = materialTotal - pickupFee - serviceFee;
             document.getElementById('calc-material-total').textContent = formatMoney(materialTotal);

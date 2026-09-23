@@ -117,8 +117,7 @@ class PickupRequestController
                 (float) $junkshopLocation['longitude']
             );
             $perKmRate = $this->getPerKmRate();
-            $wholeKm = (int) floor($calculatedDistance);
-            $pickupFee = $wholeKm * $perKmRate;
+            $pickupFee = $this->calculatePickupFee($calculatedDistance, $perKmRate);
             $materialTotal = 0.0;
             foreach ($normalized['items'] as $item) {
                 $price = $this->db->query(
@@ -573,6 +572,13 @@ class PickupRequestController
         $a = sin($latitudeDifference / 2) ** 2
             + cos(deg2rad($sellerLatitude)) * cos(deg2rad($junkshopLatitude)) * sin($longitudeDifference / 2) ** 2;
         return round($earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a)), 2);
+    }
+
+    private function calculatePickupFee(float $distanceInKm, float $perKmRate): float
+    {
+        $effectiveKilometers = max(1, (int) ceil(max(0.0, $distanceInKm)));
+
+        return round($effectiveKilometers * max(0.0, $perKmRate), 2);
     }
 
     private function getPerKmRate(): float
