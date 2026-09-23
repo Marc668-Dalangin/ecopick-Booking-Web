@@ -216,7 +216,7 @@ class BookingLifecycleController
         if (!$preparedMaterials['success']) {
             return $preparedMaterials;
         }
-        $pickupFee = $this->getPickupFeeConfig();
+        $pickupFee = max(0.0, (float) ($pickupRequest['pickup_fee'] ?? 0.0));
         $settlement = FeeCalculator::calculateMaterialSettlement($preparedMaterials['materials'], $pickupFee);
 
         return ['success' => true, 'message' => 'Final settlement preview ready.', 'data' => $settlement];

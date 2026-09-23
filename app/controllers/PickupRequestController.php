@@ -122,8 +122,8 @@ class PickupRequestController
                 (float) $junkshopLocation['latitude'],
                 (float) $junkshopLocation['longitude']
             );
-            $perKmRate = $this->getPerKmRate();
-            $pickupFee = $this->calculatePickupFee($calculatedDistance, $perKmRate);
+            $basePickupFee = FeeCalculator::getDefaultPickupFee();
+            $pickupFee = FeeCalculator::calculatePickupFee($calculatedDistance, $basePickupFee);
             $materialTotal = 0.0;
             foreach ($normalized['items'] as $item) {
                 $price = $this->db->query(
@@ -265,7 +265,7 @@ class PickupRequestController
     {
         $rows = $this->db->query(
             "SELECT pr.id, pr.booking_reference, pr.seller_account_id, a.full_name AS seller_name, a.email AS seller_email,
-                    pr.current_status, pr.contact_number, pr.pickup_address, pr.approximate_distance_km, pr.seller_lat, pr.seller_lng,
+                    pr.current_status, pr.contact_number, pr.pickup_address, pr.approximate_distance_km, pr.pickup_fee, pr.seller_lat, pr.seller_lng,
                     pr.preferred_pickup_date, pr.preferred_pickup_time, pr.confirmed_pickup_date, pr.confirmed_pickup_time,
                       DATE_FORMAT(pr.confirmed_pickup_date, '%b %d, %Y') AS formatted_pickup_date,
                       TIME_FORMAT(pr.confirmed_pickup_time, '%h:%i %p') AS formatted_pickup_time, pr.photo_path, pr.notes,
@@ -338,7 +338,7 @@ class PickupRequestController
             ];
         }
         $feeConfigs = FeeCalculator::getConfigs();
-        $pickupFee = (float) ($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
+        $pickupFee = (float) ($request['pickup_fee'] ?? 0.0);
         $serviceFeePercentage = (float) ($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
         $estServiceFee = $estimatedRecyclableValue * ($serviceFeePercentage / 100);
         $request['estimated_recyclable_value'] = round($estimatedRecyclableValue, 2);
@@ -578,30 +578,6 @@ class PickupRequestController
         $a = sin($latitudeDifference / 2) ** 2
             + cos(deg2rad($sellerLatitude)) * cos(deg2rad($junkshopLatitude)) * sin($longitudeDifference / 2) ** 2;
         return round($earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a)), 2);
-    }
-
-    private function calculatePickupFee(float $distanceInKm, float $perKmRate): float
-    {
-        $effectiveKilometers = max(1, (int) ceil(max(0.0, $distanceInKm)));
-
-        return round($effectiveKilometers * max(0.0, $perKmRate), 2);
-    }
-
-    private function getPerKmRate(): float
-    {
-        $perKmRate = FeeCalculator::DEFAULT_PICKUP_FEE;
-        try {
-            $configuredRate = $this->db->query(
-                "SELECT config_value FROM fee_configurations WHERE config_key = 'default_pickup_fee' LIMIT 1"
-            )->fetchColumn();
-            if (is_numeric($configuredRate)) {
-                $perKmRate = (float) $configuredRate;
-            }
-        } catch (PDOException $exception) {
-            error_log('Pickup fee lookup failed: ' . $exception->getMessage());
-        }
-
-        return max(0.0, $perKmRate);
     }
 
     private function storePhoto($file)

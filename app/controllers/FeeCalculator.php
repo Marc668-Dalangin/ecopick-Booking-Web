@@ -6,7 +6,7 @@
 class FeeCalculator
 {
     public const DEFAULT_SERVICE_FEE_PCT = 0.05;
-    public const DEFAULT_PICKUP_FEE = 10.00;
+    public const DEFAULT_PICKUP_FEE = 5.00;
     public const DEFAULT_JUNKSHOP_COMMISSION_PCT = 0.025;
 
     /**
@@ -35,6 +35,38 @@ class FeeCalculator
         }
 
         return $configs;
+    }
+
+    public static function getDefaultPickupFee(): float
+    {
+        try {
+            $db = Database::getInstance();
+            $configuredFee = $db->query(
+                "SELECT setting_value FROM system_settings WHERE setting_key = 'default_pickup_fee' LIMIT 1"
+            )->fetchColumn();
+            if (is_numeric($configuredFee)) {
+                return max(0.0, (float) $configuredFee);
+            }
+
+            $legacyFee = $db->query(
+                "SELECT config_value FROM fee_configurations WHERE config_key = 'default_pickup_fee' LIMIT 1"
+            )->fetchColumn();
+            if (is_numeric($legacyFee)) {
+                return max(0.0, (float) $legacyFee);
+            }
+        } catch (PDOException $exception) {
+            error_log('Pickup fee lookup failed: ' . $exception->getMessage());
+        }
+
+        return self::DEFAULT_PICKUP_FEE;
+    }
+
+    public static function calculatePickupFee(float $distanceInKm, float $baseFee): float
+    {
+        $distance = max(0.0, $distanceInKm);
+        $halfKilometerUnits = (int) ceil($distance / 0.5);
+
+        return round($halfKilometerUnits * max(0.0, $baseFee), 2);
     }
 
     /**

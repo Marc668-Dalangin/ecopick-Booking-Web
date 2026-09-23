@@ -30,7 +30,7 @@ $pendingJunkshopIds = array_fill_keys(array_map(
     )->fetchAll()
 ), true);
 $feeConfigs = FeeCalculator::getConfigs();
-$perKmRate = (float)($feeConfigs['default_pickup_fee'] ?? FeeCalculator::DEFAULT_PICKUP_FEE);
+$basePickupFee = FeeCalculator::getDefaultPickupFee();
 $serviceFeePct = (float)($feeConfigs['ecopick_service_fee_pct'] ?? (FeeCalculator::DEFAULT_SERVICE_FEE_PCT * 100));
 
 $pageTitle = 'Partner Junkshops and Buying Prices';
@@ -392,7 +392,7 @@ ob_start();
             }
             echo json_encode($pricesByJunkshop, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         ?>;
-        const perKmRate = Number(<?php echo json_encode($perKmRate); ?>);
+        const basePickupFee = Number(<?php echo json_encode($basePickupFee); ?>);
         const serviceFeePct = Number(<?php echo json_encode($serviceFeePct); ?>);
         const apiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/pickup-requests.php';
         const preferredApiUrl = '<?php echo APP_URL; ?>/user-junkshop/api/toggle_preferred_junkshop.php';
@@ -440,12 +440,12 @@ ob_start();
             return R * c;
         }
 
-        function calculatePickupFee(distanceKm, baseRatePerKm) {
+        function calculatePickupFee(distanceKm, baseFee) {
             const parsedDistance = parseFloat(distanceKm) || 0;
-            const parsedRate = parseFloat(baseRatePerKm) || 0;
-            const effectiveKm = Math.max(1, Math.ceil(parsedDistance));
+            const parsedBaseFee = parseFloat(baseFee) || 0;
+            const halfKilometerUnits = Math.ceil(Math.max(0, parsedDistance) / 0.5);
 
-            return effectiveKm * parsedRate;
+            return halfKilometerUnits * Math.max(0, parsedBaseFee);
         }
 
         function calculateDistance() {
@@ -737,7 +737,7 @@ ob_start();
             materialSelectionError.classList.toggle('d-none', totalWeight === 0 || totalWeight >= minimumPickupWeightKg);
 
             document.getElementById('selected-material-weight-total').textContent = totalWeight.toFixed(1) + ' kg';
-            const pickupFee = calculatePickupFee(distanceInKm, perKmRate);
+            const pickupFee = calculatePickupFee(distanceInKm, basePickupFee);
             const serviceFee = materialTotal * (serviceFeePct / 100);
             const estimatedTotal = materialTotal - pickupFee - serviceFee;
             document.getElementById('calc-material-total').textContent = formatMoney(materialTotal);

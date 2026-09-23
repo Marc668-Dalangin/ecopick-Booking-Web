@@ -81,6 +81,7 @@ class AdminFeeController
         }
 
         try {
+            $this->db->beginTransaction();
             $statement = $this->db->query(
                 'UPDATE fee_configurations SET config_value = :config_value, updated_at = CURRENT_TIMESTAMP WHERE config_key = :config_key',
                 [
@@ -89,12 +90,28 @@ class AdminFeeController
                 ]
             );
 
-            if ($statement->rowCount() === 0) {
+            $configExists = $this->db->query(
+                'SELECT id FROM fee_configurations WHERE config_key = :config_key LIMIT 1',
+                ['config_key' => $key]
+            )->fetchColumn();
+            if (!$configExists) {
+                $this->db->rollBack();
                 return ['success' => false, 'message' => 'Fee configuration key not found.'];
             }
 
+            if ($key === 'default_pickup_fee') {
+                $this->db->query(
+                    'INSERT INTO system_settings (setting_key, setting_value, updated_at)
+                     VALUES (:setting_key, :setting_value, CURRENT_TIMESTAMP)
+                     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURRENT_TIMESTAMP',
+                    ['setting_key' => $key, 'setting_value' => number_format($newValue, 2, '.', '')]
+                );
+            }
+
+            $this->db->commit();
             return ['success' => true, 'message' => 'Fee configuration updated successfully.'];
         } catch (Throwable $e) {
+            $this->db->rollBack();
             error_log('Fee configuration update error: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to update the fee configuration.'];
         }
