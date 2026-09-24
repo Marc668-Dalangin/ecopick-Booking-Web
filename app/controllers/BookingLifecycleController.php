@@ -121,6 +121,7 @@ class BookingLifecycleController
             StatusLogger::logChange($pickupRequestId, 'Scheduled', 'For Pickup', 'Junkshop', $junkshopAccountId);
 
             $netAmount = $this->getEstimatedNetAmount($pickupRequestId);
+            session_write_close();
             $smsResult = sendPhilSMS(
                 (string) ($pickupRequest['seller_mobile'] ?? $pickupRequest['contact_number'] ?? ''),
                 buildPickupSmsMessage(

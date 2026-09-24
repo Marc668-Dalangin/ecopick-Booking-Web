@@ -42,16 +42,18 @@ if (($_POST['action'] ?? '') === 'resend') {
         }
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $otpExpiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        $otpExpiresAt = time() + (10 * 60);
+        session_write_close();
         if (!MailerService::sendRegistrationOtp($pending['email'], $pending['full_name'], $otp)) {
             echo json_encode(['success' => false, 'message' => 'Failed to send OTP. Please check your email address.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         $sentAt = time();
+        Session::start();
         $pending['otp_code'] = $otp;
-        $pending['otp_expires_at'] = $otpExpiresAt;
-        $pending['otp_expires_timestamp'] = strtotime($otpExpiresAt);
+        $pending['otp_expires_at'] = date('c', $otpExpiresAt);
+        $pending['otp_expires_timestamp'] = $otpExpiresAt;
         $pending['last_otp_sent_at'] = $sentAt;
         Session::set('pending_registration', $pending);
         Session::set('last_otp_sent_at', $sentAt);
@@ -79,7 +81,7 @@ try {
         || $pending['email'] !== $email
         || !in_array($pending['type'], ['seller', 'junkshop'], true)
         || $otpCode !== trim((string) $pending['otp_code'])
-        || time() > (int) $pending['otp_expires_timestamp']) {
+        || time() >= (int) $pending['otp_expires_timestamp']) {
         echo json_encode($failure, JSON_UNESCAPED_UNICODE);
         exit;
     }

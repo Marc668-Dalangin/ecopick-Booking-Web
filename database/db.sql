@@ -700,5 +700,7 @@ CREATE TABLE IF NOT EXISTS junkshop_fee_payments (
 -- Ensure reference_number has a standard index for performant lookups (non-unique to allow re-submission if status = 'Rejected')
 ALTER TABLE junkshop_fee_payments ADD INDEX IF NOT EXISTS idx_reference_number (reference_number);
 ALTER TABLE junkshop_fee_payments ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL DEFAULT NULL AFTER status;
+-- Safeguard payment listing queries from slow full-table filesorts
+ALTER TABLE junkshop_fee_payments ADD INDEX IF NOT EXISTS idx_fee_created_at (created_at);
 
 SET FOREIGN_KEY_CHECKS = 1;

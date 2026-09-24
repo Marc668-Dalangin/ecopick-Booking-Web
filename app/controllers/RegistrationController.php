@@ -59,11 +59,13 @@ class RegistrationController
             }
 
             $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $otpExpiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+            $otpExpiresAt = time() + (10 * 60);
+            session_write_close();
             if (!MailerService::sendRegistrationOtp($data['email'], $data['full_name'], $otp)) {
                 return ['success' => false, 'otp_send_failed' => true, 'errors' => ['Failed to send OTP. Please check your email address.']];
             }
             $otpSentAt = time();
+            Session::start();
 
             Session::set('pending_registration', [
                 'type' => 'seller',
@@ -75,8 +77,8 @@ class RegistrationController
                 'address' => trim((string) $data['address']),
                 'barangay' => trim((string) $data['barangay']),
                 'otp_code' => $otp,
-                'otp_expires_at' => $otpExpiresAt,
-                'otp_expires_timestamp' => strtotime($otpExpiresAt),
+                'otp_expires_at' => date('c', $otpExpiresAt),
+                'otp_expires_timestamp' => $otpExpiresAt,
                 'last_otp_sent_at' => $otpSentAt,
             ]);
             Session::set('last_otp_sent_at', $otpSentAt);
@@ -116,7 +118,7 @@ class RegistrationController
             }
 
             $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $otpExpiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+            $otpExpiresAt = time() + (10 * 60);
             if (!MailerService::sendRegistrationOtp($data['email'], $data['owner_name'], $otp)) {
                 return ['success' => false, 'otp_send_failed' => true, 'errors' => ['Failed to send OTP. Please check your email address.']];
             }
@@ -135,8 +137,8 @@ class RegistrationController
                 'operating_schedule' => $data['operating_schedule'],
                 'business_permit_reference' => trim((string) $data['business_permit_reference']),
                 'otp_code' => $otp,
-                'otp_expires_at' => $otpExpiresAt,
-                'otp_expires_timestamp' => strtotime($otpExpiresAt),
+                'otp_expires_at' => date('c', $otpExpiresAt),
+                'otp_expires_timestamp' => $otpExpiresAt,
                 'last_otp_sent_at' => $otpSentAt,
             ]);
             Session::set('last_otp_sent_at', $otpSentAt);

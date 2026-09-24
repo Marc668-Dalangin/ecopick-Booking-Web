@@ -64,7 +64,7 @@ class FeeCalculator
     public static function calculatePickupFee(float $distanceInKm, float $baseFee): float
     {
         $distance = max(0.0, $distanceInKm);
-        $halfKilometerUnits = (int) ceil($distance / 0.5);
+        $halfKilometerUnits = (int) floor($distance / 0.5);
 
         return round($halfKilometerUnits * max(0.0, $baseFee), 2);
     }

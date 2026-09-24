@@ -9,6 +9,7 @@ $adminUserName = Auth::userName();
 $adminUserEmail = Auth::userEmail();
 $unreadReportCount = 0;
 $unreadConcernCount = 0;
+$pendingJunkshopsCount = 0;
 $siteFavicon = APP_URL . '/assets/images/logo.png';
 if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::userRole() === 'admin')) {
     $pdo = Database::getInstance()->getPDO();
@@ -17,6 +18,22 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
 
     $concernStmt = $pdo->query("SELECT COUNT(*) FROM concerns WHERE is_read_admin = 0 OR status = 'Pending'");
     $unreadConcernCount = (int) $concernStmt->fetchColumn();
+
+    try {
+        $pendingJunkshopsStmt = $pdo->prepare(
+            "SELECT COUNT(DISTINCT a.id)
+             FROM accounts a
+             LEFT JOIN roles r ON r.id = a.role_id
+             LEFT JOIN junkshop_profiles jp ON jp.account_id = a.id
+             WHERE LOWER(COALESCE(NULLIF(a.account_role, ''), r.name, '')) = 'junkshop'
+               AND (LOWER(COALESCE(a.account_status, '')) = 'pending'
+                    OR LOWER(COALESCE(jp.approval_status, '')) = 'pending')"
+        );
+        $pendingJunkshopsStmt->execute();
+        $pendingJunkshopsCount = (int) $pendingJunkshopsStmt->fetchColumn();
+    } catch (Throwable $exception) {
+        error_log('Pending junkshop badge count error: ' . $exception->getMessage());
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -46,7 +63,7 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
                 </a>
                 <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/junkshop-approvals.php">
                     <i class="bi bi-building-check"></i>
-                    <span>Junkshop Approvals</span><span id="pending-junkshop-badge" class="badge bg-danger rounded-pill ms-2" style="display: none;"></span>
+                    <span>Junkshop Approvals</span><?php if ($pendingJunkshopsCount > 0): ?><span id="pending-junkshop-badge" class="badge bg-danger rounded-pill ms-2" aria-label="<?php echo $pendingJunkshopsCount; ?> pending junkshop applications"><?php echo $pendingJunkshopsCount; ?></span><?php else: ?><span id="pending-junkshop-badge" class="badge bg-danger rounded-pill ms-2" style="display: none;"></span><?php endif; ?>
                 </a>
                 <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/sellers.php">
                     <i class="bi bi-people"></i>
@@ -145,7 +162,7 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
                             </a>
                             <a class="nav-link <?php echo $adminActive === 'approvals' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/junkshop-approvals.php">
                                 <i class="bi bi-building-check"></i>
-                                <span>Junkshop Approvals</span><span data-pending-junkshop-badge class="badge bg-danger rounded-pill ms-2" style="display: none;"></span>
+                                <span>Junkshop Approvals</span><?php if ($pendingJunkshopsCount > 0): ?><span data-pending-junkshop-badge class="badge bg-danger rounded-pill ms-2" aria-label="<?php echo $pendingJunkshopsCount; ?> pending junkshop applications"><?php echo $pendingJunkshopsCount; ?></span><?php else: ?><span data-pending-junkshop-badge class="badge bg-danger rounded-pill ms-2" style="display: none;"></span><?php endif; ?>
                             </a>
                             <a class="nav-link <?php echo $adminActive === 'sellers' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/sellers.php">
                                 <i class="bi bi-people"></i>

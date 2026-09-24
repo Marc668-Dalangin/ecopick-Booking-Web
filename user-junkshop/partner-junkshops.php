@@ -443,7 +443,7 @@ ob_start();
         function calculatePickupFee(distanceKm, baseFee) {
             const parsedDistance = parseFloat(distanceKm) || 0;
             const parsedBaseFee = parseFloat(baseFee) || 0;
-            const halfKilometerUnits = Math.ceil(Math.max(0, parsedDistance) / 0.5);
+            const halfKilometerUnits = Math.floor(Math.max(0, parsedDistance) / 0.5);
 
             return halfKilometerUnits * Math.max(0, parsedBaseFee);
         }

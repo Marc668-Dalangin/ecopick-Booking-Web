@@ -1,21 +1,18 @@
 <?php
 require_once __DIR__ . '/../app/controllers/PickupRequestController.php';
 
-$controller = new PickupRequestController();
+$controller = (new ReflectionClass(PickupRequestController::class))->newInstanceWithoutConstructor();
 $method = new ReflectionMethod(PickupRequestController::class, 'normalizeRequestData');
 $method->setAccessible(true);
-$feeMethod = new ReflectionMethod(PickupRequestController::class, 'calculatePickupFee');
-$feeMethod->setAccessible(true);
 
 $feeCases = [
-    [0.0, 5.0, 5.0],
-    [0.4, 5.0, 5.0],
-    [1.0, 5.0, 5.0],
-    [1.3, 5.0, 10.0],
-    [2.0, 5.0, 10.0],
+    [0.0, 5.0, 0.0],
+    [0.4, 5.0, 0.0],
+    [7.14, 5.0, 70.0],
+    [7.5, 5.0, 75.0],
 ];
 foreach ($feeCases as [$distance, $rate, $expected]) {
-    $actual = $feeMethod->invoke($controller, $distance, $rate);
+    $actual = FeeCalculator::calculatePickupFee($distance, $rate);
     if ($actual !== $expected) {
         fwrite(STDERR, "manual-selection test failed: pickup fee for {$distance} km was {$actual}, expected {$expected}\n");
         exit(1);
