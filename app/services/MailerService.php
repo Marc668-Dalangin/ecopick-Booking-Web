@@ -179,6 +179,64 @@ class MailerService
         }
     }
 
+    public static function broadcastMaintenanceNotice(string $maintenanceDate, string $maintenanceTime): array
+    {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d', trim($maintenanceDate), new DateTimeZone(APP_TIMEZONE));
+        $time = DateTimeImmutable::createFromFormat('H:i', trim($maintenanceTime), new DateTimeZone(APP_TIMEZONE));
+        if (!$date || !$time || $date->format('Y-m-d') !== trim($maintenanceDate) || $time->format('H:i') !== trim($maintenanceTime)) {
+            return ['sent' => 0, 'failed' => 0, 'total' => 0, 'error' => 'A valid maintenance date and time are required.'];
+        }
+
+        try {
+            $recipients = Database::getInstance()->getPDO()->prepare(
+                "SELECT email, full_name
+                 FROM accounts
+                 WHERE account_role IN ('seller', 'junkshop')
+                   AND email IS NOT NULL AND email <> ''
+                 ORDER BY id ASC"
+            );
+            $recipients->execute();
+            $recipients = $recipients->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $exception) {
+            error_log('Broadcast recipient lookup error: ' . $exception->getMessage());
+            return ['sent' => 0, 'failed' => 0, 'total' => 0, 'error' => 'Unable to load broadcast recipients.'];
+        }
+
+        if (function_exists('set_time_limit')) {
+            set_time_limit(300);
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $broadcastSubject = 'Notice: Scheduled System Maintenance - EcoPick Lipa City';
+        $formattedDate = $date->format('F j, Y');
+        $formattedTime = $time->format('h:i A');
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($recipients as $recipient) {
+            $recipientName = trim((string) ($recipient['full_name'] ?? 'EcoPick User')) ?: 'EcoPick User';
+            $safeName = htmlspecialchars($recipientName, ENT_QUOTES, 'UTF-8');
+            $body = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#333;line-height:1.6"><p>Dear ' . $safeName . ',</p><p>Please be advised that the EcoPick system will undergo scheduled maintenance on:</p><ul><li>Date: ' . htmlspecialchars($formattedDate, ENT_QUOTES, 'UTF-8') . '</li><li>Time: ' . htmlspecialchars($formattedTime, ENT_QUOTES, 'UTF-8') . '</li></ul><p>During this window, the Seller and Junkshop portals will be temporarily offline. We appreciate your patience.</p><p>Best regards,<br>EcoPick Lipa City Team</p></body></html>';
+            $plainBody = "Dear {$recipientName},\n\nPlease be advised that the EcoPick system will undergo scheduled maintenance on:\n- Date: {$formattedDate}\n- Time: {$formattedTime}\n\nDuring this window, the Seller and Junkshop portals will be temporarily offline. We appreciate your patience.\n\nBest regards,\nEcoPick Lipa City Team";
+            $result = self::sendHtml(
+                (string) $recipient['email'],
+                $recipientName,
+                $broadcastSubject,
+                $body,
+                $plainBody
+            );
+            if ($result['sent']) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return ['sent' => $sent, 'failed' => $failed, 'total' => count($recipients), 'error' => null];
+    }
+
     public static function sendRenewalRejection(
         string $recipientEmail,
         string $businessName,
@@ -186,10 +244,13 @@ class MailerService
         string $paymentMethod,
         string $referenceNumber,
         string $dateSubmitted,
-        string $rejectionReason
+        string $rejectionReason,
+        string $paymentType = 'Renewal'
     ): array {
         $recipientEmail = strtolower(trim($recipientEmail));
-        $subject = '[EcoPick] Partnership Renewal Payment Issue';
+        $isRegistration = strcasecmp($paymentType, 'Registration') === 0;
+        $paymentLabel = $isRegistration ? 'Registration' : 'Partnership Renewal';
+        $subject = '[EcoPick] ' . $paymentLabel . ' Payment Issue';
         $safeName = htmlspecialchars(trim($businessName) !== '' ? $businessName : 'Junkshop partner', ENT_QUOTES, 'UTF-8');
         $safePlan = htmlspecialchars($planType, ENT_QUOTES, 'UTF-8');
         $safeMethod = htmlspecialchars($paymentMethod, ENT_QUOTES, 'UTF-8');
@@ -199,8 +260,8 @@ class MailerService
         $safeReason = htmlspecialchars($rejectionReason !== '' ? $rejectionReason : 'Payment details could not be verified.', ENT_QUOTES, 'UTF-8');
         $renewalUrl = htmlspecialchars(APP_URL . '/user-junkshop/renewal.php', ENT_QUOTES, 'UTF-8');
         $plainReason = $rejectionReason !== '' ? $rejectionReason : 'Payment details could not be verified.';
-        $plainBody = "Dear {$businessName},\n\nYour Partnership Renewal payment submission was rejected.\n\nRenewal Plan: {$planType}\nPayment Method: {$paymentMethod}\nSubmitted Reference No: " . ($referenceNumber !== '' ? $referenceNumber : 'N/A') . "\nDate Submitted: {$formattedDateSubmitted}\nReason for Rejection: {$plainReason}\n\nPlease verify your payment details and submit a new renewal request at {$renewalUrl}.\n\nEcoPick Platform Operations";
-        $body = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;background:#f4f6f8;color:#333;margin:0;padding:20px}.container{max-width:600px;background:#fff;padding:30px;border-radius:8px;border:1px solid #e0e0e0;margin:0 auto}.header{border-bottom:2px solid #dc3545;padding-bottom:15px;margin-bottom:20px}.header h2{color:#dc3545;margin:0}.details-box{background:#f8f9fa;padding:15px;border-left:4px solid #dc3545;margin:20px 0}.btn{display:inline-block;padding:12px 24px;background:#198754;color:#fff!important;text-decoration:none;border-radius:5px;font-weight:bold;margin-top:15px}.footer{margin-top:30px;font-size:12px;color:#6c757d;border-top:1px solid #eee;padding-top:15px}</style></head><body><div class="container"><div class="header"><h2>Partnership Renewal Payment Issue</h2></div><p>Dear <strong>' . $safeName . '</strong>,</p><p>We reviewed your recent Partnership Renewal payment submission and were unable to verify your payment details.</p><div class="details-box"><p><strong>Renewal Plan:</strong> ' . $safePlan . '</p><p><strong>Payment Method:</strong> ' . $safeMethod . '</p><p><strong>Submitted Reference No:</strong> ' . $safeReference . '</p><p><strong>Date Submitted:</strong> ' . $safeDate . '</p><p style="color:#dc3545"><strong>Reason for Rejection:</strong> ' . $safeReason . '</p></div><p>Your submission lock has been removed. Please verify your payment receipt details and submit a new renewal request.</p><a href="' . $renewalUrl . '" class="btn">Return to Renewal Page</a><div class="footer"><p>This is an automated notification from EcoPick Platform Operations. Please do not reply directly to this email.</p></div></div></body></html>';
+        $plainBody = "Dear {$businessName},\n\nYour {$paymentLabel} payment submission was rejected.\n\nPlan: {$planType}\nPayment Method: {$paymentMethod}\nSubmitted Reference No: " . ($referenceNumber !== '' ? $referenceNumber : 'N/A') . "\nDate Submitted: {$formattedDateSubmitted}\nReason for Rejection: {$plainReason}\n\nPlease verify your payment details and submit a new plan request at {$renewalUrl}.\n\nEcoPick Platform Operations";
+        $body = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;background:#f4f6f8;color:#333;margin:0;padding:20px}.container{max-width:600px;background:#fff;padding:30px;border-radius:8px;border:1px solid #e0e0e0;margin:0 auto}.header{border-bottom:2px solid #dc3545;padding-bottom:15px;margin-bottom:20px}.header h2{color:#dc3545;margin:0}.details-box{background:#f8f9fa;padding:15px;border-left:4px solid #dc3545;margin:20px 0}.btn{display:inline-block;padding:12px 24px;background:#198754;color:#fff!important;text-decoration:none;border-radius:5px;font-weight:bold;margin-top:15px}.footer{margin-top:30px;font-size:12px;color:#6c757d;border-top:1px solid #eee;padding-top:15px}</style></head><body><div class="container"><div class="header"><h2>' . $paymentLabel . ' Payment Issue</h2></div><p>Dear <strong>' . $safeName . '</strong>,</p><p>We reviewed your recent ' . $paymentLabel . ' payment submission and were unable to verify your payment details.</p><div class="details-box"><p><strong>Plan:</strong> ' . $safePlan . '</p><p><strong>Payment Method:</strong> ' . $safeMethod . '</p><p><strong>Submitted Reference No:</strong> ' . $safeReference . '</p><p><strong>Date Submitted:</strong> ' . $safeDate . '</p><p style="color:#dc3545"><strong>Reason for Rejection:</strong> ' . $safeReason . '</p></div><p>Your submission lock has been removed. Please verify your payment receipt details and submit a new plan request.</p><a href="' . $renewalUrl . '" class="btn">Return to Renewal Page</a><div class="footer"><p>This is an automated notification from EcoPick Platform Operations. Please do not reply directly to this email.</p></div></div></body></html>';
 
         if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
             self::logEmail($recipientEmail ?: 'invalid-recipient', $subject, $plainBody, 'Failed', 'Invalid recipient email address.');
@@ -330,7 +391,10 @@ class MailerService
         string $paymentMethod,
         string $referenceNumber,
         string $dateSubmitted,
-        float $amount
+        float $amount,
+        string $endDate = '',
+        int $bonusDays = 0,
+        string $paymentType = 'Renewal'
     ): array {
         try {
             $safeName = htmlspecialchars($businessName !== '' ? $businessName : 'Junkshop partner', ENT_QUOTES, 'UTF-8');
@@ -340,9 +404,15 @@ class MailerService
             $formattedDateSubmitted = self::formatNotificationDate($dateSubmitted);
             $safeDate = htmlspecialchars($formattedDateSubmitted, ENT_QUOTES, 'UTF-8');
             $formattedAmount = number_format($amount, 2);
-            $subject = '[EcoPick] Partnership Renewal Payment Approved';
-            $plainBody = "Dear {$businessName},\n\nYour Partnership Renewal payment has been approved.\n\nRenewal Plan: {$planType}\nPayment Method: {$paymentMethod}\nReference No: " . ($referenceNumber !== '' ? $referenceNumber : 'N/A') . "\nAmount: PHP {$formattedAmount}\nDate Submitted: {$formattedDateSubmitted}\n\nEcoPick Platform Operations";
-            $body = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f6f8;color:#333;padding:20px"><div style="max-width:600px;background:#fff;padding:30px;border:1px solid #e0e0e0;margin:0 auto"><h2 style="color:#198754">Partnership Renewal Payment Approved</h2><p>Dear <strong>' . $safeName . '</strong>,</p><p>Your Partnership Renewal payment has been verified and <strong>APPROVED</strong> by the administrator.</p><p><strong>Renewal Plan:</strong> ' . $safePlan . '<br><strong>Payment Method:</strong> ' . $safeMethod . '<br><strong>Reference No:</strong> ' . $safeReference . '<br><strong>Amount:</strong> PHP ' . $formattedAmount . '<br><strong>Date Submitted:</strong> ' . $safeDate . '</p><p>Your partnership status has been updated automatically.</p><p>EcoPick Platform Operations</p></div></body></html>';
+            $formattedEndDate = $endDate !== '' ? self::formatNotificationDate($endDate) : 'your account dashboard';
+            $safeEndDate = htmlspecialchars($formattedEndDate, ENT_QUOTES, 'UTF-8');
+            $bonusMessage = $bonusDays > 0 ? "\nWelcome bonus: +{$bonusDays} days\n" : '';
+            $bonusHtml = $bonusDays > 0 ? '<br><strong>Additional:</strong> +' . $bonusDays . ' days' : '';
+            $isRegistration = strcasecmp($paymentType, 'Registration') === 0;
+            $paymentLabel = $isRegistration ? 'Registration' : 'Partnership Renewal';
+            $subject = '[EcoPick] ' . $paymentLabel . ' Payment Approved';
+            $plainBody = "Dear {$businessName},\n\nYour {$paymentLabel} payment has been approved.\n\nPlan: {$planType}\nPayment Method: {$paymentMethod}\nReference No: " . ($referenceNumber !== '' ? $referenceNumber : 'N/A') . "\nAmount: PHP {$formattedAmount}\nActive Until: {$formattedEndDate}\nDate Submitted: {$formattedDateSubmitted}{$bonusMessage}\nEcoPick Platform Operations";
+            $body = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f6f8;color:#333;padding:20px"><div style="max-width:600px;background:#fff;padding:30px;border:1px solid #e0e0e0;margin:0 auto"><h2 style="color:#198754">' . $paymentLabel . ' Payment Approved</h2><p>Dear <strong>' . $safeName . '</strong>,</p><p>Your ' . $paymentLabel . ' payment has been verified and <strong>APPROVED</strong> by the administrator.</p><p><strong>Plan:</strong> ' . $safePlan . '<br><strong>Payment Method:</strong> ' . $safeMethod . '<br><strong>Reference No:</strong> ' . $safeReference . '<br><strong>Amount:</strong> PHP ' . $formattedAmount . '<br><strong>Active Until:</strong> ' . $safeEndDate . $bonusHtml . '<br><strong>Date Submitted:</strong> ' . $safeDate . '</p><p>Your partnership status has been updated automatically.</p><p>EcoPick Platform Operations</p></div></body></html>';
             return self::sendHtml($recipientEmail, $businessName, $subject, $body, $plainBody);
         } catch (Throwable $exception) {
             error_log('Renewal approval email error: ' . $exception->getMessage());

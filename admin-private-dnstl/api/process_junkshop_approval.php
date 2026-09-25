@@ -64,11 +64,6 @@ try {
     }
 
     if ($action === 'approve') {
-        $expiryDate = (new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))
-            ->modify('+21 days')
-            ->setTime(23, 59, 59)
-            ->format('Y-m-d H:i:s');
-
         $accountStatement = $database->query(
             "UPDATE accounts
              SET account_status = 'active', updated_at = CURRENT_TIMESTAMP
@@ -78,11 +73,11 @@ try {
 
         $database->query(
             "UPDATE junkshop_profiles
-             SET approval_status = 'approved', partnership_expires_at = :expiry_date,
+             SET approval_status = 'approved', partnership_expires_at = NULL,
                  last_expiration_notice_sent = NULL,
-                 renewal_status = 'Current', updated_at = CURRENT_TIMESTAMP
+                 renewal_status = 'Expired', updated_at = CURRENT_TIMESTAMP
              WHERE account_id = :id",
-            ['id' => $accountId, 'expiry_date' => $expiryDate]
+            ['id' => $accountId]
         );
         $message = 'Junkshop application approved.';
     } else {

@@ -80,3 +80,9 @@ if (!function_exists('defer_after_response')) {
 // Start session
 Session::start();
 
+// Keep administrators in control while temporarily blocking seller and junkshop portals.
+require_once __DIR__ . '/middleware/MaintenanceMode.php';
+
+// Enforce the junkshop subscription boundary after authentication and session startup.
+require_once __DIR__ . '/middleware/JunkshopSubscriptionGate.php';
+

@@ -26,6 +26,26 @@ class Auth
             return false;
         }
 
+        $sessionRole = Session::get(SESSION_ROLE_NAME);
+        if (in_array($sessionRole, ['seller', 'junkshop'], true)) {
+            try {
+                $maintenanceReset = Database::getInstance()->query(
+                    "SELECT setting_value
+                     FROM system_settings
+                     WHERE setting_key = 'maintenance_reset_timestamp'
+                     LIMIT 1"
+                )->fetchColumn();
+                $resetTimestamp = strtotime((string) $maintenanceReset);
+                if ($resetTimestamp !== false && (int) Session::get('login_time', 0) < $resetTimestamp) {
+                    self::logout();
+                    header('Location: ' . APP_URL . '/user-junkshop/login.php?maintenance=completed');
+                    exit;
+                }
+            } catch (Throwable $exception) {
+                error_log('Maintenance session reset check failed: ' . $exception->getMessage());
+            }
+        }
+
         try {
             $account = Database::getInstance()->query(
                 'SELECT a.account_status, COALESCE(a.account_role, r.name) AS account_role,

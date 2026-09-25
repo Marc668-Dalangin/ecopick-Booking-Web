@@ -149,35 +149,47 @@ class DashboardController
             return ['success' => false, 'message' => 'This account cannot be deleted.'];
         }
 
-        $references = $this->db->query(
-            "SELECT TABLE_NAME, COLUMN_NAME
-             FROM information_schema.KEY_COLUMN_USAGE
-             WHERE CONSTRAINT_SCHEMA = DATABASE()
-               AND REFERENCED_TABLE_NAME = 'accounts'
-                             AND REFERENCED_COLUMN_NAME = 'id'
-                             AND TABLE_NAME NOT IN ('sellers', 'junkshop_profiles')"
-        )->fetchAll();
-        foreach ($references as $reference) {
-            $tableName = str_replace('`', '``', (string) $reference['TABLE_NAME']);
-            $columnName = str_replace('`', '``', (string) $reference['COLUMN_NAME']);
-            $linkedCount = $this->db->query(
-                "SELECT COUNT(*) FROM `{$tableName}` WHERE `{$columnName}` = :account_id",
+        try {
+            $this->db->beginTransaction();
+
+            $account = $this->db->query(
+                "SELECT id, account_role
+                 FROM accounts
+                 WHERE id = :account_id
+                   AND account_role IN ('seller', 'junkshop')
+                 FOR UPDATE",
                 ['account_id' => $accountId]
-            )->fetchColumn();
-            if ((int) $linkedCount > 0) {
-                return ['success' => false, 'message' => 'This account cannot be deleted because it has linked records.'];
+            )->fetch();
+            if (!$account) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Account not found.'];
             }
+
+            $this->db->query(
+                'DELETE FROM junkshop_profiles WHERE account_id = :account_id',
+                ['account_id' => $accountId]
+            );
+            $this->db->query(
+                'DELETE FROM sellers WHERE account_id = :account_id',
+                ['account_id' => $accountId]
+            );
+
+            $statement = $this->db->query(
+                'DELETE FROM accounts WHERE id = :account_id',
+                ['account_id' => $accountId]
+            );
+            if ($statement->rowCount() !== 1) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Account not found.'];
+            }
+
+            $this->db->commit();
+            return ['success' => true, 'message' => 'Account deleted.'];
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            error_log('Account deletion error: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Unable to delete the account and its linked records.'];
         }
-
-        $statement = $this->db->query(
-            "DELETE FROM accounts WHERE id = :account_id AND account_role IN ('seller', 'junkshop')",
-            ['account_id' => $accountId]
-        );
-
-        return [
-            'success' => $statement->rowCount() === 1,
-            'message' => $statement->rowCount() === 1 ? 'Account deleted.' : 'Account not found.',
-        ];
     }
 
     public function listApprovedJunkshops()
@@ -212,16 +224,9 @@ class DashboardController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'Junkshop account not found'];
             }
-            $expiryDate = null;
-            if ($status === 'approved') {
-                $expiryDate = (new DateTimeImmutable('now', new DateTimeZone(APP_TIMEZONE)))
-                    ->modify('+21 days')
-                    ->setTime(23, 59, 59)
-                    ->format('Y-m-d H:i:s');
-            }
             $this->db->query(
-                'UPDATE junkshop_profiles SET approval_status = :status, partnership_expires_at = COALESCE(:expiry_date, partnership_expires_at), renewal_status = CASE WHEN :status_for_expiry = \'approved\' THEN \'Current\' ELSE renewal_status END, updated_at = CURRENT_TIMESTAMP WHERE account_id = :account_id',
-                ['status' => $status, 'expiry_date' => $expiryDate, 'status_for_expiry' => $status, 'account_id' => (int) $accountId]
+                'UPDATE junkshop_profiles SET approval_status = :status, partnership_expires_at = CASE WHEN :status_for_expiry = \'approved\' THEN NULL ELSE partnership_expires_at END, renewal_status = CASE WHEN :status_for_expiry = \'approved\' THEN \'Expired\' ELSE renewal_status END, updated_at = CURRENT_TIMESTAMP WHERE account_id = :account_id',
+                ['status' => $status, 'status_for_expiry' => $status, 'account_id' => (int) $accountId]
             );
             $this->db->query(
                 "UPDATE accounts SET account_status = 'active', updated_at = CURRENT_TIMESTAMP

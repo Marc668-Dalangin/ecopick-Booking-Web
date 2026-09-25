@@ -123,7 +123,11 @@ $junkshops = $loadRenewalData(
     []
 );
 $payments = $loadRenewalData(
-    static fn (): array => $controller->listPartnershipPayments(),
+    static fn (): array => $controller->listPartnershipPayments('Renewal'),
+    []
+);
+$registrationPayments = $loadRenewalData(
+    static fn (): array => $controller->listPartnershipPayments('Registration'),
     []
 );
 $feePayments = $loadRenewalData(
@@ -141,7 +145,7 @@ ob_start();
                 <h2 class="fw-bold mb-1">Renewals &amp; Payments</h2>
                 <p class="text-muted mb-0">Manage partnership periods, renewals, and payment reconciliation.</p>
             </div>
-            <span class="badge bg-warning-subtle text-warning"><?php echo count(array_filter($payments, fn ($payment) => !in_array($payment['status'], ['Approved', 'Rejected'], true))); ?> outstanding</span>
+            <span class="badge bg-warning-subtle text-warning"><?php echo count(array_filter(array_merge($registrationPayments, $payments), fn ($payment) => !in_array($payment['status'], ['Approved', 'Rejected'], true))); ?> outstanding</span>
         </div>
 
         <div class="border rounded p-3 mb-4">
@@ -178,11 +182,9 @@ ob_start();
             <div class="alert alert-warning" role="alert"><?php echo Validator::escape($errorMessage); ?></div>
         <?php endif; ?>
 
-        <div class="alert alert-info d-flex align-items-center small mb-4" role="alert">
-            <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-            <div>
-                <strong>Default Free Trial:</strong> All newly registered and approved junkshop accounts automatically receive a 3-week free trial upon approval. Once expired, standard renewal options apply.
-            </div>
+        <div class="alert alert-secondary d-flex align-items-center small mb-4" role="alert">
+            <i class="bi bi-shield-check me-2 fs-5"></i>
+            <div><strong>Subscription gate:</strong> Approved junkshops must submit and receive approval for a partnership plan before portal features are unlocked.</div>
         </div>
 
         <h4 class="h5 fw-bold mb-3">Junkshop Expiration Management</h4>
@@ -192,9 +194,10 @@ ob_start();
                 <tbody>
                 <?php foreach ($junkshops as $junkshop): ?>
                     <?php $isExpired = $junkshop['display_status'] === 'Expired'; ?>
+                    <?php $isPending = $junkshop['display_status'] === 'Pending'; ?>
                     <tr>
                         <td class="fw-semibold"><?php echo Validator::escape($junkshop['business_name']); ?></td>
-                        <td><span class="badge text-bg-<?php echo $isExpired ? 'danger' : ($junkshop['account_status'] === 'active' ? 'success' : 'secondary'); ?>"><?php echo Validator::escape(ucfirst($junkshop['display_status'])); ?></span></td>
+                        <td><span class="badge <?php echo $isPending ? 'bg-warning text-dark' : 'text-bg-' . ($isExpired ? 'danger' : ($junkshop['account_status'] === 'active' ? 'success' : 'secondary')); ?>"><?php echo Validator::escape(ucfirst($junkshop['display_status'])); ?></span></td>
                         <td><?php echo Validator::escape($junkshop['partnership_expires_at'] ? (new DateTime($junkshop['partnership_expires_at']))->format('M d, Y g:i A') : 'Not assigned'); ?></td>
                         <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#expiryModal" data-account-id="<?php echo (int) $junkshop['account_id']; ?>" data-junkshop-name="<?php echo Validator::escape($junkshop['business_name']); ?>" data-current-expiry="<?php echo Validator::escape($junkshop['partnership_expires_at'] ?: ''); ?>">Modify Expiry</button></td>
                     </tr>
@@ -239,6 +242,8 @@ ob_start();
         </form>
     </div></div>
 </div>
+
+<div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Registration Payment Reconciliation</h4><p class="text-muted small">Initial junkshop plan payments are listed separately from recurring partnership renewals.</p><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop Name / Business Name</th><th>Registration Plan</th><th>Payment Method</th><th>Amount (₱)</th><th>Reference Number</th><th>Receipt</th><th>Date and Time</th><th>Status</th><th>Actions</th></tr></thead><tbody><?php foreach ($registrationPayments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['plan_type']); ?></td><td><?php echo Validator::escape($payment['payment_method']); ?></td><td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td><td><?php echo $payment['payment_method'] === 'GCash' && $payment['reference_number'] ? Validator::escape($payment['reference_number']) : 'N/A'; ?></td><td><?php if ($payment['payment_method'] === 'GCash' && !empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View Receipt</button><?php else: ?>N/A<?php endif; ?></td><td><?php echo Validator::escape((new DateTime($payment['created_at']))->format('M d, Y g:i A')); ?></td><td><?php echo Validator::escape($payment['status']); ?></td><td><?php if (!in_array($payment['status'], ['Approved', 'Rejected'], true)): ?><form method="post" class="d-flex gap-2"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" value="<?php echo (int) $payment['id']; ?>"><button class="btn btn-sm btn-success" name="payment_status" value="Approved">Approve</button><button class="btn btn-sm btn-outline-danger" name="payment_status" value="Rejected">Reject</button></form><?php else: ?><span class="text-muted">Completed</span><?php endif; ?></td></tr><?php endforeach; ?><?php if (!$registrationPayments): ?><tr><td colspan="9" class="text-center text-muted py-4">No registration payment requests found.</td></tr><?php endif; ?></tbody></table></div></div></div>
 
 <div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h4 class="h5 fw-bold mb-3">Partnership Payment Reconciliation</h4><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>Junkshop Name / Business Name</th><th>Type of Renewal Plan</th><th>Payment Method</th><th>Amount (₱)</th><th>Reference Number</th><th>Receipt</th><th>Date and Time</th><th>Status</th><th>Actions</th></tr></thead><tbody><?php foreach ($payments as $payment): ?><tr><td><?php echo Validator::escape($payment['business_name']); ?></td><td><?php echo Validator::escape($payment['plan_type']); ?></td><td><?php echo Validator::escape($payment['payment_method']); ?></td><td>₱<?php echo number_format((float) $payment['amount'], 2); ?></td><td><?php echo $payment['payment_method'] === 'GCash' && $payment['reference_number'] ? Validator::escape($payment['reference_number']) : 'N/A'; ?></td><td><?php if ($payment['payment_method'] === 'GCash' && !empty($payment['receipt_image'])): ?><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal" data-receipt-url="<?php echo htmlspecialchars(APP_URL . '/' . $payment['receipt_image'], ENT_QUOTES, 'UTF-8'); ?>">View Receipt</button><?php else: ?>N/A<?php endif; ?></td><td><?php echo Validator::escape((new DateTime($payment['created_at']))->format('M d, Y g:i A')); ?></td><td><?php echo Validator::escape($payment['status']); ?></td><td><?php if (!in_array($payment['status'], ['Approved', 'Rejected'], true)): ?><form method="post" class="d-flex gap-2"><?php echo CSRF::field(); ?><input type="hidden" name="action" value="reconcile"><input type="hidden" name="payment_id" value="<?php echo (int) $payment['id']; ?>"><button class="btn btn-sm btn-success" name="payment_status" value="Approved">Approve</button><button class="btn btn-sm btn-outline-danger" name="payment_status" value="Rejected">Reject</button></form><?php else: ?><span class="text-muted">Completed</span><?php endif; ?></td></tr><?php endforeach; ?><?php if (!$payments): ?><tr><td colspan="9" class="text-center text-muted py-4">No renewal requests found.</td></tr><?php endif; ?></tbody></table></div></div></div>
 

@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS junkshop_profiles (
 
 ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS collector_lat DECIMAL(10,8) NULL DEFAULT NULL;
 ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS collector_lng DECIMAL(11,8) NULL DEFAULT NULL;
+ALTER TABLE junkshop_profiles ADD COLUMN IF NOT EXISTS has_used_welcome_bonus TINYINT(1) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS preferred_junkshops (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -249,6 +250,15 @@ ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURR
 INSERT INTO system_settings (setting_key, setting_value, updated_at)
 VALUES ('profile_cooldown_days', '30', NOW())
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
+
+-- Maintenance settings storage
+INSERT INTO system_settings (setting_key, setting_value, updated_at) VALUES
+('maintenance_mode', 'off', NOW()),
+('maintenance_scheduled_date', '', NOW()),
+('maintenance_scheduled_time', '', NOW()),
+('maintenance_reset_timestamp', '0', NOW()),
+('maintenance_message', 'The system is currently undergoing scheduled maintenance. Please check back soon.', NOW())
+ON DUPLICATE KEY UPDATE setting_key = setting_key;
 
 CREATE TABLE IF NOT EXISTS fee_settings (
     id INT NOT NULL AUTO_INCREMENT,
@@ -490,8 +500,12 @@ CREATE TABLE IF NOT EXISTS partnership_renewals (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_partnership_renewal_junkshop (junkshop_account_id),
+    INDEX idx_partnership_renewal_type_status (renewal_type, status),
     CONSTRAINT fk_partnership_renewal_junkshop FOREIGN KEY (junkshop_account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE partnership_renewals ADD COLUMN IF NOT EXISTS bonus_days_added INT NOT NULL DEFAULT 0 AFTER expiry_date;
+ALTER TABLE partnership_renewals ADD INDEX IF NOT EXISTS idx_partnership_renewal_type_status (renewal_type, status);
 
 CREATE TABLE IF NOT EXISTS payment_records (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -700,6 +714,8 @@ CREATE TABLE IF NOT EXISTS junkshop_fee_payments (
 -- Ensure reference_number has a standard index for performant lookups (non-unique to allow re-submission if status = 'Rejected')
 ALTER TABLE junkshop_fee_payments ADD INDEX IF NOT EXISTS idx_reference_number (reference_number);
 ALTER TABLE junkshop_fee_payments ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL DEFAULT NULL AFTER status;
+ALTER TABLE junkshop_fee_payments ADD COLUMN IF NOT EXISTS payment_type ENUM('registration', 'renewal') NOT NULL DEFAULT 'renewal' AFTER junkshop_id;
+ALTER TABLE junkshop_fee_payments ADD INDEX IF NOT EXISTS idx_junkshop_fee_status (status);
 -- Safeguard payment listing queries from slow full-table filesorts
 ALTER TABLE junkshop_fee_payments ADD INDEX IF NOT EXISTS idx_fee_created_at (created_at);
 

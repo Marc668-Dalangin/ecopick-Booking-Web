@@ -33,15 +33,19 @@ class AdminFeatureController
         return $this->columnAvailability[$key];
     }
 
-    public function listPartnershipPayments(): array
+    public function listPartnershipPayments(?string $renewalType = null): array
     {
         $this->requireAdmin();
+        $typeFilter = $renewalType !== null ? ' AND pr.renewal_type = :renewal_type' : '';
+        $parameters = $renewalType !== null ? ['renewal_type' => $renewalType] : [];
         return $this->db->query(
             "SELECT pr.id, pr.junkshop_account_id, COALESCE(jp.business_name, 'Unknown') AS business_name,
-                    pr.plan_type, pr.payment_method, pr.amount, pr.reference_number, pr.receipt_image, pr.status, pr.created_at
+                    pr.renewal_type, pr.plan_type, pr.payment_method, pr.amount, pr.reference_number, pr.receipt_image, pr.status, pr.created_at
              FROM partnership_renewals pr
              LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_account_id
-             ORDER BY pr.created_at DESC"
+             WHERE 1 = 1 {$typeFilter}
+             ORDER BY pr.created_at DESC",
+            $parameters
         )->fetchAll();
     }
 
@@ -92,11 +96,18 @@ class AdminFeatureController
         return $this->db->query(
             "SELECT a.id AS account_id, a.account_status, COALESCE(jp.business_name, 'Unknown') AS business_name,
                     {$partnershipExpiry} AS partnership_expires_at, {$renewalStatus} AS renewal_status,
-                    CASE WHEN {$partnershipExpiry} IS NOT NULL
+                    CASE WHEN COALESCE(registration.approved_count, 0) = 0 THEN 'Pending'
+                        WHEN {$partnershipExpiry} IS NOT NULL
                             AND {$partnershipExpiry} <= CURRENT_TIMESTAMP
-                         THEN 'Expired' ELSE COALESCE(a.account_status, 'inactive') END AS display_status
+                        THEN 'Expired' ELSE COALESCE(a.account_status, 'inactive') END AS display_status
              FROM accounts a
              JOIN junkshop_profiles jp ON jp.account_id = a.id
+               LEFT JOIN (
+                  SELECT junkshop_account_id, COUNT(*) AS approved_count
+                  FROM partnership_renewals
+                  WHERE renewal_type = 'Registration' AND status = 'Approved'
+                  GROUP BY junkshop_account_id
+               ) registration ON registration.junkshop_account_id = a.id
              WHERE jp.approval_status = 'approved'
              ORDER BY jp.business_name ASC"
         )->fetchAll();
@@ -195,15 +206,49 @@ class AdminFeatureController
                 'UPDATE payment_records SET status = :status WHERE renewal_id = :renewal_id',
                 ['status' => $status, 'renewal_id' => $paymentId]
             );
+            $bonusDays = 0;
+            $endDate = null;
             if ($status === 'Approved') {
                 $interval = match ((string) $renewal['plan_type']) {
                     '6 Months', 'Quarterly' => '6 MONTH',
                     '1 Year', 'Annual' => '1 YEAR',
                     default => '1 MONTH',
                 };
+                $subscriptionHistory = $this->db->query(
+                    "SELECT jp.has_used_welcome_bonus,
+                            EXISTS(
+                                SELECT 1 FROM partnership_renewals prior
+                                WHERE prior.junkshop_account_id = :account_id_history
+                                  AND prior.status = 'Approved'
+                                  AND prior.id <> :renewal_id
+                            ) AS has_approved_history
+                     FROM junkshop_profiles jp
+                     WHERE jp.account_id = :account_id_profile
+                     FOR UPDATE",
+                    [
+                        'account_id_history' => (int) $renewal['junkshop_account_id'],
+                        'renewal_id' => $paymentId,
+                        'account_id_profile' => (int) $renewal['junkshop_account_id'],
+                    ]
+                )->fetch();
+                $isFirstSubscription = $subscriptionHistory
+                    && (int) $subscriptionHistory['has_used_welcome_bonus'] === 0
+                    && (int) $subscriptionHistory['has_approved_history'] === 0;
+                $bonusDays = $isFirstSubscription ? 21 : 0;
+                $endDate = $this->db->query(
+                    "SELECT DATE_FORMAT(DATE_ADD(DATE_ADD(CURRENT_TIMESTAMP, INTERVAL {$interval}), INTERVAL {$bonusDays} DAY), '%Y-%m-%d %H:%i:%s')"
+                )->fetchColumn();
                 $this->db->query(
-                    "UPDATE junkshop_profiles SET partnership_expires_at = DATE_ADD(CASE WHEN partnership_expires_at IS NULL OR partnership_expires_at <= CURRENT_TIMESTAMP THEN CURRENT_TIMESTAMP ELSE partnership_expires_at END, INTERVAL {$interval}), renewal_status = 'Current' WHERE account_id = :account_id",
-                    ['account_id' => (int) $renewal['junkshop_account_id']]
+                    "UPDATE junkshop_profiles
+                     SET partnership_expires_at = :end_date,
+                         has_used_welcome_bonus = CASE WHEN :bonus_days > 0 THEN 1 ELSE has_used_welcome_bonus END,
+                         renewal_status = 'Current'
+                     WHERE account_id = :account_id",
+                    ['end_date' => $endDate, 'bonus_days' => $bonusDays, 'account_id' => (int) $renewal['junkshop_account_id']]
+                );
+                $this->db->query(
+                    'UPDATE partnership_renewals SET expiry_date = :expiry_date, bonus_days_added = :bonus_days WHERE id = :id',
+                    ['expiry_date' => $endDate, 'bonus_days' => $bonusDays, 'id' => $paymentId]
                 );
             }
             $saved = $this->db->query('SELECT status FROM partnership_renewals WHERE id = :id', ['id' => $paymentId])->fetchColumn();
@@ -211,6 +256,9 @@ class AdminFeatureController
                 throw new RuntimeException('Partnership payment state was not persisted.');
             }
             $this->db->commit();
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
             try {
                 $emailResult = $status === 'Rejected'
                     ? MailerService::sendRenewalRejection(
@@ -220,7 +268,8 @@ class AdminFeatureController
                         (string) $renewal['payment_method'],
                         (string) ($renewal['reference_number'] ?? ''),
                         (string) $renewal['created_at'],
-                        $rejectionReason
+                        $rejectionReason,
+                        (string) $renewal['renewal_type']
                     )
                     : MailerService::sendRenewalApproval(
                         (string) $renewal['email'],
@@ -229,7 +278,10 @@ class AdminFeatureController
                         (string) $renewal['payment_method'],
                         (string) ($renewal['reference_number'] ?? ''),
                         (string) $renewal['created_at'],
-                        (float) $renewal['amount']
+                        (float) $renewal['amount'],
+                        (string) $endDate,
+                        $bonusDays,
+                        (string) $renewal['renewal_type']
                     );
                 if (!$emailResult['sent']) {
                     error_log('Renewal decision email was not sent: ' . ($emailResult['error'] ?? 'Unknown error'));
@@ -413,6 +465,12 @@ class AdminFeatureController
                 $this->db->rollBack();
                 return ['success' => false, 'message' => 'You already have a pending renewal request awaiting Admin reconciliation.'];
             }
+            $approvedSubscriptionCount = (int) $this->db->query(
+                "SELECT COUNT(*) FROM partnership_renewals
+                 WHERE junkshop_account_id = :account_id AND status = 'Approved'",
+                ['account_id' => $junkshopAccountId]
+            )->fetchColumn();
+            $renewalType = $approvedSubscriptionCount === 0 ? 'Registration' : 'Renewal';
             if ($method === 'GCash') {
                 if (!is_array($receiptFile) || ($receiptFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
                     throw new InvalidArgumentException('Upload a GCash receipt screenshot.');
@@ -448,9 +506,10 @@ class AdminFeatureController
             }
             $renewalStatement = $this->db->query(
                 'INSERT INTO partnership_renewals (junkshop_account_id, renewal_type, plan_type, payment_method, amount, reference_number, receipt_image, status, created_at)
-                 VALUES (:account_id, \'Renewal\', :plan_type, :method, :amount, :reference_number, :receipt_image, \'Pending Reconciliation\', CURRENT_TIMESTAMP)',
+                 VALUES (:account_id, :renewal_type, :plan_type, :method, :amount, :reference_number, :receipt_image, \'Pending Reconciliation\', CURRENT_TIMESTAMP)',
                 [
                     'account_id' => $junkshopAccountId,
+                    'renewal_type' => $renewalType,
                     'plan_type' => $planType,
                     'method' => $method,
                     'amount' => $amount,
@@ -468,7 +527,7 @@ class AdminFeatureController
                 [
                     'junkshop_id' => $junkshopAccountId,
                     'renewal_id' => $renewalId,
-                    'transaction_type' => 'Partnership Renewal (' . $planType . ')',
+                    'transaction_type' => 'Partnership ' . $renewalType . ' (' . $planType . ')',
                     'payment_method' => $method,
                     'amount' => $amount,
                     'reference_number' => $method === 'GCash' ? $referenceNumber : null,
@@ -511,6 +570,17 @@ class AdminFeatureController
     {
         if (!Auth::check() || Auth::userRole() !== 'junkshop' || Auth::userId() !== $junkshopId) {
             return ['success' => false, 'message' => 'You cannot create this payment record.'];
+        }
+        $hasApprovedRegistration = (int) $this->db->query(
+            "SELECT COUNT(*)
+             FROM partnership_renewals
+             WHERE junkshop_account_id = :junkshop_id
+               AND renewal_type = 'Registration'
+               AND status = 'Approved'",
+            ['junkshop_id' => $junkshopId]
+        )->fetchColumn() > 0;
+        if (!$hasApprovedRegistration) {
+            return ['success' => false, 'message' => 'An approved registration plan is required before outstanding fee payments can be submitted.'];
         }
         if (!in_array($method, ['Cash', 'GCash'], true) || !is_numeric($amount) || (float) $amount <= 0) {
             return ['success' => false, 'message' => 'Enter a valid payment amount and method.'];
@@ -559,9 +629,9 @@ class AdminFeatureController
                 $receiptPath = 'uploads/receipts/' . $fileName;
             }
             $this->db->query(
-                'INSERT INTO junkshop_fee_payments (junkshop_id, payment_method, reference_number, receipt_image, amount_submitted)
-                 VALUES (:junkshop_id, :payment_method, :reference_number, :receipt_image, :amount_submitted)',
-                ['junkshop_id' => $junkshopId, 'payment_method' => $method, 'reference_number' => $method === 'GCash' ? $referenceNumber : null, 'receipt_image' => $receiptPath, 'amount_submitted' => $amount]
+                'INSERT INTO junkshop_fee_payments (junkshop_id, payment_type, payment_method, reference_number, receipt_image, amount_submitted)
+                 VALUES (:junkshop_id, :payment_type, :payment_method, :reference_number, :receipt_image, :amount_submitted)',
+                ['junkshop_id' => $junkshopId, 'payment_type' => 'renewal', 'payment_method' => $method, 'reference_number' => $method === 'GCash' ? $referenceNumber : null, 'receipt_image' => $receiptPath, 'amount_submitted' => $amount]
             );
             return ['success' => true, 'message' => 'Fee payment submitted for admin verification.'];
         } catch (Throwable $exception) {
@@ -596,6 +666,9 @@ class AdminFeatureController
                 ['status' => $status, 'amount_deducted' => $deductedAmount, 'rejection_reason' => $status === 'Rejected' ? $rejectionReason : null, 'id' => $paymentId]
             );
             $this->db->commit();
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
             try {
                 $emailResult = MailerService::sendJunkshopPaymentNotification($paymentId, $status, (float) $deductedAmount, $rejectionReason);
                 if (!$emailResult['sent']) {

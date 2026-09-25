@@ -10,6 +10,7 @@ $adminUserEmail = Auth::userEmail();
 $unreadReportCount = 0;
 $unreadConcernCount = 0;
 $pendingJunkshopsCount = 0;
+$total_pending_payments_count = 0;
 $siteFavicon = APP_URL . '/assets/images/logo.png';
 if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::userRole() === 'admin')) {
     $pdo = Database::getInstance()->getPDO();
@@ -33,6 +34,21 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
         $pendingJunkshopsCount = (int) $pendingJunkshopsStmt->fetchColumn();
     } catch (Throwable $exception) {
         error_log('Pending junkshop badge count error: ' . $exception->getMessage());
+    }
+
+    try {
+        $pendingPaymentsStmt = $pdo->query(
+            "SELECT
+                (SELECT COUNT(*) FROM partnership_renewals
+                 WHERE renewal_type = 'Registration' AND status IN ('Pending', 'Pending Reconciliation'))
+                + (SELECT COUNT(*) FROM partnership_renewals
+                   WHERE renewal_type = 'Renewal' AND status IN ('Pending', 'Pending Reconciliation'))
+                + (SELECT COUNT(*) FROM junkshop_fee_payments
+                   WHERE status = 'Pending') AS total_pending"
+        );
+        $total_pending_payments_count = (int) ($pendingPaymentsStmt->fetchColumn() ?: 0);
+    } catch (Throwable $exception) {
+        error_log('Pending payment badge count error: ' . $exception->getMessage());
     }
 }
 ?>
@@ -96,7 +112,7 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
                             <a class="nav-link <?php echo $adminActive === 'concerns' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/concerns.php"><i class="bi bi-life-preserver"></i><span>Concerns & Disputes</span><?php if ($unreadConcernCount > 0): ?><span class="badge bg-danger rounded-pill ms-auto" aria-label="<?php echo $unreadConcernCount; ?> unread concerns"><?php echo $unreadConcernCount; ?></span><?php endif; ?></a>
                             <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span><?php if ($unreadReportCount > 0): ?><span class="badge bg-danger rounded-pill ms-2" aria-label="<?php echo $unreadReportCount; ?> unread completed transactions"><?php echo $unreadReportCount; ?></span><?php endif; ?></a>
                             <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
-                            <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
+                            <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span><?php if ($total_pending_payments_count > 0): ?><span class="badge bg-danger rounded-pill ms-auto" aria-label="<?php echo $total_pending_payments_count; ?> pending payments"><?php echo $total_pending_payments_count; ?></span><?php endif; ?></a>
                             <a class="nav-link <?php echo $adminActive === 'backup-import' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/backup_import.php"><i class="bi bi-database-gear"></i><span>Database Maintenance</span></a>
                         </div>
                     </div>
@@ -195,7 +211,7 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION[SESSION_USER_ID]) && Auth::
                                         <a class="nav-link <?php echo $adminActive === 'concerns' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/concerns.php"><i class="bi bi-life-preserver"></i><span>Concerns & Disputes</span><?php if ($unreadConcernCount > 0): ?><span class="badge bg-danger rounded-pill ms-auto" aria-label="<?php echo $unreadConcernCount; ?> unread concerns"><?php echo $unreadConcernCount; ?></span><?php endif; ?></a>
                                         <a class="nav-link <?php echo $adminActive === 'reports' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/reports.php"><i class="bi bi-bar-chart"></i><span>Reports</span><?php if ($unreadReportCount > 0): ?><span class="badge bg-danger rounded-pill ms-2" aria-label="<?php echo $unreadReportCount; ?> unread completed transactions"><?php echo $unreadReportCount; ?></span><?php endif; ?></a>
                                         <a class="nav-link <?php echo $adminActive === 'profile' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/profile.php"><i class="bi bi-person-circle"></i><span>Admin Profile</span></a>
-                                        <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span></a>
+                                        <a class="nav-link <?php echo $adminActive === 'partnership-payments' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/partnership-payments.php"><i class="bi bi-arrow-repeat"></i><span>Renewals & Payments</span><?php if ($total_pending_payments_count > 0): ?><span class="badge bg-danger rounded-pill ms-auto" aria-label="<?php echo $total_pending_payments_count; ?> pending payments"><?php echo $total_pending_payments_count; ?></span><?php endif; ?></a>
                                         <a class="nav-link <?php echo $adminActive === 'backup-import' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/admin-private-dnstl/backup_import.php"><i class="bi bi-database-gear"></i><span>Database Maintenance</span></a>
                                     </div>
                                 </div>

@@ -19,15 +19,29 @@ $plans = [
 
 $feedback = $_SESSION['renewal_feedback'] ?? null;
 unset($_SESSION['renewal_feedback']);
+$gateWarning = $_SESSION['subscription_gate_warning'] ?? null;
+unset($_SESSION['subscription_gate_warning']);
 $profile = $db->query(
-    'SELECT id, business_name, partnership_expires_at, renewal_status
-     FROM junkshop_profiles
-     WHERE account_id = :account_id',
+    "SELECT jp.id, jp.business_name, jp.partnership_expires_at, jp.renewal_status,
+            jp.has_used_welcome_bonus,
+            (SELECT COUNT(*) FROM partnership_renewals pr
+             WHERE pr.junkshop_account_id = jp.account_id AND pr.status = 'Approved') AS approved_subscription_count,
+            (SELECT COUNT(*) FROM partnership_renewals registration
+                            WHERE registration.junkshop_account_id = jp.account_id
+                                AND registration.renewal_type = 'Registration'
+                                AND registration.status = 'Approved') AS approved_registration_count
+     FROM junkshop_profiles jp
+     WHERE jp.account_id = :account_id",
     ['account_id' => Auth::userId()]
 )->fetch();
+$isFirstTime = $profile && (int) $profile['approved_subscription_count'] === 0;
+$hasApprovedRegistration = $profile && (int) $profile['approved_registration_count'] > 0;
 $now = new DateTime();
 $expDate = !empty($profile['partnership_expires_at']) ? new DateTime($profile['partnership_expires_at']) : null;
 $isExpired = $expDate === null || $expDate <= $now;
+$displayStatus = $isFirstTime ? 'Pending Registration' : ($isExpired ? 'Expired' : 'Active');
+$displayExpiry = $isFirstTime ? 'Not assigned' : ($expDate ? $expDate->format('M d, Y g:i A') : 'N/A');
+$sectionTitle = $isFirstTime ? 'Select Registration Plan' : 'Choose a renewal plan';
 $pendingRequest = $db->query(
     "SELECT id, created_at, plan_type, amount, payment_method
      FROM partnership_renewals
@@ -49,9 +63,11 @@ $hasPendingFeePayment = $pendingFeePayment !== false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fee_payment'])) {
     $feedback = CSRF::verify()
-        ? ($hasPendingFeePayment
-            ? ['success' => false, 'message' => 'You currently have a payment submission pending admin verification. You may submit another payment only after your pending request is Approved or Rejected.']
-            : $controller->createFeePayment(Auth::userId(), (string) ($_POST['fee_payment_method'] ?? ''), (string) ($_POST['amount_submitted'] ?? ''), (string) ($_POST['fee_reference_number'] ?? ''), $_FILES['fee_receipt_image'] ?? null))
+        ? (!$hasApprovedRegistration
+            ? ['success' => false, 'message' => 'An approved registration plan is required before outstanding fee payments can be submitted.']
+            : ($hasPendingFeePayment
+                ? ['success' => false, 'message' => 'You currently have a payment submission pending admin verification. You may submit another payment only after your pending request is Approved or Rejected.']
+                : $controller->createFeePayment(Auth::userId(), (string) ($_POST['fee_payment_method'] ?? ''), (string) ($_POST['amount_submitted'] ?? ''), (string) ($_POST['fee_reference_number'] ?? ''), $_FILES['fee_receipt_image'] ?? null)))
         : ['success' => false, 'message' => 'Your session expired. Please try again.'];
     $_SESSION['renewal_feedback'] = $feedback;
     header('Location: ' . APP_URL . '/user-junkshop/renewal.php');
@@ -140,10 +156,18 @@ $currentPage = 'renewal';
 $userDisplayName = Auth::userName();
 ob_start();
 ?>
-<div class="alert alert-info d-flex align-items-center small mb-4" role="alert">
-    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-    <div><strong>3-Week Free Trial:</strong> Newly approved junkshop accounts receive a 3-week free trial. Standard renewal options apply after the trial expires.</div>
-</div>
+<?php if ($gateWarning): ?>
+    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-lock-fill me-2 fs-5"></i>
+        <div><?php echo Validator::escape($gateWarning); ?></div>
+    </div>
+<?php endif; ?>
+<?php if ($isFirstTime): ?>
+    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-gift-fill me-2 fs-4"></i>
+        <div><strong>First-Time Bonus:</strong> Subscribe to any plan today (1 Month, 6 Months, or 1 Year) and get an <strong>EXTRA 3 Weeks (21 Days)</strong> added to your plan for free!</div>
+    </div>
+<?php endif; ?>
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
@@ -154,7 +178,8 @@ ob_start();
             <div class="col-12 col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Commission Subtotal</div><strong>₱<?php echo number_format($feeSummary['commission_subtotal'], 2); ?></strong></div></div>
             <div class="col-12 col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Maximum Allowed Fee Limit</div><strong>₱<?php echo number_format($feeSummary['maximum_allowed'], 2); ?></strong><div class="small text-muted mt-1">Remaining: ₱<?php echo number_format($feeSummary['remaining_allowance'], 2); ?></div></div></div>
         </div>
-        <div class="d-flex justify-content-between align-items-center mt-4"><span class="small text-muted">Approved payments deducted: ₱<?php echo number_format($feeSummary['approved_fee_payments'], 2); ?></span><?php if (!$hasPendingFeePayment): ?><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#feePaymentModal">Pay Outstanding Fees</button><?php endif; ?></div>
+        <div class="d-flex justify-content-between align-items-center mt-4"><span class="small text-muted">Approved payments deducted: ₱<?php echo number_format($feeSummary['approved_fee_payments'], 2); ?></span><?php if (!$hasPendingFeePayment): ?><div class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="<?php echo !$hasApprovedRegistration ? 'Requires an approved registration plan before outstanding fee payments can be submitted.' : ''; ?>"><button type="button" class="btn btn-primary<?php echo !$hasApprovedRegistration ? ' disabled' : ''; ?>"<?php echo !$hasApprovedRegistration ? ' disabled aria-disabled="true"' : ' data-bs-toggle="modal" data-bs-target="#feePaymentModal"'; ?>>Pay Outstanding Fees</button></div><?php endif; ?></div>
+        <?php if (!$hasPendingFeePayment && !$hasApprovedRegistration): ?><small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Requires an approved registration plan before outstanding fee payments can be submitted.</small><?php endif; ?>
         <?php if ($hasPendingFeePayment): ?><div class="alert alert-warning mt-4 mb-0" role="alert">You currently have a payment submission pending admin verification. You may submit another payment only after your pending request is Approved or Rejected.</div><?php endif; ?>
         <?php if ($feeSummary['is_locked']): ?><div class="alert alert-danger mt-4 mb-0" role="alert">Your outstanding fees have reached the maximum allowed limit. Settle your balance to accept new pickup requests.</div><?php endif; ?>
     </div>
@@ -226,20 +251,27 @@ ob_start();
                 <?php endif; ?>
                 <dl class="mb-4">
                     <dt>Partnership status</dt>
-                    <dd><?php echo Validator::escape($profile['renewal_status'] ?? 'Current'); ?></dd>
+                    <dd>
+                        <span class="badge <?php echo $isFirstTime ? 'bg-secondary' : ($displayStatus === 'Active' ? 'bg-success' : 'bg-danger'); ?>">
+                            <?php echo Validator::escape($displayStatus); ?>
+                        </span>
+                    </dd>
                     <dt>Expiry date</dt>
-                    <dd><?php echo Validator::escape($expDate ? $expDate->format('M d, Y g:i A') : 'Not assigned'); ?></dd>
+                    <dd><?php echo Validator::escape($displayExpiry); ?></dd>
                 </dl>
                 <form id="renewalForm" action="renewal.php" method="POST" enctype="multipart/form-data">
                     <?php echo CSRF::field(); ?>
                     <div class="mb-4">
-                        <label for="plan_type" class="form-label fw-bold">Choose a renewal plan</label>
+                        <label for="plan_type" class="form-label fw-bold"><?php echo Validator::escape($sectionTitle); ?></label>
                         <select name="plan_type" id="plan_type" class="form-select" required <?php echo $canSubmitRenewal ? '' : 'disabled'; ?>>
                             <option value="" disabled>Select plan</option>
-                            <option value="Monthly" selected data-amount="<?php echo number_format((float) ($plans['1_month']['amount'] ?? 0), 2, '.', ''); ?>">Monthly Plan - ₱<?php echo number_format((float) ($plans['1_month']['amount'] ?? 0), 2); ?></option>
-                            <option value="Quarterly" data-amount="<?php echo number_format((float) ($plans['6_months']['amount'] ?? 0), 2, '.', ''); ?>">Quarterly Plan - ₱<?php echo number_format((float) ($plans['6_months']['amount'] ?? 0), 2); ?></option>
-                            <option value="Annual" data-amount="<?php echo number_format((float) ($plans['1_year']['amount'] ?? 0), 2, '.', ''); ?>">Annual Plan - ₱<?php echo number_format((float) ($plans['1_year']['amount'] ?? 0), 2); ?></option>
+                            <option value="Monthly" selected data-amount="<?php echo number_format((float) ($plans['1_month']['amount'] ?? 0), 2, '.', ''); ?>">Monthly Plan<?php echo $isFirstTime ? ' (1 Month)' : ''; ?> - ₱<?php echo number_format((float) ($plans['1_month']['amount'] ?? 0), 2); ?><?php echo $isFirstTime ? ' + 3 weeks (21 days)' : ''; ?></option>
+                            <option value="Quarterly" data-amount="<?php echo number_format((float) ($plans['6_months']['amount'] ?? 0), 2, '.', ''); ?>">Quarterly Plan<?php echo $isFirstTime ? ' (6 Months)' : ''; ?> - ₱<?php echo number_format((float) ($plans['6_months']['amount'] ?? 0), 2); ?><?php echo $isFirstTime ? ' + 3 weeks (21 days)' : ''; ?></option>
+                            <option value="Annual" data-amount="<?php echo number_format((float) ($plans['1_year']['amount'] ?? 0), 2, '.', ''); ?>">Annual Plan<?php echo $isFirstTime ? ' (1 Year)' : ''; ?> - ₱<?php echo number_format((float) ($plans['1_year']['amount'] ?? 0), 2); ?><?php echo $isFirstTime ? ' + 3 weeks (21 days)' : ''; ?></option>
                         </select>
+                        <?php if ($isFirstTime): ?>
+                            <div id="selectedPlanBonus" class="badge bg-success mt-2">Includes Bonus: + 3 weeks (21 days) free</div>
+                        <?php endif; ?>
                     </div>
                     <input type="hidden" name="amount" id="plan_amount" value="<?php echo number_format((float) ($plans['1_month']['amount'] ?? 0), 2, '.', ''); ?>">
                     <div class="mb-3">
@@ -264,7 +296,7 @@ ob_start();
                             <div class="form-text">JPG, PNG, or WEBP only, maximum 3 MB.</div>
                         </div>
                     </div>
-                    <button type="submit" name="process_renewal_submit" value="1" class="btn btn-primary mt-3" <?php echo $canSubmitRenewal ? '' : 'disabled'; ?>>Submit Renewal Payment</button>
+                    <button type="submit" name="process_renewal_submit" value="1" class="btn btn-primary mt-3" <?php echo $canSubmitRenewal ? '' : 'disabled'; ?>><?php echo $hasApprovedRegistration ? 'Submit Renewal Payment' : 'Submit Registration Payment'; ?></button>
                 </form>
             </div>
         </div>
@@ -381,8 +413,14 @@ ob_start();
     });
     updatePaymentFields();
 
-    document.getElementById('plan_type').addEventListener('change', function () {
+    const planType = document.getElementById('plan_type');
+    const selectedPlanBonus = document.getElementById('selectedPlanBonus');
+    planType.addEventListener('change', function () {
         document.getElementById('plan_amount').value = this.options[this.selectedIndex].dataset.amount || '0.00';
+        if (selectedPlanBonus) {
+            selectedPlanBonus.classList.remove('d-none');
+            selectedPlanBonus.textContent = 'Includes Bonus: + 3 weeks (21 days) free';
+        }
     });
     const feeMethod = document.getElementById('fee_payment_method');
     const feeGcashFields = document.getElementById('feeGcashFields');

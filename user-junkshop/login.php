@@ -12,6 +12,7 @@ Auth::redirectIfAuthenticated();
 // Handle form submission
 $error = '';
 $showPendingMessage = false;
+$maintenanceCompleted = ($_GET['maintenance'] ?? '') === 'completed';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
@@ -67,6 +68,14 @@ $pageTitle = 'Login';
                         <div class="alert alert-info alert-dismissible fade show" role="alert">
                             <i class="bi bi-info-circle-fill"></i>
                             <strong>Pending Approval:</strong> Your junkshop account is awaiting EcoPick admin approval. You will be able to login once approved.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($maintenanceCompleted): ?>
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="bi bi-tools me-1"></i>
+                            System maintenance has been completed. Please log in again to resume your session.
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     <?php endif; ?>
