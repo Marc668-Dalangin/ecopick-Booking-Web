@@ -338,7 +338,7 @@ try {
 
     $registrationFee = $pdo->query("SELECT config_value FROM fee_configurations WHERE config_key = 'junkshop_registration_fee'")->fetchColumn();
     $renewalFee = $pdo->query("SELECT config_value FROM fee_configurations WHERE config_key = 'renewal_fee_1_month'")->fetchColumn();
-    assertTrue($registrationFee !== false && $renewalFee !== false, 'Registration and renewal fee configurations should exist');
+    assertTrue($registrationFee === false && $renewalFee !== false, 'Registration fee configuration should be absent while renewal fee configuration remains');
 
     $analytics = new PlatformAnalytics();
     $summary = $analytics->getPlatformSummary(date('Y-m-d', strtotime('-30 days')), date('Y-m-d', strtotime('+1 day')));

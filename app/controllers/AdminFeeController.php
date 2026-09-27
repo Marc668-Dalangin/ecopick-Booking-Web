@@ -11,7 +11,6 @@ class AdminFeeController
         'default_pickup_fee',
         'ecopick_service_fee_pct',
         'junkshop_commission_pct',
-        'junkshop_registration_fee',
         'renewal_fee_1_month',
         'renewal_fee_6_months',
         'renewal_fee_1_year',
@@ -52,13 +51,12 @@ class AdminFeeController
         $rows = $this->db->query(
             'SELECT id, config_key, config_value, description, updated_at
              FROM fee_configurations
-             WHERE config_key IN (:pickup_fee, :service_fee, :commission, :registration_fee, :renewal_1_month, :renewal_6_months, :renewal_1_year)
+             WHERE config_key IN (:pickup_fee, :service_fee, :commission, :renewal_1_month, :renewal_6_months, :renewal_1_year)
              ORDER BY id ASC',
             [
                 'pickup_fee' => 'default_pickup_fee',
                 'service_fee' => 'ecopick_service_fee_pct',
                 'commission' => 'junkshop_commission_pct',
-                'registration_fee' => 'junkshop_registration_fee',
                 'renewal_1_month' => 'renewal_fee_1_month',
                 'renewal_6_months' => 'renewal_fee_6_months',
                 'renewal_1_year' => 'renewal_fee_1_year',

@@ -29,7 +29,6 @@ $feeLabels = [
     'default_pickup_fee' => 'Default Pickup Fee',
     'ecopick_service_fee_pct' => 'Ecopick Service Fee %',
     'junkshop_commission_pct' => 'Junkshop Commission %',
-    'junkshop_registration_fee' => 'Junkshop Registration Fee',
     'renewal_fee_1_month' => 'Junkshop Renewal Fee - 1 month',
     'renewal_fee_6_months' => 'Junkshop Renewal Fee - 6 months',
     'renewal_fee_1_year' => 'Junkshop Renewal Fee - 1 year',
@@ -63,7 +62,6 @@ ob_start();
                             <option value="ecopick_service_fee_pct"><?php echo $feeLabels['ecopick_service_fee_pct']; ?></option>
                             <option value="default_pickup_fee"><?php echo $feeLabels['default_pickup_fee']; ?></option>
                             <option value="junkshop_commission_pct"><?php echo $feeLabels['junkshop_commission_pct']; ?></option>
-                            <option value="junkshop_registration_fee"><?php echo $feeLabels['junkshop_registration_fee']; ?></option>
                             <option value="renewal_fee_1_month"><?php echo $feeLabels['renewal_fee_1_month']; ?></option>
                             <option value="renewal_fee_6_months"><?php echo $feeLabels['renewal_fee_6_months']; ?></option>
                             <option value="renewal_fee_1_year"><?php echo $feeLabels['renewal_fee_1_year']; ?></option>

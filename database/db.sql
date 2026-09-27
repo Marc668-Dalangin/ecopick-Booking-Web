@@ -680,7 +680,6 @@ VALUES
     ('ecopick_service_fee_pct', 5.00, 'EcoPick platform service fee as a percentage of estimated recyclable value.'),
     ('default_pickup_fee', 0.00, 'Default collection service fee applied when no dynamic fee override is configured.'),
     ('junkshop_commission_pct', 2.50, 'Commission percentage retained by EcoPick from final completed transaction value.'),
-    ('junkshop_registration_fee', 0.00, 'Configurable registration fee for a junkshop partnership.'),
     ('renewal_fee_1_month', 0.00, 'Junkshop partnership renewal fee for 1 month.'),
     ('renewal_fee_6_months', 0.00, 'Junkshop partnership renewal fee for 6 months.'),
     ('renewal_fee_1_year', 0.00, 'Junkshop partnership renewal fee for 1 year.'),
