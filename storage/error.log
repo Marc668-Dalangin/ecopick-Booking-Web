@@ -32,3 +32,156 @@
 [25-Sep-2026 23:15:37 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
 [25-Sep-2026 23:34:31 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
 [25-Sep-2026 23:34:31 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:01:21 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:01:21 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:01:25 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:01:25 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:05:10 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:05:10 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:14:42 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:14:42 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:15:11 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:15:11 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:15:58 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc78791c072sm3153229a12.15 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:15:58 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:16:01 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2df913dd8d2sm28259545ad.20 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:16:01 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:17:34 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b898cabesm14753177a91.0 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:17:34 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:17:54 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:17:54 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:19:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b998dbf2sm14617901a91.12 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:19:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:19:40 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0c3f74e5bsm12547861a91.5 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:19:40 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:20:59 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc7a4b03082sm939015a12.11 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:20:59 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:21:02 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:21:02 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:21:27 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0c3f74e5bsm12555813a91.5 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:21:27 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:21:29 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0c2e986easm16033928a91.1 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:21:29 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:39:59 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-87fea88ed6fsm2822293b3a.31 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:39:59 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:40:00 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b99917besm14276817a91.14 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:40:00 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:45:54 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:45:54 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:46:02 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:46:02 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:46:31 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0e05d674dsm3367071a91.4 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:46:31 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:46:32 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b9355e54sm14161470a91.5 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:46:32 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:47:28 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b498fb12sm5923207a91.0 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:47:28 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:47:29 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b9355e54sm14165069a91.5 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:47:29 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:47:31 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:47:36 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:47:36 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:47:40 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:47:52 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:47:57 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d9443c01a7336-2df913dfea3sm27847415ad.14 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:47:57 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:47:58 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 41be03b00d2f7-cc78773acfasm3151897a12.0 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:47:58 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:48:07 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:07 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:15 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:15 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:38 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:38 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:41 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:48:41 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:49:35 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0df614b02sm3450366a91.3 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:49:35 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:49:36 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b998dbf2sm14736766a91.12 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:49:36 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:49:47 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0976cacbesm20621858a91.13 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:49:47 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:49:48 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b498fb12sm5926652a91.0 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:49:48 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:49:56 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. d2e1a72fcca58-87feae8d827sm2817165b3a.36 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:49:56 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:49:57 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b99e5220sm14392877a91.16 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:49:57 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:50:05 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0b9feddd0sm4881877a91.2 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:50:05 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:50:06 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0974ec5d0sm22756911a91.4 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:50:06 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:50:25 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:50:33 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:50:34 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:50:47 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:52:17 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:53:29 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:53:39 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:54:02 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:58:55 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:58:58 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:58:58 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:04 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:04 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:06 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:06 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:10 Asia/Manila] PHP Warning:  Undefined variable $perKmRate in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:10 Asia/Manila] PHP Deprecated:  number_format(): Passing null to parameter #1 ($num) of type float is deprecated in C:\xampp\htdocs\booking-website-lipacity\user-junkshop\partner-junkshops.php on line 194
+[27-Sep-2026 18:59:26 Asia/Manila] Live tracking update failed: SQLSTATE[HY093]: Invalid parameter number
+[27-Sep-2026 18:59:28 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0974ec5dfsm20604643a91.3 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:59:28 Asia/Manila] Booking notification email was not accepted by the configured mail transport.
+[27-Sep-2026 18:59:29 Asia/Manila] PHP Warning:  mail(): SMTP server response: 530-5.7.0 Must issue a STARTTLS command first. For more information, go to
+530-5.7.0  https://support.google.com/a/answer/3221692 and review RFC 3207
+530 5.7.0 specifications. 98e67ed59e1d1-3a0c3f74e5bsm12701221a91.5 - gsmtp in C:\xampp\htdocs\booking-website-lipacity\app\services\MailerService.php on line 96
+[27-Sep-2026 18:59:29 Asia/Manila] Booking notification email was not accepted by the configured mail transport.

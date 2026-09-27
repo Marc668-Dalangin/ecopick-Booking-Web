@@ -110,7 +110,7 @@ $siteFavicon = APP_URL . '/assets/images/logo.png';
                             <i class="bi bi-bell"></i>
                             <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle <?php echo $notificationCount > 0 ? '' : 'd-none'; ?>" data-notification-count><?php echo $notificationCount; ?></span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown-menu" data-notification-menu style="min-width: 320px;">
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown-menu" data-notification-menu>
                             <li class="dropdown-header">Notifications</li>
                             <li data-notification-empty class="px-3 py-2 text-muted small <?php echo $notificationCount > 0 ? 'd-none' : ''; ?>">No unread notifications.</li>
                         </ul>

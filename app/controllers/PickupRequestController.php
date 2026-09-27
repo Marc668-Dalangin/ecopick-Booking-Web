@@ -11,6 +11,8 @@ class PickupRequestController
 {
     private const MINIMUM_PICKUP_WEIGHT_KG = 5.0;
     private const MINIMUM_PICKUP_WEIGHT_MESSAGE = 'Minimum pickup weight requirement is 5 kg. Please enter 5 kg or more to schedule a pickup.';
+    private const MAX_PHOTO_SIZE_BYTES = 3145728;
+    private const PHOTO_SIZE_ERROR = 'Selected photo exceeds the 3MB size limit. Please upload a smaller image.';
 
     private $db;
     private $photoDirectory;
@@ -44,9 +46,13 @@ class PickupRequestController
         }
 
         if (!empty($errors)) {
-            $message = in_array(self::MINIMUM_PICKUP_WEIGHT_MESSAGE, $errors, true)
-                ? self::MINIMUM_PICKUP_WEIGHT_MESSAGE
-                : 'Please correct the highlighted fields.';
+            if (in_array(self::PHOTO_SIZE_ERROR, $errors, true)) {
+                $message = self::PHOTO_SIZE_ERROR;
+            } else {
+                $message = in_array(self::MINIMUM_PICKUP_WEIGHT_MESSAGE, $errors, true)
+                    ? self::MINIMUM_PICKUP_WEIGHT_MESSAGE
+                    : 'Please correct the highlighted fields.';
+            }
             return ['success' => false, 'message' => $message, 'validation_errors' => $errors];
         }
 
@@ -582,18 +588,21 @@ class PickupRequestController
 
     private function storePhoto($file)
     {
-        $maxSize = 5 * 1024 * 1024;
         $allowed = [
             'image/jpeg' => 'jpg',
             'image/png' => 'png',
             'image/webp' => 'webp',
         ];
 
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if (in_array($uploadError, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true) || (int) ($file['size'] ?? 0) > self::MAX_PHOTO_SIZE_BYTES) {
+            return ['success' => false, 'message' => self::PHOTO_SIZE_ERROR];
+        }
+        if ($uploadError !== UPLOAD_ERR_OK) {
             return ['success' => false, 'message' => 'The recyclable-material photo could not be uploaded.'];
         }
-        if (($file['size'] ?? 0) <= 0 || $file['size'] > $maxSize) {
-            return ['success' => false, 'message' => 'The recyclable-material photo must be 5 MB or smaller.'];
+        if ((int) ($file['size'] ?? 0) <= 0) {
+            return ['success' => false, 'message' => 'The recyclable-material photo must not be empty.'];
         }
         if (!is_uploaded_file($file['tmp_name'] ?? '')) {
             return ['success' => false, 'message' => 'The recyclable-material photo upload is invalid.'];

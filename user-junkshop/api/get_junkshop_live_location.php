@@ -24,8 +24,13 @@ try {
     $database = Database::getInstance();
     $pdo = $database->getPDO();
     $stmt = $pdo->prepare(
-        "SELECT pr.current_status, pr.seller_lat, pr.seller_lng, pr.junkshop_lat, pr.junkshop_lng, pr.collector_lat, pr.collector_lng
+        "SELECT pr.current_status, pr.seller_lat, pr.seller_lng,
+            COALESCE(pr.junkshop_lat, jp.latitude) AS junkshop_lat,
+            COALESCE(pr.junkshop_lng, jp.longitude) AS junkshop_lng,
+            COALESCE(pr.collector_lat, pr.junkshop_lat, jp.collector_lat, jp.latitude) AS collector_lat,
+            COALESCE(pr.collector_lng, pr.junkshop_lng, jp.collector_lng, jp.longitude) AS collector_lng
          FROM pickup_requests pr
+         LEFT JOIN junkshop_profiles jp ON jp.account_id = pr.junkshop_id
          WHERE pr.id = :booking_id AND {$ownership}
          LIMIT 1",
     );

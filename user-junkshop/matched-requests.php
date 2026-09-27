@@ -263,6 +263,13 @@ ob_start();
                                 </div>
 
                                 <div class="small text-muted mb-3"><?php echo Validator::escape($assignment['pickup_address'] ?? ''); ?></div>
+                                <div class="small mb-2"><strong>Optional notes:</strong> <span style="white-space: pre-line;"><?php echo Validator::escape(trim((string) ($assignment['pickup_notes'] ?? '')) ?: 'None'); ?></span></div>
+                                <?php $pickupPhotoPath = trim((string) ($assignment['photo_path'] ?? '')); ?>
+                                <?php if ($pickupPhotoPath !== ''): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#pickupPhotoModal" data-photo-url="<?php echo htmlspecialchars(rtrim(APP_URL, '/') . '/' . ltrim($pickupPhotoPath, '/'), ENT_QUOTES, 'UTF-8'); ?>">View Photo</button>
+                                <?php else: ?>
+                                    <div class="small text-muted mb-3">No photo provided</div>
+                                <?php endif; ?>
                                 <?php if ($currentStatus === 'Declined' && trim((string) ($assignment['decline_reason'] ?? '')) !== ''): ?><div class="alert alert-danger py-2 mb-3"><strong>Decline reason:</strong> <?php echo Validator::escape($assignment['decline_reason']); ?></div><?php endif; ?>
 
                                 <?php $booking = ['id' => (int)($assignment['pickup_request_id'] ?? 0), 'status' => strtolower(str_replace(' ', '_', (string)($assignment['current_status'] ?? ''))), 'seller_lat' => $assignment['seller_lat'] ?? null, 'seller_lng' => $assignment['seller_lng'] ?? null]; ?>
@@ -393,6 +400,19 @@ ob_start();
         </div>
     </div>
 </div>
+<div class="modal fade" id="pickupPhotoModal" tabindex="-1" aria-labelledby="pickupPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pickupPhotoModalLabel">Recyclable Material Photo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="pickupPhotoModalImage" class="img-fluid" alt="Uploaded recyclable material">
+            </div>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="confirmMatchedRequestModal" tabindex="-1" aria-labelledby="confirmMatchedRequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -425,6 +445,15 @@ window.addEventListener('DOMContentLoaded', function () {
     const matchedRequestsApiUrl = <?php echo json_encode(APP_URL . '/user-junkshop/api/get_matched_requests.php' . ($selectedStatus !== null || $sortOrder !== 'DESC' ? '?' . http_build_query(array_filter(['status' => $selectedStatus, 'sort' => $sortOrder], static fn ($value): bool => $value !== null)) : ''), JSON_UNESCAPED_SLASHES); ?>;
     const feedback = document.getElementById('assignment-feedback');
     const assignmentList = document.getElementById('assignment-list');
+    const appUrl = <?php echo json_encode(rtrim(APP_URL, '/') . '/', JSON_UNESCAPED_SLASHES); ?>;
+    const pickupPhotoModal = document.getElementById('pickupPhotoModal');
+    const pickupPhotoModalImage = document.getElementById('pickupPhotoModalImage');
+    pickupPhotoModal.addEventListener('show.bs.modal', function (event) {
+        pickupPhotoModalImage.src = event.relatedTarget.getAttribute('data-photo-url');
+    });
+    pickupPhotoModal.addEventListener('hidden.bs.modal', function () {
+        pickupPhotoModalImage.removeAttribute('src');
+    });
     const confirmation = window.ecopick.setupActionConfirmation({ modalId: 'confirmMatchedRequestModal' });
     const successModalElement = document.getElementById('matchedRequestSuccessModal');
     const successModal = bootstrap.Modal.getOrCreateInstance(successModalElement);
@@ -800,7 +829,7 @@ window.addEventListener('DOMContentLoaded', function () {
             const netAmount = getEstimatedNetAmount(request);
             const secondModal = document.createElement('div');
             secondModal.className = 'modal fade';
-            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Contact number</dt><dd class="col-6 text-end">+639' + escapeHtml(contactInput.value) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an SMS notification when the platform SMS setting is enabled.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
+            secondModal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Pickup Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><dl class="row mb-3"><dt class="col-6">Collector</dt><dd class="col-6 text-end fw-bold">' + escapeHtml(collectorName) + '</dd><dt class="col-6">Contact number</dt><dd class="col-6 text-end">+639' + escapeHtml(contactInput.value) + '</dd><dt class="col-6">Seller mobile</dt><dd class="col-6 text-end" data-seller-mobile>' + escapeHtml(formatPhilippineMobile(request.seller_mobile || request.contact_number)) + '</dd><dt class="col-6">Net amount to receive</dt><dd class="col-6 text-end fw-bold">₱' + netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</dd></dl><div class="alert alert-info small mb-0">Confirming will update request status to \'For Pickup\' and send an message.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-back-to-edit>Back to Edit</button><button type="button" class="btn btn-primary" data-confirm-pickup>Confirm &amp; Send SMS</button></div></div></div>';
             firstModal.dataset.keepOpen = 'true';
             firstInstance.hide();
             document.body.appendChild(secondModal);
@@ -1211,6 +1240,37 @@ window.addEventListener('DOMContentLoaded', function () {
             const declineReason = status === 'Declined' && request.decline_reason ? '<div class="alert alert-danger py-2 mb-3"><strong>Decline reason:</strong> ' + escapeHtml(request.decline_reason) + '</div>' : '';
             return '<div class="col-12" data-assignment-card data-assignment-id="' + requestId + '"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3"><div><div class="small text-muted">Booking reference</div><h5 class="fw-bold mb-1">' + escapeHtml(request.booking_reference) + '</h5><div class="small text-muted">' + escapeHtml(request.materials_summary || '') + '</div></div>' + statusMarkup + '</div><div class="row g-3 small mb-3"><div class="col-md-4"><div class="text-muted">Seller</div><strong>' + escapeHtml(request.seller_name) + '</strong></div><div class="col-md-4"><div class="text-muted">Mobile Number</div>' + contactMarkup + '</div><div class="col-md-4"><div class="text-muted">Pickup</div><strong>' + escapeHtml(pickupDate) + '</strong><br>' + escapeHtml(pickupTime) + '</div><div class="col-md-4"><div class="text-muted">Approximate Distance</div><strong>' + escapeHtml(distance) + '</strong></div><div class="col-md-4"><div class="text-muted">Actual Weight</div>' + actualWeightMarkup + '</div></div><div class="small text-muted mb-3">' + escapeHtml(request.pickup_address) + '</div>' + declineReason + mapMarkup + '<div class="d-flex flex-wrap gap-2">' + renderLifecycleControls(request, requestId) + '</div></div></div></div>';
         }).join('');
+        requests.forEach(function (request) {
+            const requestId = getPickupRequestId(request);
+            const cardBody = assignmentList.querySelector('[data-assignment-id="' + requestId + '"] .card-body');
+            const address = cardBody?.querySelector('.small.text-muted.mb-3');
+            if (!cardBody || !address) return;
+
+            const notesBlock = document.createElement('div');
+            notesBlock.className = 'small mb-2';
+            const notesLabel = document.createElement('strong');
+            notesLabel.textContent = 'Optional notes:';
+            const notesText = document.createElement('span');
+            notesText.style.whiteSpace = 'pre-line';
+            notesText.textContent = String(request.pickup_notes || '').trim() || 'None';
+            notesBlock.append(notesLabel, document.createTextNode(' '), notesText);
+            address.insertAdjacentElement('afterend', notesBlock);
+
+            const photoPath = String(request.photo_path || '').replace(/^\/+/, '');
+            const photoElement = document.createElement(photoPath ? 'button' : 'div');
+            if (photoPath) {
+                photoElement.type = 'button';
+                photoElement.className = 'btn btn-sm btn-outline-success mb-3';
+                photoElement.setAttribute('data-bs-toggle', 'modal');
+                photoElement.setAttribute('data-bs-target', '#pickupPhotoModal');
+                photoElement.setAttribute('data-photo-url', appUrl + photoPath);
+                photoElement.textContent = 'View Photo';
+            } else {
+                photoElement.className = 'small text-muted mb-3';
+                photoElement.textContent = 'No photo provided';
+            }
+            notesBlock.insertAdjacentElement('afterend', photoElement);
+        });
         initializeSellerMaps();
     }
 

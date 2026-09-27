@@ -13,6 +13,39 @@
     --shell-background: #f4f8f6;
 }
 
+.notification-dropdown-menu {
+    width: 360px;
+    max-width: 90vw;
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.notification-dropdown-menu .notification-item,
+.notification-dropdown-menu .notification-dropdown-item,
+.notification-dropdown-menu .dropdown-item,
+.notification-dropdown-menu p,
+.notification-dropdown-menu div,
+.notification-dropdown-menu span {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+}
+
+.notification-dropdown-menu .notification-item,
+.notification-dropdown-menu .notification-dropdown-item {
+    padding: 0.75rem 0.5rem;
+}
+
+@media (max-width: 575.98px) {
+    .notification-dropdown-menu {
+        width: 92vw !important;
+        max-width: 360px !important;
+        max-height: 70vh;
+        overflow-y: auto;
+        font-size: 0.875rem;
+    }
+}
+
 /* General Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

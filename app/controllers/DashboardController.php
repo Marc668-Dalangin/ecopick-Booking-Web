@@ -531,6 +531,8 @@ class DashboardController
                 pr.id AS assignment_id,
                 pr.booking_reference,
                 pr.current_status,
+                pr.photo_path,
+                pr.notes AS pickup_notes,
                 pr.contact_number,
                 COALESCE(NULLIF(pr.contact_number, \'\'), NULLIF(seller.mobile_number, \'\'), \'\') AS seller_mobile,
                 pr.pickup_address,

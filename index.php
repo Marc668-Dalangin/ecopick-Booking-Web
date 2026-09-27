@@ -94,7 +94,7 @@ $homepageSchema = [
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3 text-success">How EcoPick Recycling Works in Lipa City</h2>
+                <h2 class="fw-bold mb-3" style="color: var(--dark-text);">How EcoPick Recycling Works in Lipa City</h2>
                 <p class="text-muted fs-5">
                     A simple, transparent process that benefits both sellers and verified junkshops
                 </p>
@@ -194,7 +194,7 @@ $homepageSchema = [
 <section id="materials" class="py-5 py-md-7" style="background: var(--light-bg);">
     <div class="container py-4">
         <div class="text-center mb-5">
-            <h2 class="fw-bold text-success">Recyclable Material Categories</h2>
+            <h2 class="fw-bold" style="color: var(--dark-text);">Recyclable Material Categories</h2>
             <p class="text-muted fs-6">Explore the types of materials accepted and processed across registered junkshops.</p>
         </div>
 
@@ -280,7 +280,7 @@ $homepageSchema = [
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3 text-success">Verified Partner Junkshops</h2>
+                <h2 class="fw-bold mb-3" style="color: var(--dark-text);">Verified Partner Junkshops</h2>
                 <p class="text-muted fs-5">
                     Trust our verified partners to provide fair assessment and payment
                 </p>
@@ -335,7 +335,7 @@ $homepageSchema = [
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3 text-success">Waste Segregation Tips</h2>
+                <h2 class="fw-bold mb-3" style="color: var(--dark-text);">Waste Segregation Tips</h2>
                 <p class="text-muted fs-5">
                     Learn how to properly separate and prepare your recyclable materials
                 </p>
@@ -430,7 +430,7 @@ $homepageSchema = [
     <div class="container-lg">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="fw-bold mb-3 text-success">Get in Touch</h2>
+                <h2 class="fw-bold mb-3" style="color: var(--dark-text);">Get in Touch</h2>
                 <p class="text-muted fs-5">
                     Have questions? We'd love to hear from you
                 </p>

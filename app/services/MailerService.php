@@ -407,7 +407,7 @@ class MailerService
             $formattedEndDate = $endDate !== '' ? self::formatNotificationDate($endDate) : 'your account dashboard';
             $safeEndDate = htmlspecialchars($formattedEndDate, ENT_QUOTES, 'UTF-8');
             $bonusMessage = $bonusDays > 0 ? "\nWelcome bonus: +{$bonusDays} days\n" : '';
-            $bonusHtml = $bonusDays > 0 ? '<br><strong>Additional:</strong> +' . $bonusDays . ' days' : '';
+            $bonusHtml = $bonusDays > 0 ? '<br><strong>Additional free plan:</strong> +' . $bonusDays . ' days' : '';
             $isRegistration = strcasecmp($paymentType, 'Registration') === 0;
             $paymentLabel = $isRegistration ? 'Registration' : 'Partnership Renewal';
             $subject = '[EcoPick] ' . $paymentLabel . ' Payment Approved';

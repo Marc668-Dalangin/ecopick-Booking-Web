@@ -108,15 +108,26 @@ window.addEventListener('DOMContentLoaded', function () {
     function reverseGeocodeJunkshopLocation(lat, lng) {
         if (lastGeocodedJunkshopLocation && calculateDistance(lastGeocodedJunkshopLocation.lat, lastGeocodedJunkshopLocation.lng, lat, lng) < 0.05) return;
         lastGeocodedJunkshopLocation = { lat: lat, lng: lng };
+        const label = document.getElementById('junkshop-location-label');
+        const coordinateLabel = lat.toFixed(5) + ', ' + lng.toFixed(5);
+        if (label) label.textContent = coordinateLabel;
         const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
         fetch(url, { headers: { Accept: 'application/json' } })
             .then(response => response.ok ? response.json() : null)
             .then(data => {
-                const label = document.getElementById('junkshop-location-label');
                 const address = formatFullAddress(data?.address);
-                if (label && address) label.textContent = address;
+                if (label) label.textContent = address || coordinateLabel;
             })
-            .catch(function () {});
+            .catch(function () {
+                if (label) label.textContent = coordinateLabel;
+            });
+    }
+
+    function showUnavailableLocation() {
+        const label = document.getElementById('junkshop-location-label');
+        const distance = document.getElementById('seller-live-distance');
+        if (label && label.textContent === 'Fetching...') label.textContent = 'Location unavailable';
+        if (distance && distance.textContent === 'Calculating...') distance.textContent = 'Distance unavailable';
     }
 
     function stopLiveLocationPolling() {
@@ -154,7 +165,12 @@ window.addEventListener('DOMContentLoaded', function () {
         }
         const collectorLat = Number.parseFloat(payload.collector_lat ?? payload.junkshop_lat);
         const collectorLng = Number.parseFloat(payload.collector_lng ?? payload.junkshop_lng);
-        if (!Number.isFinite(sellerLat) || sellerLat < -90 || sellerLat > 90 || !Number.isFinite(sellerLng) || sellerLng < -180 || sellerLng > 180 || !Number.isFinite(collectorLat) || collectorLat < -90 || collectorLat > 90 || !Number.isFinite(collectorLng) || collectorLng < -180 || collectorLng > 180) return;
+        const validSellerLocation = Number.isFinite(sellerLat) && sellerLat >= -90 && sellerLat <= 90 && Number.isFinite(sellerLng) && sellerLng >= -180 && sellerLng <= 180;
+        const validCollectorLocation = Number.isFinite(collectorLat) && collectorLat >= -90 && collectorLat <= 90 && Number.isFinite(collectorLng) && collectorLng >= -180 && collectorLng <= 180;
+        if (!validSellerLocation || !validCollectorLocation) {
+            showUnavailableLocation();
+            return;
+        }
         clearWeakSignalAlert();
         reverseGeocodeJunkshopLocation(collectorLat, collectorLng);
         document.getElementById('seller-live-distance').textContent = calculateDistance(sellerLat, sellerLng, collectorLat, collectorLng).toFixed(2) + ' km';
@@ -177,6 +193,7 @@ window.addEventListener('DOMContentLoaded', function () {
                 updateSellerLiveText(payload);
             })
             .catch(function () {
+                showUnavailableLocation();
                 showWeakSignalAlert('Weak GPS signal or connection drop detected. Please check location settings or refresh/reload the website.');
             })
             .finally(function () {

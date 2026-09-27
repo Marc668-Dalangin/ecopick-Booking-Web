@@ -149,7 +149,7 @@ ob_start();
         </div>
 
         <div class="border rounded p-3 mb-4">
-            <h4 class="h5 fw-bold mb-1">Renewal Email Notifications</h4>
+            <h4 class="h5 fw-bold mb-1 text-primary">Renewal Email Notifications</h4>
             <p class="text-muted small mb-3">Approved junkshops receive one email reminder for each subscription expiration.</p>
             <form method="post" class="js-loading-form">
                 <?php echo CSRF::field(); ?>
@@ -163,7 +163,7 @@ ob_start();
             </form>
         </div>
         <div class="border rounded p-3 mb-4">
-            <h4 class="h5 fw-bold mb-1">Junkshop Outstanding Fee Threshold</h4>
+            <h4 class="h5 fw-bold mb-1 text-primary">Junkshop Outstanding Fee Threshold</h4>
             <p class="text-muted small mb-3">Junkshops cannot accept new pickup requests when completed-transaction fees reach this limit.</p>
             <form method="post" class="js-loading-form">
                 <?php echo CSRF::field(); ?>
@@ -187,7 +187,7 @@ ob_start();
             <div><strong>Subscription gate:</strong> Approved junkshops must submit and receive approval for a partnership plan before portal features are unlocked.</div>
         </div>
 
-        <h4 class="h5 fw-bold mb-3">Junkshop Expiration Management</h4>
+        <h4 class="h5 fw-bold mb-3 text-primary">Junkshop Expiration Management</h4>
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light"><tr><th>Junkshop Name</th><th>Account Status</th><th>Expiration Date</th><th class="text-end">Action</th></tr></thead>
@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function () {
         header.style.cursor = 'pointer';
         card.insertBefore(header, cardBody);
         header.appendChild(heading);
-        heading.className = 'h5 m-0 fw-bold ' + (headingText.includes('Verification') ? 'text-success' : 'text-primary');
+        heading.className = 'h5 m-0 fw-bold text-primary';
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.id = buttonId;
@@ -301,6 +301,11 @@ document.addEventListener('DOMContentLoaded', function () {
             toggle.setAttribute('aria-label', 'Expand section');
         });
     }
+
+    const registrationHeading = Array.from(document.querySelectorAll('h4')).find(function (element) {
+        return element.textContent.trim() === 'Registration Payment Reconciliation';
+    });
+    registrationHeading?.classList.add('text-primary');
 
     addSectionCollapse('Partnership Payment Reconciliation', 'partnershipPaymentsCollapse', 'togglePartnershipPayments', true);
     addSectionCollapse('Junkshop Fee Payment Verification', 'feePaymentsCollapse', 'toggleFeePayments', true);

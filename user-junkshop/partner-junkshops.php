@@ -282,7 +282,7 @@ ob_start();
                         <div class="col-md-4"><label class="form-label fw-bold" for="approximate_distance_km">Approximate Distance</label><div class="input-group"><input type="text" class="form-control bg-light" id="approximate_distance_km" name="approximate_distance_km" readonly tabindex="-1" required placeholder="Calculated automatically..."><span class="input-group-text">km</span></div><small class="text-muted">Distance is calculated automatically based on your address and the selected junkshop location.</small></div>
                         <div class="col-md-4"><label class="form-label" for="preferred_pickup_date">Preferred pickup date <span class="text-danger">*</span></label><input type="date" class="form-control" id="preferred_pickup_date" name="preferred_pickup_date" required></div>
                         <div class="col-md-4"><label class="form-label" for="preferred_pickup_time">Preferred pickup time <span class="text-danger">*</span></label><select class="form-select" id="preferred_pickup_time" name="preferred_pickup_time" required><option value="">Choose a preferred time</option><?php foreach ($timeOptions as $time): ?><option value="<?php echo Validator::escape($time); ?>"><?php echo Validator::escape($time); ?></option><?php endforeach; ?></select></div>
-                        <div class="col-12"><label class="form-label" for="photo">Optional recyclable-material photo</label><input type="file" class="form-control" id="photo" name="photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><div class="form-text">JPG, JPEG, PNG, or WEBP only; maximum 5 MB.</div></div>
+                        <div class="col-12"><label class="form-label" for="photo">Optional recyclable-material photo</label><input type="file" class="form-control" id="photo" name="photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><div class="form-text">JPG, JPEG, PNG, or WEBP only; maximum 3 MB.</div></div>
                         <div class="col-12"><label class="form-label" for="notes">Optional notes</label><textarea class="form-control" id="notes" name="notes" rows="4" maxlength="2000" placeholder="Add useful access or material details."></textarea></div>
                     </div>
 
@@ -326,6 +326,14 @@ ob_start();
         const materialSelectionError = document.getElementById('material-selection-error');
         const status = document.getElementById('pickup-request-form-status');
         const submitButton = document.getElementById('submit-pickup-request');
+        const photoInput = document.getElementById('photo');
+        photoInput?.addEventListener('change', function () {
+            const photo = this.files[0];
+            if (photo && photo.size > 3 * 1024 * 1024) {
+                window.alert('Selected photo exceeds the 3MB size limit. Please upload a smaller image.');
+                this.value = '';
+            }
+        });
         const resetSubmitButton = function () {
             clearActionButtonLoading(submitButton);
         };
